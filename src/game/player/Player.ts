@@ -5,6 +5,7 @@ import { cornerCorrection, edgeCorrection, type Rect } from './CollisionAssist';
 import type { PlayerIntent } from '../input/Input';
 import type { Point } from '../levels/types';
 import { animatePlayer } from './animations';
+import type { SfxOutput } from '../audio/Sfx';
 export class Player {
   readonly sprite: Phaser.Physics.Arcade.Sprite;
   readonly controller: PlayerController;
@@ -14,8 +15,9 @@ export class Player {
     private readonly solids: readonly Rect[],
     private readonly config: Readonly<PlayerPhysicsConfig> = physics,
     private readonly texture = 'sophie',
+    sfx?: Pick<SfxOutput, 'jump' | 'dash'>,
   ) {
-    this.controller = new PlayerController(config);
+    this.controller = new PlayerController(config, sfx);
     this.sprite = scene.physics.add
       .sprite(
         spawn.x,

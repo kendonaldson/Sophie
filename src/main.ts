@@ -4,7 +4,10 @@ import { Hud } from './ui/Hud';
 import { GameScene } from './game/scenes/GameScene';
 import { InterludeScene } from './game/scenes/InterludeScene';
 import { viewportSize, watchViewport } from './game/rendering/Viewport';
-const hud = new Hud(document.querySelector<HTMLElement>('#app')!);
+import { Sfx } from './game/audio/Sfx';
+const sfx = new Sfx();
+sfx.bindGestures();
+const hud = new Hud(document.querySelector<HTMLElement>('#app')!, sfx);
 const container = document.querySelector<HTMLElement>('#world')!;
 const size = viewportSize(container.clientWidth, container.clientHeight);
 const game = new Phaser.Game({
@@ -26,10 +29,13 @@ const game = new Phaser.Game({
       fixedStep: false,
     },
   },
-  scene: [new GameScene(hud), new InterludeScene(hud)],
+  scene: [new GameScene(hud, sfx), new InterludeScene(hud, sfx)],
+  // Music streams through LevelMusic; SFX own the only Web Audio context.
+  audio: { noAudio: true },
   banner: false,
 });
 const unwatch = watchViewport(game, container);
+game.events.once('destroy', () => sfx.destroy());
 if (import.meta.hot)
   import.meta.hot.dispose(() => {
     unwatch();

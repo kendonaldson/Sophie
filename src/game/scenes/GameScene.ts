@@ -11,6 +11,7 @@ import { CombinedInput } from '../input/CombinedInput';
 import { TouchControls } from '../../ui/mobile/TouchControls';
 import { DebugLevelSelector } from '../../ui/DebugLevelSelector';
 import { LevelMusic } from '../audio/LevelMusic';
+import type { SfxOutput } from '../audio/Sfx';
 import { Player } from '../player/Player';
 import { createAnimations } from '../player/animations';
 import { overlaps } from '../player/CollisionAssist';
@@ -62,6 +63,7 @@ export class GameScene extends Phaser.Scene {
   private testEntryApplied = false;
   constructor(
     private readonly hud: Hud,
+    private readonly sfx: SfxOutput,
     private level: LevelDefinition = atticEscape,
   ) {
     super('Game');
@@ -127,6 +129,7 @@ export class GameScene extends Phaser.Scene {
       this.events.off('shutdown', cleanup);
       this.events.off('destroy', cleanup);
       this.music?.destroy();
+      this.hud.showDialogue();
       unbindHud();
       this.debugSelector?.destroy();
       this.inputSource.destroy();
@@ -193,7 +196,14 @@ export class GameScene extends Phaser.Scene {
     this.machinery =
       level.theme === 'warehouse' ? new Machinery(this, level) : undefined;
     const solids = this.machinery?.solids ?? level.platforms;
-    this.player = new Player(this, level.playerSpawn, solids);
+    this.player = new Player(
+      this,
+      level.playerSpawn,
+      solids,
+      physics,
+      'sophie',
+      this.sfx,
+    );
     this.jimmy = level.companionSpawn
       ? new Jimmy(this, level, solids)
       : undefined;
@@ -514,6 +524,8 @@ export class GameScene extends Phaser.Scene {
   }
   update(_time: number, delta: number) {
     if (this.leavingScene) return;
+    if (!this.paused && !this.orientationBlocked)
+      this.hud.revealDialogue(Math.min(delta, simulation.maxFrameMs));
     if (!this.manual && !this.paused && !this.orientationBlocked) {
       this.accumulator += Math.min(delta, simulation.maxFrameMs);
       while (this.accumulator >= simulation.stepMs) {

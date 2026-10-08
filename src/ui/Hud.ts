@@ -1,4 +1,6 @@
 import type { LevelDefinition, TutorialDefinition } from '../game/levels/types';
+import type { SfxOutput } from '../game/audio/Sfx';
+import { DialogueReveal } from './DialogueReveal';
 export const boneSvg = `<svg viewBox="0 0 28 16" aria-hidden="true" shape-rendering="crispEdges"><path d="M2 1h5v2h2v3h10V3h2V1h5v2h2v4h-2v2h2v4h-2v2h-5v-2h-2v-3H9v3H7v2H2v-2H0V9h2V7H0V3h2z" fill="currentColor"/></svg>`;
 export class Hud {
   private readonly bones: HTMLElement[];
@@ -13,7 +15,10 @@ export class Hud {
   private readonly dialogue: HTMLElement;
   private lastSection = '';
   private lastCharges = -1;
-  constructor(root: HTMLElement) {
+  private readonly reveal: DialogueReveal;
+  private dialogueText?: HTMLElement;
+  constructor(root: HTMLElement, sfx: SfxOutput) {
+    this.reveal = new DialogueReveal(sfx);
     root.innerHTML = `
       <header class="masthead"><a class="wordmark" href="./" aria-label="Sophie home">Sophie<span class="wordmark-dot">.</span></a><div class="chapter"><span class="eyebrow">A ROOFTOP ADVENTURE</span><span>Chapter 01 <i></i> Attic Escape</span></div><button id="pause" class="quiet-button" aria-label="Pause game"><span class="pause-icon" aria-hidden="true"></span><span class="button-label">Pause</span></button></header>
       <main><div class="game-shell"><div id="world" role="img" aria-label="Sophie, a dachshund, exploring neighborhood rooftops"></div>
@@ -60,14 +65,40 @@ export class Hud {
   }
   showDialogue(text?: string, speaker = 'JIMMY') {
     this.dialogue.hidden = !text;
-    if (text && this.dialogue.dataset.text !== text) {
+    if (!text) {
+      delete this.dialogue.dataset.text;
+      this.reveal.set();
+      this.dialogueText = undefined;
+    } else if (
+      this.dialogue.dataset.text !== text ||
+      this.dialogue.dataset.speaker !== speaker
+    ) {
       this.dialogue.dataset.text = text;
+      this.dialogue.dataset.speaker = speaker;
       const label = document.createElement('strong');
       label.textContent = speaker;
       const line = document.createElement('p');
-      line.textContent = text;
+      line.setAttribute('aria-hidden', 'true');
+      this.dialogue.setAttribute('aria-label', `${speaker}: ${text}`);
+      // Elevator signage has no character voice and remains instantaneous.
+      const voice = speaker.toLowerCase();
+      if (voice === 'sophie' || voice === 'jimmy' || voice === 'offscreen') {
+        this.reveal.set(text, voice);
+      } else {
+        this.reveal.set();
+        line.textContent = text;
+      }
+      this.dialogueText = line;
       this.dialogue.replaceChildren(label, line);
     }
+  }
+  revealDialogue(ms: number) {
+    const speaker = this.dialogue.dataset.speaker?.toLowerCase();
+    if (
+      this.dialogueText &&
+      ['sophie', 'jimmy', 'offscreen'].includes(speaker ?? '')
+    )
+      this.dialogueText.textContent = this.reveal.tick(ms);
   }
   bind(onPause: () => void, onRetry: () => void, onContinue: () => void) {
     const controller = new AbortController();

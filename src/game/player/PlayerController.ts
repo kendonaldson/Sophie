@@ -2,6 +2,7 @@ import type { PlayerPhysicsConfig } from '../config/physics';
 import { touchTiming } from '../config/touch';
 import type { PlayerIntent } from '../input/Input';
 import { DashController } from './DashController';
+import type { SfxOutput } from '../audio/Sfx';
 export type PlayerState = 'Grounded' | 'Airborne' | 'Dashing';
 export interface Motion {
   vx: number;
@@ -26,7 +27,10 @@ export class PlayerController {
   private dashJumpVelocity = 0;
   private canCutJump = false;
   private pendingDash?: { ms: number; x: number; y: number; facing: -1 | 1 };
-  constructor(readonly config: Readonly<PlayerPhysicsConfig>) {
+  constructor(
+    readonly config: Readonly<PlayerPhysicsConfig>,
+    private readonly sfx?: Pick<SfxOutput, 'jump' | 'dash'>,
+  ) {
     this.dash = new DashController(config);
   }
   step(ms: number, input: PlayerIntent, motion: Motion): MovementResult {
@@ -73,6 +77,7 @@ export class PlayerController {
     if (request && this.dash.start(request.x, request.y, request.facing)) {
       this.pendingDash = undefined;
       dashed = true;
+      this.sfx?.dash();
       this.canCutJump = false;
       this.dashJumpMs = 0;
       if (grounded && this.dash.direction.y === 0) {
@@ -94,6 +99,7 @@ export class PlayerController {
       vy = c.jumpVelocity;
       grounded = false;
       jumped = true;
+      this.sfx?.jump();
       this.coyoteMs = 0;
       this.bufferMs = 0;
       this.pendingDash = undefined;
