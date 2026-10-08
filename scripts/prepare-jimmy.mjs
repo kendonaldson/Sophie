@@ -13,8 +13,9 @@ const rows = [
   { name: 'walk', top: 425, bottom: 491 },
   { name: 'run', top: 497, bottom: 565 },
   { name: 'jump', top: 730, bottom: 800 },
+  { name: 'sit', top: 274, bottom: 343 },
 ];
-const atlas = new PNG({ width: 512, height: 256 });
+const atlas = new PNG({ width: 512, height: rows.length * 64 });
 for (const [rowIndex, row] of rows.entries()) {
   for (let frame = 0; frame < 8; frame++) {
     const x0 = columns[frame],
@@ -86,5 +87,5 @@ for (const [rowIndex, row] of rows.entries()) {
 }
 writeFileSync('public/assets/jimmy.png', PNG.sync.write(atlas));
 console.log(
-  'Prepared 32 side-view poses in a transparent 8 × 4 atlas (64 × 64 frames).',
+  'Prepared 40 side-view poses in a transparent 8 × 5 atlas (64 × 64 frames).',
 );

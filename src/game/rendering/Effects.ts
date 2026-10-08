@@ -42,6 +42,8 @@ export class Effects {
             sprite.frame.name,
           )
           .setFlipX(sprite.flipX)
+          .setOrigin(sprite.originX, sprite.originY)
+          .setScale(sprite.scaleX, sprite.scaleY)
           .setTint(0xccebc4)
           .setAlpha(0.4)
           .setDepth(9),

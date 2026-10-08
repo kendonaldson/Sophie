@@ -705,3 +705,111 @@ kbd {
 .mobile-portrait .keyboard-notice {
   display: none;
 }
+.story-mode .world-ui,
+.story-mode .tutorial-card,
+.story-mode .dialogue,
+.story-mode #retry,
+.story-mode .key-guide {
+  display: none;
+}
+.story-mode #fade {
+  z-index: 4;
+}
+.story-mode .game-shell {
+  background: #182e38;
+}
+.story-ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+.story-bubble {
+  position: absolute;
+  width: max-content;
+  max-width: min(380px, calc(100% - 36px));
+  padding: 14px 18px;
+  border: 2px solid #d6b77e;
+  border-radius: 12px;
+  background: #fff1d8;
+  color: #293d40;
+  box-shadow: 0 5px 0 #10242b40;
+}
+.story-bubble::after {
+  content: '';
+  position: absolute;
+  left: var(--tail-x, 50%);
+  bottom: -9px;
+  width: 14px;
+  height: 14px;
+  background: inherit;
+  border-right: 2px solid #d6b77e;
+  border-bottom: 2px solid #d6b77e;
+  transform: translateX(-50%) rotate(45deg);
+}
+.story-bubble strong {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: #86643f;
+}
+.story-bubble p {
+  margin: 7px 0 0;
+  white-space: pre-line;
+  font-size: 16px;
+  line-height: 1.45;
+}
+.story-bubble[data-speaker='jimmy'] {
+  background: #e8f0e2;
+  border-color: #9bb9aa;
+}
+.story-bubble[data-speaker='jimmy']::after {
+  border-color: #9bb9aa;
+}
+.story-bubble[data-speaker='jimmy'] strong {
+  color: #466b60;
+}
+.story-bubble[data-speaker='offscreen'] {
+  color: #f8e9cd;
+  background: #293f49f2;
+  border: 2px dashed #d8bf91;
+  border-radius: 3px 14px 14px 3px;
+}
+.story-bubble[data-speaker='offscreen'] strong {
+  color: #e6c68b;
+}
+.story-bubble[data-speaker='offscreen']::after {
+  left: -9px;
+  top: 45%;
+  bottom: auto;
+  transform: rotate(135deg);
+  border-color: #d8bf91;
+}
+.story-next {
+  position: absolute;
+  right: 18px;
+  bottom: 16px;
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 1px solid #d6b77e;
+  border-radius: 4px;
+  color: #f8e9cd;
+  background: #1e343a;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+.story-next:disabled {
+  opacity: 0.5;
+}
+.story-bubble[hidden],
+.story-next[hidden] {
+  display: none;
+}
+.mobile-landscape .story-bubble {
+  max-width: min(350px, calc(100% - 36px));
+  padding: 10px 14px;
+}
+.mobile-landscape .story-bubble p {
+  font-size: 14px;
+  line-height: 1.35;
+  margin-top: 5px;
+}

@@ -1,5 +1,21 @@
 import type { PlayerIntent } from '../input/Input';
 import type { PlayerPhysicsConfig } from '../config/physics';
+import type { InterludeDirector } from '../story/InterludeDirector';
+export interface StoryTestApi {
+  snapshot(): {
+    phase: InterludeDirector['phase'];
+    index: number;
+    line: InterludeDirector['line'];
+    canAdvance: boolean;
+    fade: number;
+    paused: boolean;
+    actors: InterludeDirector['actors'];
+    animations: { sophie?: string; jimmy?: string };
+    characters: string[];
+  };
+  manual(enabled: boolean): void;
+  tick(ms: number): ReturnType<StoryTestApi['snapshot']>;
+}
 export interface GameSnapshot {
   x: number;
   y: number;
@@ -48,5 +64,6 @@ export interface GameTestApi {
 declare global {
   interface Window {
     __sophie?: GameTestApi;
+    __sophieStory?: StoryTestApi;
   }
 }

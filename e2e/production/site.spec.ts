@@ -1,5 +1,39 @@
 import { devices, expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import { interludeLines } from '../../src/game/story/interlude1';
+
+test('production interlude plays through to the only ending without exposing test APIs', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto('./#debug');
+  await page
+    .getByRole('combobox', { name: 'Debug level', exact: true })
+    .selectOption('interlude-1');
+  await page.getByRole('button', { name: 'Load', exact: true }).click();
+  const bubble = page.locator('.story-bubble');
+  for (const [index, line] of interludeLines.entries()) {
+    await expect(bubble.locator('p')).toHaveText(line.text);
+    await expect(bubble).toHaveAttribute('data-speaker', line.speaker);
+    if (index < interludeLines.length - 1)
+      await page
+        .getByRole('button', { name: 'Continue · X', exact: true })
+        .click();
+  }
+  await expect(
+    page.getByRole('heading', { name: 'TO BE CONTINUED' }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() => [window.__sophie, window.__sophieStory]),
+  ).toEqual([undefined, undefined]);
+  await expect(page.locator('audio')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Play again' }).click();
+  await expect(page.locator('#section')).toHaveText('Open air');
+  await expect(page.locator('audio')).toHaveCount(1);
+  await expect(page.locator('.story-ui')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
 
 test.describe('deployed debug selector on mobile', () => {
   test.use({

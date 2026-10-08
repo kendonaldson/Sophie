@@ -173,7 +173,7 @@ test('elevator boards both dogs, travels for 6.5 seconds, and opens onto the upp
   expect(upstairs.checkpoint).toBe('upper-floor');
 });
 
-test('the final attempt freezes, Jimmy catches and slings both dogs, then the Level 2 door ends the game', async ({
+test('the final attempt freezes, Jimmy catches and slings both dogs, then the Level 2 door leads to Interlude 1', async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -212,17 +212,18 @@ test('the final attempt freezes, Jimmy catches and slings both dogs, then the Le
   expect(moved.x).toBeGreaterThan(landed.x);
   await advance(page, 240, { moveX: 1 });
   await advance(page, 180);
+  await page.waitForFunction(() => Boolean(window.__sophieStory));
+  await expect(page.locator('.story-bubble')).toContainText(
+    'Thanks for the help back there.',
+  );
   await expect(
     page.getByRole('heading', { name: 'TO BE CONTINUED' }),
-  ).toBeVisible();
-  expect((await snapshot(page)).levelId).toBe('warehouse');
-  await page.getByRole('button', { name: 'Play again' }).click();
-  expect((await snapshot(page)).levelId).toBe('attic-escape');
-  await expect(page.locator('audio')).toHaveCount(1);
-  await expect(page.locator('audio')).toHaveAttribute(
-    'src',
-    '/assets/audio/rooftop-dash.mp3',
-  );
+  ).toHaveCount(0);
+  expect(await page.evaluate(() => window.__sophie)).toBeUndefined();
+  expect(
+    await page.evaluate(() => window.__sophieStory!.snapshot().animations),
+  ).toEqual({ sophie: 'idle', jimmy: 'jimmy-sit' });
+  await expect(page.locator('audio')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 
