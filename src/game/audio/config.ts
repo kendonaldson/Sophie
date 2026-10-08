@@ -25,6 +25,19 @@ export interface SfxConfig {
     filterEndFrequency: number;
     filterQ: number;
   };
+  jimmySuperJump: {
+    volume: number;
+    anticipationMs: number;
+    anticipationStartFrequency: number;
+    anticipationEndFrequency: number;
+    anticipationWaveform: OscillatorType;
+    launchMs: number;
+    startFrequency: number;
+    endFrequency: number;
+    waveform: OscillatorType;
+    sweepPower: number;
+    releaseMs: number;
+  };
   dialogue: {
     volume: number;
     durationMs: number;
@@ -66,6 +79,19 @@ export const sfxConfig: SfxConfig = {
       jimmy: { basePitch: 440, variation: 35, cadenceMs: 75 },
       offscreen: { basePitch: 330, variation: 25, cadenceMs: 85 },
     },
+  },
+  jimmySuperJump: {
+    volume: 0.3,
+    anticipationMs: 60,
+    anticipationStartFrequency: 180,
+    anticipationEndFrequency: 125,
+    anticipationWaveform: 'triangle',
+    launchMs: 220,
+    startFrequency: 150,
+    endFrequency: 1000,
+    waveform: 'square',
+    sweepPower: 2.5,
+    releaseMs: 12,
   },
 };
 export const clampVolume = (value: number) =>

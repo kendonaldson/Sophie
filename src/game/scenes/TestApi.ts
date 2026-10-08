@@ -46,6 +46,17 @@ export interface GameSnapshot {
   machinery?: { id: string; x: number; y: number; vx: number; vy: number }[];
   gates?: { id: string; open: boolean }[];
   elevator?: string;
+  chase?: {
+    x: number;
+    speed: number;
+    enabled: boolean;
+    boundary: number;
+    phase: string;
+    line?: string;
+    nextCall: number;
+    attempts: number;
+  };
+  characters: string[];
   intro: boolean;
   finale?: string;
   finaleComplete: boolean;
@@ -55,7 +66,8 @@ export interface GameTestApi {
   manual(enabled: boolean): void;
   advance(frames: number, intent?: Partial<PlayerIntent>): GameSnapshot;
   restart(): void;
-  loadLevel(id: 'attic-escape' | 'warehouse'): void;
+  loadLevel(id: 'attic-escape' | 'warehouse' | 'the-chase'): void;
+  chaseSection(x: number): void;
   checkpoint(id: string): void;
   platform(id: string): void;
   finaleEnabled(enabled: boolean): void;

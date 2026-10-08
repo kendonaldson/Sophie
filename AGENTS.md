@@ -771,12 +771,14 @@ Avoid:
 ### Core Procedural Effects
 
 Jump:
+
 - short bouncy upward pitch sweep
 - square or triangle-wave character
 - cute "bweep / boing" feel
 - roughly 80-140 ms
 
 Dash:
+
 - short synthetic swoosh
 - filtered noise and/or pitched oscillator sweep
 - crisp "fwip / shwoop" character
@@ -784,6 +786,7 @@ Dash:
 - only play when a dash actually succeeds
 
 Dialogue:
+
 - short 8-bit "boop" sounds as text is revealed
 - do not sound on every space or punctuation mark
 - rate-limit the cadence so dialogue does not become a buzz

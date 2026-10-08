@@ -10,11 +10,19 @@ import {
 export interface SfxOutput {
   jump(): void;
   dash(): void;
+  jimmySuperJumpAnticipation(): void;
+  jimmySuperJump(): void;
+  stopJimmySuperJump(): void;
   dialogueBoop(speaker: DialogueSpeaker, character: string): void;
   stopDialogue(): void;
 }
+type Effect = 'jump' | 'dash' | 'dialogue' | 'jimmySuperJump';
+export type JimmySuperJumpOutput = Pick<
+  SfxOutput,
+  'jimmySuperJumpAnticipation' | 'jimmySuperJump'
+>;
 interface Voice {
-  dialogue: boolean;
+  effect: Effect;
   sources: AudioScheduledSourceNode[];
   nodes: AudioNode[];
 }
@@ -43,7 +51,7 @@ export class Sfx implements SfxOutput {
   private initialized = false;
   private lastBoopAt = -Infinity;
   private unbind?: () => void;
-  private readonly volumes: Record<'jump' | 'dash' | 'dialogue', number>;
+  private readonly volumes: Record<Effect, number>;
   private masterVolume: number;
 
   constructor(
@@ -56,6 +64,7 @@ export class Sfx implements SfxOutput {
       jump: clampVolume(config.jump.volume),
       dash: clampVolume(config.dash.volume),
       dialogue: clampVolume(config.dialogue.volume),
+      jimmySuperJump: clampVolume(config.jimmySuperJump.volume),
     };
   }
   bindGestures(target: Window = window) {
@@ -128,7 +137,7 @@ export class Sfx implements SfxOutput {
     this.masterVolume = clampVolume(volume);
     this.syncVolume();
   }
-  setEffectVolume(effect: 'jump' | 'dash' | 'dialogue', volume: number) {
+  setEffectVolume(effect: Effect, volume: number) {
     this.volumes[effect] = clampVolume(volume);
   }
   setMuted(muted: boolean) {
@@ -212,6 +221,59 @@ export class Sfx implements SfxOutput {
       noiseGain.connect(gain);
     });
   }
+  jimmySuperJumpAnticipation() {
+    const c = this.config.jimmySuperJump;
+    this.play(
+      'jimmySuperJump',
+      c.anticipationMs,
+      (context, voice, gain, at, end) => {
+        this.tone(
+          context,
+          voice,
+          gain,
+          c.anticipationWaveform,
+          c.anticipationStartFrequency,
+          c.anticipationEndFrequency,
+          at,
+          end,
+        );
+      },
+    );
+  }
+  /** The script calls this at takeoff; the bright peak matches its ascent duration. */
+  jimmySuperJump() {
+    const c = this.config.jimmySuperJump;
+    this.play(
+      'jimmySuperJump',
+      c.launchMs + c.releaseMs,
+      (context, voice, gain, at, end) => {
+        const oscillator = context.createOscillator();
+        voice.sources.push(oscillator);
+        oscillator.type = c.waveform;
+        const max = Math.min(12000, context.sampleRate / 2 - 1);
+        const start = bounded(c.startFrequency, 20, max);
+        const peak = bounded(c.endFrequency, 20, max);
+        const curve = Float32Array.from(
+          { length: 65 },
+          (_, i) =>
+            start + (peak - start) * (i / 64) ** bounded(c.sweepPower, 1, 5),
+        );
+        oscillator.frequency.setValueCurveAtTime(
+          curve,
+          at,
+          end -
+            at -
+            Math.min(bounded(c.releaseMs, 1, 30) / 1000, (end - at) / 3),
+        );
+        oscillator.connect(gain);
+      },
+      c.releaseMs,
+    );
+  }
+  stopJimmySuperJump() {
+    for (const voice of this.voices)
+      if (voice.effect === 'jimmySuperJump') this.release(voice);
+  }
   dialogueBoop(speaker: DialogueSpeaker, character: string) {
     if (!isBoopCharacter(character)) return;
     const context = this.context;
@@ -239,11 +301,12 @@ export class Sfx implements SfxOutput {
       this.lastBoopAt = context.currentTime;
   }
   stopDialogue() {
-    for (const voice of this.voices) if (voice.dialogue) this.release(voice);
+    for (const voice of this.voices)
+      if (voice.effect === 'dialogue') this.release(voice);
     // Preserve the cadence across rapid line changes; no burst when advancing.
   }
   private play(
-    effect: 'jump' | 'dash' | 'dialogue',
+    effect: Effect,
     durationMs: number,
     build: (
       context: AudioContext,
@@ -252,6 +315,7 @@ export class Sfx implements SfxOutput {
       at: number,
       end: number,
     ) => void,
+    releaseMs?: number,
   ): boolean {
     const context = this.context;
     if (
@@ -268,14 +332,14 @@ export class Sfx implements SfxOutput {
     )
       return false;
     const voice: Voice = {
-      dialogue: effect === 'dialogue',
+      effect,
       sources: [],
       nodes: [],
     };
     this.voices.add(voice);
     try {
       const at = context.currentTime,
-        end = at + bounded(durationMs, 10, 250) / 1000;
+        end = at + bounded(durationMs, 10, 300) / 1000;
       const gain = context.createGain();
       voice.nodes.push(gain);
       gain.connect(this.master);
@@ -285,6 +349,12 @@ export class Sfx implements SfxOutput {
         at +
           Math.min(bounded(this.config.attackMs, 1, 10) / 1000, (end - at) / 3),
       );
+      // Hold the spring launch until its bright peak, then release without a click.
+      if (releaseMs !== undefined)
+        gain.gain.setValueAtTime(
+          this.volumes[effect],
+          end - Math.min(bounded(releaseMs, 1, 30) / 1000, (end - at) / 3),
+        );
       gain.gain.exponentialRampToValueAtTime(0.0001, end);
       gain.gain.setValueAtTime(0, end);
       build(context, voice, gain, at, end);

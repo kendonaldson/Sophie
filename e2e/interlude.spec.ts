@@ -16,7 +16,7 @@ const snapshot = (page: Page) =>
   page.evaluate(() => window.__sophieStory!.snapshot());
 const tick = (page: Page, ms: number) =>
   page.evaluate((ms) => window.__sophieStory!.tick(ms), ms);
-test('Interlude 1 performs the full conversation, unseen interruption, escape, fade and clean replay', async ({
+test('Interlude 1 performs the full conversation, unseen interruption, escape, fade and immediate playable chase', async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -85,14 +85,18 @@ test('Interlude 1 performs the full conversation, unseen interruption, escape, f
     expect(dog.x).toBeGreaterThan(c.width + 48);
   expect(state.fade).toBeGreaterThan(0);
   await tick(page, c.fadeOutMs);
+  await page.waitForFunction(
+    () => window.__sophie?.snapshot().levelId === 'the-chase',
+  );
   await expect(
     page.getByRole('heading', { name: 'TO BE CONTINUED' }),
-  ).toBeVisible();
-  await expect(page.locator('#fade')).toHaveCSS('opacity', '1');
-  await page.getByRole('button', { name: 'Play again' }).click();
-  await page.waitForFunction(
-    () => window.__sophie?.snapshot().levelId === 'attic-escape',
+  ).toHaveCount(0);
+  await expect(page.locator('.chase-ui p')).toHaveText(
+    "Run, Jimmy, or we'll be caught!",
   );
+  expect(
+    await page.evaluate(() => window.__sophie!.snapshot().chase?.enabled),
+  ).toBe(true);
   expect(await page.evaluate(() => window.__sophieStory)).toBeUndefined();
   await expect(page.locator('.story-ui')).toHaveCount(0);
   await expect(page.locator('audio')).toHaveCount(1);

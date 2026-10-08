@@ -215,7 +215,7 @@ export class InterludeScene extends Phaser.Scene {
     if (this.director.phase === 'complete' && !this.ended) {
       this.ended = true;
       this.inputSource.clear();
-      this.hud.showEnding();
+      this.scene.start('Game', { levelId: 'the-chase' });
     }
   }
   private installTestApi() {

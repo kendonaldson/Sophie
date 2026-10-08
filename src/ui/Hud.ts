@@ -46,19 +46,26 @@ export class Hud {
   }
   setLevel(level: LevelDefinition) {
     const warehouse = level.theme === 'warehouse';
-    document.querySelector('.chapter > span:last-child')!.innerHTML = warehouse
-      ? 'Chapter 02 <i></i> The Warehouse'
-      : 'Chapter 01 <i></i> Attic Escape';
-    document.querySelector('.chapter-number')!.textContent = warehouse
-      ? '02 — 02'
-      : '01 — 02';
+    const chase = level.theme === 'chase';
+    document.querySelector('.chapter > span:last-child')!.innerHTML = chase
+      ? 'Chapter 03 <i></i> The Chase'
+      : warehouse
+        ? 'Chapter 02 <i></i> The Warehouse'
+        : 'Chapter 01 <i></i> Attic Escape';
+    document.querySelector('.chapter-number')!.textContent = chase
+      ? '03 — 03'
+      : warehouse
+        ? '02 — 03'
+        : '01 — 03';
     document
       .querySelector('#world')!
       .setAttribute(
         'aria-label',
-        warehouse
-          ? 'Sophie and Jimmy exploring a warehouse'
-          : 'Sophie, a dachshund, exploring neighborhood rooftops',
+        chase
+          ? 'Sophie and Jimmy escaping through a neighborhood and construction yard'
+          : warehouse
+            ? 'Sophie and Jimmy exploring a warehouse'
+            : 'Sophie, a dachshund, exploring neighborhood rooftops',
       );
     this.lastSection = '';
     this.showDialogue();
