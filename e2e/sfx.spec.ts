@@ -93,6 +93,45 @@ async function probeAudio(page: Page) {
     };
   });
 }
+
+test('a bird chirps once for Sophie contact and stays silent for Jimmy', async ({
+  page,
+}) => {
+  await probeAudio(page);
+  await page.goto('/?test&level=skyscraper');
+  await page.waitForFunction(
+    () => window.__sophie?.snapshot().levelId === 'skyscraper',
+  );
+  await page.evaluate(() => {
+    const a = window.__sophie!;
+    a.manual(true);
+    a.checkpoint('bird-introduction');
+  });
+  await page.keyboard.press('KeyA');
+  await page.evaluate(() => {
+    const a = window.__sophie!,
+      bird = a.snapshot().climb!.birds[0]!;
+    a.place({ x: bird.x, y: bird.y + 12 }, true);
+    a.advance(1);
+  });
+  expect((await audioState(page)).tones).toHaveLength(0);
+  await page.evaluate(() => {
+    const a = window.__sophie!,
+      bird = a.snapshot().climb!.birds[0]!;
+    a.place({ x: bird.x, y: bird.y + 12 });
+    a.advance(1);
+    a.advance(10);
+  });
+  const audio = await audioState(page);
+  expect(audio.contexts).toBe(1);
+  expect(audio.tones).toHaveLength(1);
+  expect(audio.tones[0]!.pitch).toBe(sfxConfig.birdSquawk.secondFrequency);
+  expect(audio.tones[0]!.duration).toBeCloseTo(
+    sfxConfig.birdSquawk.durationMs / 1000,
+  );
+  await expect.poll(async () => (await audioState(page)).active).toBe(0);
+  await expect(page.locator('audio')).toHaveJSProperty('paused', false);
+});
 function collectErrors(page: Page) {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
@@ -478,11 +517,14 @@ for (const available of [true, false])
     await page.evaluate(() => window.__sophie!.advance(400));
     await expect(
       page.getByRole('heading', { name: 'TO BE CONTINUED' }),
-    ).toBeVisible();
+    ).toHaveCount(0);
     expect(
       (await audioState(page)).tones.filter((t) => t.peakPitch),
     ).toHaveLength(available ? 2 : 0);
     expect((await audioState(page)).contexts).toBe(available ? 1 : 0);
-    await expect(page.locator('audio')).toHaveJSProperty('paused', true);
+    expect(await page.evaluate(() => window.__sophie!.snapshot().levelId)).toBe(
+      'skyscraper',
+    );
+    await expect(page.locator('audio')).toHaveJSProperty('paused', false);
     expect(errors).toEqual([]);
   });

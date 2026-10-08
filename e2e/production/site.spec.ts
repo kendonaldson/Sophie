@@ -95,6 +95,17 @@ test.describe('deployed debug selector on mobile', () => {
         music.evaluate((audio: HTMLAudioElement) => audio.currentTime),
       )
       .toBeGreaterThan(0);
+    await selector.selectOption('skyscraper');
+    await load.tap();
+    await expect(page.locator('#section')).toHaveText('Up from here');
+    await expect(music).toHaveAttribute(
+      'src',
+      new URL('assets/audio/city-lights-above.mp3', baseURL!).pathname,
+    );
+    await expect(music).toHaveJSProperty('loop', true);
+    await expect(page.locator('.touch-controls')).toBeVisible();
+    await page.getByRole('button', { name: 'Jump', exact: true }).tap();
+    expect(await page.evaluate(() => window.__sophie)).toBeUndefined();
     await page.getByRole('button', { name: 'Pause game' }).tap();
     await selector.selectOption('attic-escape');
     await load.tap();
@@ -256,6 +267,8 @@ test('built URLs and original/generated images use the configured deployment pat
     'assets/sophie.png',
     'assets/sophie-source.png',
     'assets/jimmy.png',
+    'assets/sparrow.png',
+    'assets/sparrow-sprite.png',
   ]) {
     const response = await request.get(new URL(file, baseURL!).href);
     expect(response.ok()).toBe(true);
@@ -269,6 +282,7 @@ test('built URLs and original/generated images use the configured deployment pat
     'rooftop-dash.mp3',
     'factory-pulse.mp3',
     'pixel-dash.mp3',
+    'city-lights-above.mp3',
   ]) {
     const track = await request.get(
       new URL(`assets/audio/${file}`, baseURL!).href,

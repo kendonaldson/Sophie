@@ -876,3 +876,8 @@ kbd {
     max-width: 47%;
   }
 }
+
+.climb-scripted .touch-controls {
+  visibility: hidden;
+  pointer-events: none;
+}

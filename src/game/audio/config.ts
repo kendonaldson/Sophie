@@ -7,6 +7,17 @@ export interface DialogueProfile {
 export interface SfxConfig {
   masterVolume: number;
   maxVoices: number;
+  birdSquawk: {
+    volume: number;
+    durationMs: number;
+    startFrequency: number;
+    peakFrequency: number;
+    secondFrequency: number;
+    endFrequency: number;
+    turnAt: number;
+    secondAt: number;
+    waveform: OscillatorType;
+  };
   attackMs: number;
   jump: {
     volume: number;
@@ -50,6 +61,17 @@ export interface SfxConfig {
 export const sfxConfig: SfxConfig = {
   masterVolume: 0.42,
   maxVoices: 8,
+  birdSquawk: {
+    volume: 0.2,
+    durationMs: 120,
+    startFrequency: 540,
+    peakFrequency: 1180,
+    secondFrequency: 680,
+    endFrequency: 920,
+    turnAt: 0.35,
+    secondAt: 0.55,
+    waveform: 'square',
+  },
   attackMs: 3,
   jump: {
     volume: 0.28,

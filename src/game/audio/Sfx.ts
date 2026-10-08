@@ -10,13 +10,14 @@ import {
 export interface SfxOutput {
   jump(): void;
   dash(): void;
+  birdSquawk(): void;
   jimmySuperJumpAnticipation(): void;
   jimmySuperJump(): void;
   stopJimmySuperJump(): void;
   dialogueBoop(speaker: DialogueSpeaker, character: string): void;
   stopDialogue(): void;
 }
-type Effect = 'jump' | 'dash' | 'dialogue' | 'jimmySuperJump';
+type Effect = 'jump' | 'dash' | 'dialogue' | 'jimmySuperJump' | 'birdSquawk';
 export type JimmySuperJumpOutput = Pick<
   SfxOutput,
   'jimmySuperJumpAnticipation' | 'jimmySuperJump'
@@ -65,6 +66,7 @@ export class Sfx implements SfxOutput {
       dash: clampVolume(config.dash.volume),
       dialogue: clampVolume(config.dialogue.volume),
       jimmySuperJump: clampVolume(config.jimmySuperJump.volume),
+      birdSquawk: clampVolume(config.birdSquawk.volume),
     };
   }
   bindGestures(target: Window = window) {
@@ -240,6 +242,30 @@ export class Sfx implements SfxOutput {
       },
     );
   }
+  birdSquawk() {
+    const c = this.config.birdSquawk;
+    this.play('birdSquawk', c.durationMs, (context, voice, gain, at, end) => {
+      const duration = end - at;
+      const oscillator = this.tone(
+        context,
+        voice,
+        gain,
+        c.waveform,
+        c.startFrequency,
+        c.peakFrequency,
+        at,
+        at + duration * bounded(c.turnAt, 0.1, 0.45),
+      );
+      this.sweep(
+        oscillator.frequency,
+        context,
+        c.secondFrequency,
+        c.endFrequency,
+        at + duration * bounded(c.secondAt, 0.5, 0.8),
+        end,
+      );
+    });
+  }
   /** The script calls this at takeoff; the bright peak matches its ascent duration. */
   jimmySuperJump() {
     const c = this.config.jimmySuperJump;
@@ -387,6 +413,7 @@ export class Sfx implements SfxOutput {
     oscillator.type = waveform;
     this.sweep(oscillator.frequency, context, start, end, at, until);
     oscillator.connect(output);
+    return oscillator;
   }
   private sweep(
     parameter: AudioParam,
