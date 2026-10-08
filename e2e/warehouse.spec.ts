@@ -158,6 +158,7 @@ test('elevator boards both dogs, travels for 6.5 seconds, and opens onto the upp
   await advance(page, 120);
   const riding = await snapshot(page);
   expect(riding.elevator).toBe('riding');
+  await expect(page.locator('audio')).toHaveJSProperty('volume', 0.2);
   const moving = await advance(page, 360);
   expect(moving.y).toBeLessThan(riding.y - 100);
   expect(moving.y).toBe(moving.jimmy!.y);
@@ -166,6 +167,7 @@ test('elevator boards both dogs, travels for 6.5 seconds, and opens onto the upp
   expect(top.elevator).toBe('arrived');
   expect(top.y).toBe(warehouse.elevator!.topY);
   expect(top.jimmy!.y).toBe(top.y);
+  await expect(page.locator('audio')).toHaveJSProperty('volume', 0.5);
   await expect(page.locator('.dialogue')).toContainText('DING');
   const upstairs = await advance(page, 225, { moveX: 1 });
   expect(upstairs.checkpoint).toBe('upper-floor');
@@ -216,6 +218,11 @@ test('the final attempt freezes, Jimmy catches and slings both dogs, then the Le
   expect((await snapshot(page)).levelId).toBe('warehouse');
   await page.getByRole('button', { name: 'Play again' }).click();
   expect((await snapshot(page)).levelId).toBe('attic-escape');
+  await expect(page.locator('audio')).toHaveCount(1);
+  await expect(page.locator('audio')).toHaveAttribute(
+    'src',
+    '/assets/audio/rooftop-dash.mp3',
+  );
   expect(errors).toEqual([]);
 });
 
@@ -350,6 +357,7 @@ test('retry during the elevator restores Jimmy and clears the lift presentation'
   const reset = await advance(page, 24);
   expect(reset.elevator).toBe('waiting');
   expect(reset.jimmy!.enabled).toBe(true);
+  await expect(page.locator('audio')).toHaveJSProperty('volume', 0.5);
   expect(reset.y).toBe(warehouse.elevator!.bottomY);
   await expect(page.locator('.dialogue')).toBeHidden();
 });

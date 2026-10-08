@@ -227,7 +227,12 @@ test('full rooftop route uses the learned moves and transitions straight into th
   expect(inside.intro).toBe(false);
   expect(inside.jimmy?.enabled).toBe(true);
   expect(inside.ending).toBe(false);
+  await expect(music).toHaveCount(1);
+  await expect(music).toHaveAttribute('src', '/assets/audio/factory-pulse.mp3');
   await expect(music).toHaveJSProperty('paused', false);
+  await expect
+    .poll(() => music.evaluate((a: HTMLAudioElement) => a.currentTime))
+    .toBeGreaterThan(0);
 });
 test('missing the final treat gives no airborne recharge and quickly returns to safe anchor', async ({
   page,

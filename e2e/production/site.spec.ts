@@ -130,11 +130,13 @@ test('built URLs and original/generated images use the configured deployment pat
     ]);
     expect(bytes.length).toBeGreaterThan(1000);
   }
-  const track = await request.get(
-    new URL('assets/audio/rooftop-dash.mp3', baseURL!).href,
-  );
-  expect(track.ok()).toBe(true);
-  expect(await track.body()).toEqual(
-    readFileSync('public/assets/audio/rooftop-dash.mp3'),
-  );
+  for (const file of ['rooftop-dash.mp3', 'factory-pulse.mp3']) {
+    const track = await request.get(
+      new URL(`assets/audio/${file}`, baseURL!).href,
+    );
+    expect(track.ok()).toBe(true);
+    expect(await track.body()).toEqual(
+      readFileSync(`public/assets/audio/${file}`),
+    );
+  }
 });

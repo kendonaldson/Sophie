@@ -83,7 +83,7 @@ export class GameScene extends Phaser.Scene {
     this.physics.disableUpdate();
     this.physics.world.fixedStep = false;
     const shell = document.querySelector<HTMLElement>('.game-shell')!;
-    this.music = new LevelMusic(shell, this.level.music!);
+    this.music = new LevelMusic(shell, this.level.music);
     this.inputSource = new CombinedInput(
       new KeyboardInput(),
       new TouchControls(shell, (mode) => {
@@ -183,8 +183,9 @@ export class GameScene extends Phaser.Scene {
     this.hud.showPause(false);
     this.hud.setFade(fade ? 1 : 0);
     this.hud.setLevel(level);
-    this.syncMusic();
     this.music?.setVolume(0.5);
+    this.music?.setTrack(level.music);
+    this.syncMusic();
   }
   private get actors() {
     return this.jimmy ? [this.player, this.jimmy.actor] : [this.player];

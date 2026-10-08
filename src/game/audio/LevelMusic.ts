@@ -4,10 +4,10 @@ export class LevelMusic {
   private active = true;
   private activated = false;
   private destroyed = false;
+  private asset?: string;
 
-  constructor(host: HTMLElement, asset: string) {
+  constructor(host: HTMLElement, asset?: string) {
     this.audio = document.createElement('audio');
-    this.audio.src = `${import.meta.env.BASE_URL}${asset}`;
     this.audio.preload = 'metadata';
     this.audio.loop = true;
     this.audio.volume = 0.5;
@@ -17,6 +17,19 @@ export class LevelMusic {
     // Touch pointerup is an activation gesture even when controls prevent default clicks.
     window.addEventListener('pointerup', this.onGesture);
     document.addEventListener('visibilitychange', this.sync);
+    this.setTrack(asset);
+  }
+
+  setTrack(asset?: string) {
+    if (asset === this.asset) return;
+    this.asset = asset;
+    this.audio.pause();
+    if (asset) this.audio.src = `${import.meta.env.BASE_URL}${asset}`;
+    else this.audio.removeAttribute('src');
+    // Reuse the gesture-activated element when chapters change. Checkpoint
+    // retries and repeated selection of the same track preserve playback time.
+    this.audio.load();
+    this.sync();
   }
 
   setActive(active: boolean) {
@@ -40,7 +53,7 @@ export class LevelMusic {
     if (this.destroyed) return;
     if (!this.active || document.hidden) {
       this.audio.pause();
-    } else if (this.activated && this.audio.paused) {
+    } else if (this.asset && this.activated && this.audio.paused) {
       // Call synchronously inside the gesture for mobile autoplay policies. Keep the
       // listeners so a denied/interrupted attempt can retry on the next interaction.
       void this.audio.play().then(

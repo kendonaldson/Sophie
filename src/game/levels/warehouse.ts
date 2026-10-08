@@ -29,7 +29,7 @@ export const warehouse: LevelDefinition = {
   fallY: 1630,
   playerSpawn: { x: 140, y: 1340 },
   companionSpawn: { x: 85, y: 1340 },
-  music: 'assets/audio/rooftop-dash.mp3',
+  music: 'assets/audio/factory-pulse.mp3',
   platforms: [
     floor('entrance-floor', 0, 1340, 430, 'steel', 360),
     floor('welcome-crate', 270, 1308, 76, 'crate', 32),
