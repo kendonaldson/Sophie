@@ -33,7 +33,7 @@ async function runTo(page: Page, x: number) {
     return a.snapshot();
   }, x);
 }
-async function reachFinalRoof(page: Page) {
+async function reachFinalRoof(page: Page, dashStart = 2140, dashFrames = 12) {
   await advance(page, 70);
   await runTo(page, 407);
   await advance(page, 80, { moveX: 1, jumpPressed: true, jumpHeld: true });
@@ -48,13 +48,25 @@ async function reachFinalRoof(page: Page) {
   expect(s.grounded).toBe(true);
   expect(s.x).toBeGreaterThan(1540);
   await runTo(page, 1788);
+  await expect(
+    page.getByRole('heading', { name: 'High jump', exact: true }),
+  ).toBeVisible();
+  await expect(page.locator('.tutorial-card')).toContainText(
+    'While rising, hold ↑ and press X.',
+  );
   await advance(page, 22, { moveX: 1, jumpPressed: true, jumpHeld: true });
   await advance(page, 21, { aimY: -1, dashPressed: true, jumpHeld: true });
   s = await advance(page, 45, { moveX: 1, jumpHeld: true });
   expect(s.y).toBeLessThan(388);
   expect(s.checkpoint).toBe('high');
-  await runTo(page, 2140);
-  await advance(page, 12, { moveX: 1, dashPressed: true });
+  await runTo(page, dashStart);
+  await expect(
+    page.getByRole('heading', { name: 'Long jump', exact: true }),
+  ).toBeVisible();
+  await expect(page.locator('.tutorial-card')).toContainText(
+    'Immediately press and hold Z / Space to jump.',
+  );
+  await advance(page, dashFrames, { moveX: 1, dashPressed: true });
   s = await advance(page, 76, { moveX: 1, jumpPressed: true, jumpHeld: true });
   expect(s.vx).toBeGreaterThan(s.physics.maxRunSpeed);
   expect(s.checkpoint).toBe('long');
@@ -62,7 +74,24 @@ async function reachFinalRoof(page: Page) {
   s = await snapshot(page);
   expect(s.charges).toBe(1);
   expect(s.checkpoint).toBe('combo');
+  await expect(page.locator('.tutorial-card')).toBeHidden();
 }
+test('first long-jump gap allows earlier takeoff and varied dash-to-jump timing', async ({
+  page,
+}) => {
+  await boot(page, true);
+  for (const [dashStart, dashFrames] of [
+    [2110, 12],
+    [2140, 6],
+    [2140, 18],
+  ]) {
+    await page.evaluate(() => window.__sophie!.restart());
+    await reachFinalRoof(page, dashStart, dashFrames);
+    const landed = await snapshot(page);
+    expect(landed.grounded).toBe(true);
+    expect(landed.checkpoint).toBe('combo');
+  }
+});
 test('loads Level 1 without console errors; real keyboard movement, jump, dash, pause', async ({
   page,
 }) => {

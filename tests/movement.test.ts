@@ -182,6 +182,8 @@ describe('combos and control', () => {
     expect(jump.jumped).toBe(true);
     expect(p.dash.active).toBe(false);
     expect(flight('long').x).toBeGreaterThan(flight('normal').x * 2);
+    // A 270px teaching gap needs landing margin for an early takeoff.
+    expect(flight('long').x).toBeGreaterThan(300);
   });
   it('jump then upward diagonal dash reaches higher roofs', () => {
     expect(flight('high').height).toBeGreaterThan(flight('normal').height + 60);

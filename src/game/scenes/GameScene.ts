@@ -236,6 +236,7 @@ export class GameScene extends Phaser.Scene {
       this.player.grounded,
       section.title,
       section.hint,
+      section.tutorial,
     );
   }
   private installTestApi() {
