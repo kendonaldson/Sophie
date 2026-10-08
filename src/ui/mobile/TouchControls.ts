@@ -4,6 +4,16 @@ import {
   type PlayerIntent,
 } from '../../game/input/Input';
 import { readGameplayMode, type GameplayMode } from './capabilities';
+const padDirections = [
+  [-1, -1],
+  [0, -1],
+  [1, -1],
+  [-1, 0],
+  [1, 0],
+  [-1, 1],
+  [0, 1],
+  [1, 1],
+] as const;
 /** Pointer capture keeps drag aiming and simultaneous movement/jump/dash reliable. */
 export class TouchControls implements InputSource {
   private root: HTMLElement | null = null;
@@ -48,8 +58,19 @@ export class TouchControls implements InputSource {
     this.root = document.createElement('div');
     this.root.className = 'touch-controls';
     this.root.setAttribute('aria-label', 'Touch controller');
-    this.root.innerHTML =
-      '<div class="touch-pad" role="group" aria-label="Movement and eight-direction dash aim"><span class="pad-up" aria-hidden="true">↑</span><span class="pad-left" aria-hidden="true">←</span><span class="pad-right" aria-hidden="true">→</span><span class="pad-down" aria-hidden="true">↓</span><span class="pad-dot"></span></div><div class="touch-actions"><button class="touch-button touch-jump" aria-label="Jump"><b>Z</b><span>JUMP</span></button><button class="touch-button touch-dash" aria-label="Dash"><b>X</b><span>DASH</span></button></div>';
+    this.root.innerHTML = `
+      <div class="touch-pad" role="group" aria-label="Movement and eight-direction dash aim">
+        ${padDirections
+          .map(
+            ([x, y]) => `
+          <span class="pad-direction" data-x="${x}" data-y="${y}" style="grid-area: ${y + 2} / ${x + 2}" aria-hidden="true">
+            <svg viewBox="0 0 24 24" style="transform: rotate(${(Math.atan2(y, x) * 180) / Math.PI + 90}deg)"><path d="M12 20V4M5 11l7-7 7 7"/></svg>
+          </span>`,
+          )
+          .join('')}
+        <span class="pad-dot" aria-hidden="true"></span>
+      </div>
+      <div class="touch-actions"><button class="touch-button touch-jump" aria-label="Jump"><b>Z</b><span>JUMP</span></button><button class="touch-button touch-dash" aria-label="Dash"><b>X</b><span>DASH</span></button></div>`;
     this.host.append(this.root);
     this.pad = this.root.querySelector('.touch-pad');
     this.pad!.addEventListener('pointerdown', (event) => {
@@ -70,8 +91,7 @@ export class TouchControls implements InputSource {
         this.directionPointer = null;
         this.intent.moveX = 0;
         this.intent.aimY = 0;
-        this.pad?.style.setProperty('--stick-x', '0px');
-        this.pad?.style.setProperty('--stick-y', '0px');
+        this.updatePad();
       }
     };
     for (const event of [
@@ -94,8 +114,20 @@ export class TouchControls implements InputSource {
       ? (Math.round(Math.cos(angle)) as -1 | 0 | 1)
       : 0;
     this.intent.aimY = active ? (Math.round(Math.sin(angle)) as -1 | 0 | 1) : 0;
-    this.pad!.style.setProperty('--stick-x', `${this.intent.moveX * 12}px`);
-    this.pad!.style.setProperty('--stick-y', `${this.intent.aimY * 12}px`);
+    this.updatePad();
+  }
+  private updatePad() {
+    const { moveX, aimY } = this.intent;
+    this.pad?.style.setProperty('--stick-x', `${moveX * 12}px`);
+    this.pad?.style.setProperty('--stick-y', `${aimY * 12}px`);
+    this.pad
+      ?.querySelectorAll<HTMLElement>('.pad-direction')
+      .forEach((arrow) => {
+        arrow.classList.toggle(
+          'active',
+          Number(arrow.dataset.x) === moveX && Number(arrow.dataset.y) === aimY,
+        );
+      });
   }
   private bindButton(button: HTMLButtonElement, kind: 'jump' | 'dash') {
     const pointers = kind === 'jump' ? this.jumps : this.dashes;
@@ -135,8 +167,7 @@ export class TouchControls implements InputSource {
     this.root
       ?.querySelectorAll('.pressed')
       .forEach((b) => b.classList.remove('pressed'));
-    this.pad?.style.setProperty('--stick-x', '0px');
-    this.pad?.style.setProperty('--stick-y', '0px');
+    this.updatePad();
   };
   destroy() {
     window.removeEventListener('resize', this.refresh);
