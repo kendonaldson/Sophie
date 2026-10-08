@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import type { PlayerController } from './PlayerController';
 export const frames = { idle: 0, walk: 8, run: 16, jump: 24 } as const;
+export const jimmySitFrame = 32;
 export function createAnimations(scene: Phaser.Scene, texture = 'sophie') {
   for (const [name, start] of Object.entries(frames)) {
     if (name === 'jump') continue;
@@ -16,6 +17,16 @@ export function createAnimations(scene: Phaser.Scene, texture = 'sophie') {
       repeat: -1,
     });
   }
+  if (texture === 'jimmy' && !scene.anims.exists('jimmy-sit'))
+    scene.anims.create({
+      key: 'jimmy-sit',
+      frames: scene.anims.generateFrameNumbers(texture, {
+        start: jimmySitFrame,
+        end: jimmySitFrame + 7,
+      }),
+      frameRate: 3,
+      repeat: -1,
+    });
 }
 export function animatePlayer(
   sprite: Phaser.GameObjects.Sprite,

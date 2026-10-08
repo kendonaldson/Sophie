@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import './style.css';
 import { Hud } from './ui/Hud';
 import { GameScene } from './game/scenes/GameScene';
+import { InterludeScene } from './game/scenes/InterludeScene';
 import { viewportSize, watchViewport } from './game/rendering/Viewport';
 const hud = new Hud(document.querySelector<HTMLElement>('#app')!);
 const container = document.querySelector<HTMLElement>('#world')!;
@@ -25,7 +26,7 @@ const game = new Phaser.Game({
       fixedStep: false,
     },
   },
-  scene: [new GameScene(hud)],
+  scene: [new GameScene(hud), new InterludeScene(hud)],
   banner: false,
 });
 const unwatch = watchViewport(game, container);

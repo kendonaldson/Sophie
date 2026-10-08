@@ -1,4 +1,4 @@
-import type { LevelDefinition } from '../game/levels/types';
+type Destination = { id: string; name: string };
 
 /** Available in the deployed game only while the URL fragment is exactly #debug. */
 export class DebugLevelSelector {
@@ -7,15 +7,15 @@ export class DebugLevelSelector {
 
   constructor(
     private readonly host: HTMLElement,
-    private readonly levels: readonly LevelDefinition[],
-    private currentLevel: LevelDefinition,
-    private readonly onLoad: (level: LevelDefinition) => void,
+    private readonly levels: readonly Destination[],
+    private currentLevel: Destination,
+    private readonly onLoad: (level: Destination) => void,
   ) {
     window.addEventListener('hashchange', this.refresh);
     this.refresh();
   }
 
-  setLevel(level: LevelDefinition) {
+  setLevel(level: Destination) {
     this.currentLevel = level;
     if (this.select) this.select.value = level.id;
   }
@@ -33,8 +33,8 @@ export class DebugLevelSelector {
     label.textContent = 'DEBUG LEVEL';
     this.select = document.createElement('select');
     this.select.setAttribute('aria-label', 'Debug level');
-    this.levels.forEach((level, index) => {
-      this.select!.add(new Option(`${index + 1} — ${level.name}`, level.id));
+    this.levels.forEach((level) => {
+      this.select!.add(new Option(level.name, level.id));
     });
     this.select.value = this.currentLevel.id;
     label.append(this.select);

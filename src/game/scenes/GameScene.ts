@@ -29,6 +29,7 @@ import { FinalSling, shouldStartSling } from '../events/FinalSling';
 import type { Hud } from '../../ui/Hud';
 import type { LevelDefinition } from '../levels/types';
 import type { GameTestApi } from './TestApi';
+import { sceneDestinations } from './destinations';
 export class GameScene extends Phaser.Scene {
   private player!: Player;
   private inputSource!: InputSource;
@@ -57,11 +58,20 @@ export class GameScene extends Phaser.Scene {
   private exitWalkMs = 0;
   private followCamera!: FollowCamera;
   private debugFinaleEnabled = true;
+  private leavingScene = false;
+  private testEntryApplied = false;
   constructor(
     private readonly hud: Hud,
     private level: LevelDefinition = atticEscape,
   ) {
     super('Game');
+  }
+  init(data: { levelId?: string } = {}) {
+    if (data.levelId)
+      this.level = data.levelId === 'warehouse' ? warehouse : atticEscape;
+    this.manual = false;
+    this.leavingScene = false;
+    this.debugFinaleEnabled = true;
   }
   preload() {
     this.load.spritesheet(
@@ -98,11 +108,14 @@ export class GameScene extends Phaser.Scene {
     this.buildLevel(this.level);
     this.debugSelector = new DebugLevelSelector(
       document.querySelector<HTMLElement>('#app')!,
-      [atticEscape, warehouse],
+      sceneDestinations,
       this.level,
-      (level) => this.buildLevel(level),
+      (level) =>
+        level.id === 'interlude-1'
+          ? this.startInterlude()
+          : this.buildLevel(level.id === 'warehouse' ? warehouse : atticEscape),
     );
-    this.hud.bind(
+    const unbindHud = this.hud.bind(
       () => this.togglePause(),
       () => this.beginRespawn(),
       () => (this.ending ? this.buildLevel(atticEscape) : this.togglePause()),
@@ -114,11 +127,18 @@ export class GameScene extends Phaser.Scene {
       this.events.off('shutdown', cleanup);
       this.events.off('destroy', cleanup);
       this.music?.destroy();
+      unbindHud();
       this.debugSelector?.destroy();
       this.inputSource.destroy();
       window.removeEventListener('keydown', this.onCommand);
       window.removeEventListener('blur', this.onBlur);
       document.removeEventListener('visibilitychange', this.onVisibility);
+      this.effects?.clear();
+      this.jimmy?.effects.clear();
+      this.colliders = [];
+      this.terrain = undefined;
+      this.machinery = undefined;
+      this.jimmy = undefined;
       delete window.__sophie;
     };
     this.events.once('shutdown', cleanup);
@@ -128,8 +148,12 @@ export class GameScene extends Phaser.Scene {
       new URLSearchParams(location.search).has('test')
     ) {
       this.installTestApi();
-      if (new URLSearchParams(location.search).get('level') === 'warehouse')
+      if (
+        !this.testEntryApplied &&
+        new URLSearchParams(location.search).get('level') === 'warehouse'
+      )
         this.buildLevel(warehouse);
+      this.testEntryApplied = true;
     }
   }
   private buildLevel(level: LevelDefinition, fade = false) {
@@ -276,7 +300,7 @@ export class GameScene extends Phaser.Scene {
     this.music?.setVolume(0.5);
   }
   private step(ms: number, intent: PlayerIntent) {
-    if (this.paused || this.orientationBlocked) return;
+    if (this.paused || this.orientationBlocked || this.leavingScene) return;
     this.elapsed += ms;
     if (this.fadeInMs > 0) {
       this.fadeInMs = Math.max(0, this.fadeInMs - ms);
@@ -289,7 +313,7 @@ export class GameScene extends Phaser.Scene {
       if (this.endingMs >= simulation.endingFadeMs) {
         if (this.level.nextLevel === 'warehouse')
           this.buildLevel(warehouse, true);
-        else this.hud.showEnding();
+        else this.startInterlude();
       }
       return;
     }
@@ -482,12 +506,20 @@ export class GameScene extends Phaser.Scene {
     this.clearInput();
     this.syncMusic();
   }
+  private startInterlude() {
+    if (this.leavingScene) return;
+    this.leavingScene = true;
+    this.clearInput();
+    this.scene.start('Interlude1');
+  }
   update(_time: number, delta: number) {
+    if (this.leavingScene) return;
     if (!this.manual && !this.paused && !this.orientationBlocked) {
       this.accumulator += Math.min(delta, simulation.maxFrameMs);
       while (this.accumulator >= simulation.stepMs) {
         this.accumulator -= simulation.stepMs;
         this.step(simulation.stepMs, this.inputSource.sample());
+        if (this.leavingScene) return;
       }
     }
     if ((!this.sling || this.sling.done) && !this.exitWalkMs) {

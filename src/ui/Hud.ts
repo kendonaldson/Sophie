@@ -70,18 +70,33 @@ export class Hud {
     }
   }
   bind(onPause: () => void, onRetry: () => void, onContinue: () => void) {
-    document.querySelector('#pause')!.addEventListener('click', () => {
-      onPause();
-      (document.activeElement as HTMLElement)?.blur();
-    });
-    document.querySelector('#retry')!.addEventListener('click', () => {
-      onRetry();
-      (document.activeElement as HTMLElement)?.blur();
-    });
-    this.continueButton.addEventListener('click', () => {
-      onContinue();
-      this.continueButton.blur();
-    });
+    const controller = new AbortController();
+    const options = { signal: controller.signal };
+    document.querySelector('#pause')!.addEventListener(
+      'click',
+      () => {
+        onPause();
+        (document.activeElement as HTMLElement)?.blur();
+      },
+      options,
+    );
+    document.querySelector('#retry')!.addEventListener(
+      'click',
+      () => {
+        onRetry();
+        (document.activeElement as HTMLElement)?.blur();
+      },
+      options,
+    );
+    this.continueButton.addEventListener(
+      'click',
+      () => {
+        onContinue();
+        this.continueButton.blur();
+      },
+      options,
+    );
+    return () => controller.abort();
   }
   update(
     charges: number,
