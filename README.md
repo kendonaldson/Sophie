@@ -34,6 +34,7 @@ Without an arrow direction, dash follows the last horizontal facing direction. A
 - `src/game/input/Input.ts`: keyboard edges and held keys interpreted as player intent. Short button presses are queued until a simulation tick. Blur clears held inputs.
 - `src/game/levels/atticEscape.ts`: all terrain, treats, safe anchors, tutorial sections, opening placement, and the exit for Level 1. `types.ts` validates the definition before loading.
 - `src/game/levels/LevelLoader.ts` and `Checkpoints.ts`: generic loading and checkpoint progress. `DogTreat.ts` owns collectible presentation and contact tests.
+- `src/game/audio/LevelMusic.ts`: streams the level's optional music asset, handles browser audio activation, and owns playback and cleanup.
 - `src/game/scenes/GameScene.ts`: composition and the fixed 120 Hz simulation loop; it connects the independent rules to Arcade collision and the UI. Rendering can run at a different rate. Long browser stalls are capped and window blur pauses the game.
 - `src/game/rendering/`: replaceable procedural environment art, trail/dust effects, viewport sizing, and a direction-aware follow camera. Camera movement never changes physics.
 - `src/ui/Hud.ts` and `src/style.css`: native-resolution bones, recharge feedback, contextual hints, pause controls, and ending text.
@@ -96,7 +97,13 @@ Vitest covers charge bounds, every dash direction, treat refills, continuous-gro
 
 Playwright checks real keyboard controls and pause, browser errors, a complete traversal from spawn to ending, failed combos and resource restoration, and matching physics at three viewport sizes. The complete traversal drives normal player intent through real Arcade Physics at fixed simulation steps; it does not teleport to challenges. The development-only `?test` hook exposes read-only snapshots and deterministic stepping, and is not installed in production. Tests assert gameplay state rather than brittle exact rendered coordinates.
 
-All art beyond Sophie is simple procedural pixel art, intentionally easy to replace. This slice has no audio, persistence, or gamepad implementation.
+All art beyond Sophie is simple procedural pixel art, intentionally easy to replace. This slice has no persistence or gamepad implementation.
+
+## Music
+
+Attic Escape loops the supplied **Rooftop Dash** track from `public/assets/audio/rooftop-dash.mp3`. Music starts on the first key press or completed tap/click, as required by browser autoplay policies. It streams through a single HTML audio element at 50% volume, so downloading/decoding the full track never blocks the level. Mobile devices may use their system media volume.
+
+Pausing, switching away, or rotating a phone/tablet to portrait pauses the music. Resuming continues from the same position. Falls and checkpoint retries keep the track running; reaching the factory ending pauses it, and Play again starts it from the beginning. Scene shutdown or destruction releases playback and listeners. Audio load/playback failures leave the game playable. Set a level's optional `music` field to its path relative to `public/`; the URL respects the configured GitHub Pages base path. The uploaded MP3 is preserved as supplied, including any silence at its loop boundary.
 
 ## Deployment — GitHub Pages
 

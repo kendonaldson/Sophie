@@ -9,6 +9,7 @@ import {
 } from '../input/Input';
 import { CombinedInput } from '../input/CombinedInput';
 import { TouchControls } from '../../ui/mobile/TouchControls';
+import { LevelMusic } from '../audio/LevelMusic';
 import { Player } from '../player/Player';
 import { createAnimations } from '../player/animations';
 import { overlaps } from '../player/CollisionAssist';
@@ -25,6 +26,7 @@ export class GameScene extends Phaser.Scene {
   private player!: Player;
   private inputSource!: InputSource;
   private orientationBlocked = false;
+  private music?: LevelMusic;
   private checkpoints: Checkpoints;
   private treats: DogTreat[] = [];
   private art!: WorldArt;
@@ -80,10 +82,13 @@ export class GameScene extends Phaser.Scene {
       this.level.platforms,
     );
     this.physics.add.collider(this.player.sprite, loaded.terrain);
+    const shell = document.querySelector<HTMLElement>('.game-shell')!;
+    if (this.level.music) this.music = new LevelMusic(shell, this.level.music);
     this.inputSource = new CombinedInput(
       new KeyboardInput(),
-      new TouchControls(document.querySelector('.game-shell')!, (mode) => {
+      new TouchControls(shell, (mode) => {
         this.orientationBlocked = mode === 'mobile-portrait';
+        this.syncMusic();
         this.accumulator = 0;
         this.inputSource?.clear();
       }),
@@ -97,13 +102,18 @@ export class GameScene extends Phaser.Scene {
     window.addEventListener('keydown', this.onCommand);
     window.addEventListener('blur', this.onBlur);
     document.addEventListener('visibilitychange', this.onVisibility);
-    this.events.once('shutdown', () => {
+    const cleanup = () => {
+      this.events.off('shutdown', cleanup);
+      this.events.off('destroy', cleanup);
+      this.music?.destroy();
       this.inputSource.destroy();
       window.removeEventListener('keydown', this.onCommand);
       window.removeEventListener('blur', this.onBlur);
       document.removeEventListener('visibilitychange', this.onVisibility);
       delete window.__sophie;
-    });
+    };
+    this.events.once('shutdown', cleanup);
+    this.events.once('destroy', cleanup);
     this.followCamera.snap(this.player);
     if (import.meta.env.DEV && new URLSearchParams(location.search).has('test'))
       this.installTestApi();
@@ -122,9 +132,15 @@ export class GameScene extends Phaser.Scene {
   private onVisibility = () => {
     if (document.hidden) this.onBlur();
   };
+  private syncMusic() {
+    this.music?.setActive(
+      !this.paused && !this.orientationBlocked && !this.ending,
+    );
+  }
   private togglePause() {
     if (this.ending) return;
     this.paused = !this.paused;
+    this.syncMusic();
     this.inputSource.clear();
     this.accumulator = 0;
     this.hud.showPause(this.paused);
@@ -135,6 +151,8 @@ export class GameScene extends Phaser.Scene {
     this.ending = false;
     this.endingMs = 0;
     this.paused = false;
+    this.music?.restart();
+    this.syncMusic();
     this.checkpoints.reset();
     this.treats.forEach((t) => t.restore());
     this.hud.showPause(false);
@@ -144,6 +162,7 @@ export class GameScene extends Phaser.Scene {
   private beginRespawn() {
     if (this.ending || this.respawnRemaining) return;
     this.paused = false;
+    this.syncMusic();
     this.hud.showPause(false);
     this.respawnRemaining = simulation.respawnMs;
     this.inputSource.clear();
@@ -206,6 +225,7 @@ export class GameScene extends Phaser.Scene {
     if (this.player.feet.y > this.level.fallY) this.beginRespawn();
     if (overlaps(this.player.body, this.level.exit)) {
       this.ending = true;
+      this.syncMusic();
       this.player.body.setVelocity(0, 0);
       this.inputSource.clear();
     }

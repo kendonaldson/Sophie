@@ -28,6 +28,8 @@ export interface SectionDefinition {
 export interface LevelDefinition {
   id: string;
   name: string;
+  /** Asset path relative to public/, played on repeat during gameplay. */
+  music?: string;
   width: number;
   height: number;
   fallY: number;

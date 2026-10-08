@@ -11,9 +11,15 @@ test('built application loads assets, draws, accepts input, and survives resize 
   page.on('console', (m) => {
     if (m.type() === 'error') errors.push(m.text());
   });
-  page.on('requestfailed', (r) =>
-    errors.push(`${r.method()} ${r.url()}: ${r.failure()?.errorText}`),
-  );
+  page.on('requestfailed', (r) => {
+    // Media streams may cancel a metadata range before requesting the playback range.
+    if (
+      r.resourceType() === 'media' &&
+      r.failure()?.errorText === 'net::ERR_ABORTED'
+    )
+      return;
+    errors.push(`${r.method()} ${r.url()}: ${r.failure()?.errorText}`);
+  });
   page.on('response', (r) => {
     if (r.status() >= 400) errors.push(`${r.status()} ${r.url()}`);
     if (r.url().includes('/assets/')) assets.push(r.url());
@@ -35,9 +41,19 @@ test('built application loads assets, draws, accepts input, and survives resize 
       .getImageData(0, 0, a.width, a.height).data;
   });
   await page.keyboard.down('ArrowRight');
+  const music = page.locator('audio');
+  await expect
+    .poll(() => music.evaluate((a: HTMLAudioElement) => a.currentTime))
+    .toBeGreaterThan(0);
+  expect(await music.evaluate((a: HTMLAudioElement) => a.currentSrc)).toBe(
+    new URL('assets/audio/rooftop-dash.mp3', baseURL!).href,
+  );
+  await expect(music).toHaveJSProperty('loop', true);
+  await expect(music).toHaveJSProperty('error', null);
   await page.waitForTimeout(520);
   await page.keyboard.up('ArrowRight');
   await page.keyboard.press('Escape');
+  await expect(music).toHaveJSProperty('paused', true);
   await expect(
     page.getByRole('heading', { name: 'A little breather.' }),
   ).toBeVisible();
@@ -110,4 +126,11 @@ test('built URLs and original/generated images use the configured deployment pat
     ]);
     expect(bytes.length).toBeGreaterThan(1000);
   }
+  const track = await request.get(
+    new URL('assets/audio/rooftop-dash.mp3', baseURL!).href,
+  );
+  expect(track.ok()).toBe(true);
+  expect(await track.body()).toEqual(
+    readFileSync('public/assets/audio/rooftop-dash.mp3'),
+  );
 });
