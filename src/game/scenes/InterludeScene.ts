@@ -101,7 +101,7 @@ export class InterludeScene extends Phaser.Scene {
     );
     const unbindHud = this.hud.bind(
       this.togglePause,
-      () => {},
+      () => this.scene.restart(),
       () => {
         if (this.ended) this.scene.start('Game', { levelId: 'attic-escape' });
         else this.togglePause();

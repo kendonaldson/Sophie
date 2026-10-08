@@ -11,20 +11,22 @@ npm ci
 npm run dev
 ```
 
-Open the address printed by Vite. The game begins immediately. Click Resume if switching windows paused it. Production: `npm run build`, then `npm run preview`. Serve `dist/` over HTTP rather than opening `index.html` as a local file. There are no runtime services or external art/font requests.
+Open the address printed by Vite. The game begins immediately. Choose Continue if switching windows paused it. Production: `npm run build`, then `npm run preview`. Serve `dist/` over HTTP rather than opening `index.html` as a local file. There are no runtime services or external art/font requests.
 
 ## Controls
 
-| Input         | Action                                                |
-| ------------- | ----------------------------------------------------- |
-| ← / →         | Run and steer in the air                              |
-| Z / Space     | Jump; release early for a shorter jump                |
-| X             | Dash in the direction held on the arrow keys          |
-| ↑ / ↓         | Aim dash vertically; combine with ← / → for diagonals |
-| Esc / Pause   | Pause or resume                                       |
-| R / Try again | Return to the current safe checkpoint                 |
+| Input       | Action                                                |
+| ----------- | ----------------------------------------------------- |
+| ← / →       | Run and steer in the air                              |
+| Z / Space   | Jump; release early for a shorter jump                |
+| X           | Dash in the direction held on the arrow keys          |
+| ↑ / ↓       | Aim dash vertically; combine with ← / → for diagonals |
+| Esc / Pause | Pause or resume                                       |
+| R           | Return to the current safe checkpoint                 |
 
 Without an arrow direction, dash follows the last horizontal facing direction. All eight directions have the same dash speed. For the long jump, dash horizontally on the ground, then press and hold jump within the 190 ms keyboard combo window (250 ms for a touch dash) for full distance. For the high jump, jump first, then dash up or diagonally up and steer onto the roof. There are no wall jumps or wall sliding. Desktop keeps keyboard controls only. Identified phones/tablets show a four-arrow touch pad and Z/X buttons in landscape; portrait pauses simulation behind a rotate-device overlay. The entire pad accepts all eight directions, including its unmarked diagonal areas. The four cardinal arrows highlight independently, so a diagonal lights both corresponding arrows. Drag the pad to aim diagonally, and hold Z for a full jump while another finger presses X. You can also slide a thumb between X and Z without lifting it; passing through the gap keeps the current action held. Touch jumps buffer for 180 ms before landing (keyboard: 120 ms), and an early touch dash waits up to 120 ms for the current dash to finish or a charge to become available, retaining the direction at the tap. Buffered actions expire, fire once, and clear on pause, rotation, or retry. Speeds, gravity, dash duration, and charge limits remain shared. A physical keyboard still works on mobile with its original timing. Touchscreen laptops keep the desktop presentation. The small capability policy lives in `src/ui/mobile/capabilities.ts`; pointer input composes with keyboard input through `CombinedInput`. There is no user-facing touch toggle. Gamepad support is not included.
+
+The pause menu offers **Restart**, **Full Screen**, and **Continue**. Restart begins the current chapter again (or restarts Interlude 1); **R** remains the checkpoint retry shortcut. Full Screen requests browser fullscreen for the whole app, including the native HUD and mobile controls, and becomes **Exit Full Screen** while active. A compact header and hint strip give the game more room. Fullscreen changes leave the game paused until Continue is chosen. Unsupported browsers disable the option with an explanation; a rejected request leaves the menu usable. The fullscreen state follows browser events, including exits outside the menu. Normal page layout returns on exit. The old lower-right Try again button is removed.
 
 ## Debug level selector
 

@@ -74,7 +74,7 @@ test('infinite dash survives retries, level loads, and scene changes while debug
     exact: true,
   });
   await infinite.check();
-  await page.getByRole('button', { name: 'Try again' }).click();
+  await page.keyboard.press('KeyR');
   await expect(infinite).toBeChecked();
   const level = page.getByRole('combobox', {
     name: 'Debug level',

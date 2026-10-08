@@ -39,7 +39,10 @@ const game = new Phaser.Game({
   banner: false,
 });
 const unwatch = watchViewport(game, container);
-game.events.once('destroy', () => sfx.destroy());
+game.events.once('destroy', () => {
+  sfx.destroy();
+  hud.destroy();
+});
 if (import.meta.hot)
   import.meta.hot.dispose(() => {
     unwatch();

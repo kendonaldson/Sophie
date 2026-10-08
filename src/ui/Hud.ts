@@ -1,6 +1,7 @@
 import type { LevelDefinition, TutorialDefinition } from '../game/levels/types';
 import type { SfxOutput } from '../game/audio/Sfx';
 import { DialogueReveal } from './DialogueReveal';
+import { FullscreenControl } from './FullscreenControl';
 export const boneSvg = `<svg viewBox="0 0 28 16" aria-hidden="true" shape-rendering="crispEdges"><path d="M2 1h5v2h2v3h10V3h2V1h5v2h2v4h-2v2h2v4h-2v2h-5v-2h-2v-3H9v3H7v2H2v-2H0V9h2V7H0V3h2z" fill="currentColor"/></svg>`;
 export class Hud {
   private readonly bones: HTMLElement[];
@@ -10,6 +11,8 @@ export class Hud {
   private readonly overlayTitle: HTMLElement;
   private readonly overlayNote: HTMLElement;
   private readonly continueButton: HTMLButtonElement;
+  private readonly restartButton: HTMLButtonElement;
+  private readonly fullscreen: FullscreenControl;
   private readonly fade: HTMLElement;
   private readonly tutorial: HTMLElement;
   private readonly dialogue: HTMLElement;
@@ -24,8 +27,8 @@ export class Hud {
       <main><div class="game-shell"><div id="world" role="img" aria-label="Sophie, a dachshund, exploring neighborhood rooftops"></div>
       <div class="world-ui"><div class="location"><span class="location-dot"></span><span id="section">A little way out</span></div><div id="dash-hud" class="dash-hud" role="img" aria-label="1 of 2 dash charges available"><span class="eyebrow">DASH</span><div class="bones">${[0, 1].map((i) => `<span class="bone" data-bone="${i}"><span class="bone-empty">${boneSvg}</span><span class="bone-fill">${boneSvg}</span></span>`).join('')}</div></div></div>
       <section class="tutorial-card" aria-label="Traversal tutorial" aria-live="polite" hidden><h2></h2><ol></ol></section>
-      <div class="vignette"></div><div id="fade"></div><div id="overlay" class="overlay" hidden><span class="eyebrow" id="overlay-note">TAKE YOUR TIME</span><h1 id="overlay-title">A little breather.</h1><button id="continue" class="primary-button">Keep exploring <span>→</span></button></div></div>
-      <div class="below-world"><div class="hint-mark">✦</div><p id="hint">← → Move · Z / Space Jump</p><button id="retry" class="retry-button" title="Return to safe roof (R)">↺ <span>Try again</span></button></div></main>
+      <div class="vignette"></div><div id="fade"></div><div id="overlay" class="overlay" role="dialog" aria-labelledby="overlay-title" hidden><span class="eyebrow" id="overlay-note">TAKE YOUR TIME</span><h1 id="overlay-title">A little breather.</h1><div class="pause-menu"><button id="restart" class="menu-button pause-only" title="Restart the current chapter">Restart</button><button id="fullscreen" class="menu-button pause-only" aria-describedby="fullscreen-status">Full Screen</button><button id="continue" class="primary-button">Continue</button></div><p id="fullscreen-status" class="pause-only" role="status" aria-live="polite"></p></div></div>
+      <div class="below-world"><div class="hint-mark">✦</div><p id="hint">← → Move · Z / Space Jump</p></div></main>
       <footer><span>A little dog. A big way home.</span><div class="key-guide"><span><kbd>←</kbd><kbd>→</kbd> Move</span><span><kbd>Z</kbd> / <kbd>Space</kbd> Jump</span><span><kbd>X</kbd> Dash</span><span><kbd>Esc</kbd> Pause</span></div><span class="chapter-number">01 — 01</span></footer>
       <p class="keyboard-notice">Best played with a keyboard. Arrow keys · Z · X</p>`;
     this.bones = Array.from(root.querySelectorAll<HTMLElement>('.bone'));
@@ -35,6 +38,12 @@ export class Hud {
     this.overlayTitle = root.querySelector('#overlay-title')!;
     this.overlayNote = root.querySelector('#overlay-note')!;
     this.continueButton = root.querySelector('#continue')!;
+    this.restartButton = root.querySelector('#restart')!;
+    this.fullscreen = new FullscreenControl(
+      root,
+      root.querySelector('#fullscreen')!,
+      root.querySelector('#fullscreen-status')!,
+    );
     this.fade = root.querySelector('#fade')!;
     this.tutorial = root.querySelector('.tutorial-card')!;
     this.dialogue = document.createElement('aside');
@@ -114,22 +123,22 @@ export class Hud {
     )
       this.dialogueText.textContent = this.reveal.tick(ms);
   }
-  bind(onPause: () => void, onRetry: () => void, onContinue: () => void) {
+  bind(onPause: () => void, onRestart: () => void, onContinue: () => void) {
     const controller = new AbortController();
     const options = { signal: controller.signal };
     document.querySelector('#pause')!.addEventListener(
       'click',
       () => {
         onPause();
-        (document.activeElement as HTMLElement)?.blur();
+        document.querySelector<HTMLButtonElement>('#pause')!.blur();
       },
       options,
     );
-    document.querySelector('#retry')!.addEventListener(
+    this.restartButton.addEventListener(
       'click',
       () => {
-        onRetry();
-        (document.activeElement as HTMLElement)?.blur();
+        onRestart();
+        this.restartButton.blur();
       },
       options,
     );
@@ -201,10 +210,13 @@ export class Hud {
     this.overlay.classList.remove('ending');
     this.overlayNote.textContent = 'TAKE YOUR TIME';
     this.overlayTitle.textContent = 'A little breather.';
-    this.continueButton.innerHTML = 'Keep exploring <span>→</span>';
+    this.continueButton.textContent = 'Continue';
     document
       .querySelector('#pause')!
       .setAttribute('aria-label', paused ? 'Resume game' : 'Pause game');
+    if (paused) this.continueButton.focus({ preventScroll: true });
+    else if (this.overlay.contains(document.activeElement))
+      (document.activeElement as HTMLElement).blur();
   }
   showEnding() {
     this.overlay.hidden = false;
@@ -212,5 +224,8 @@ export class Hud {
     this.overlayNote.textContent = 'SOPHIE & JIMMY WILL BE BACK';
     this.overlayTitle.textContent = 'TO BE CONTINUED';
     this.continueButton.innerHTML = 'Play again <span>↺</span>';
+  }
+  destroy() {
+    this.fullscreen.destroy();
   }
 }
