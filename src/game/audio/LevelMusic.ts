@@ -27,6 +27,9 @@ export class LevelMusic {
   restart() {
     this.audio.currentTime = 0;
   }
+  setVolume(volume: number) {
+    this.audio.volume = volume;
+  }
 
   private onGesture = () => {
     this.activated = true;

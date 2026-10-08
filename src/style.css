@@ -470,6 +470,38 @@ kbd {
   user-select: none;
   -webkit-user-select: none;
 }
+.dialogue {
+  position: absolute;
+  top: 68px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(340px, calc(100% - 32px));
+  padding: 16px 20px;
+  color: #f4e7cc;
+  background: #1b3039f2;
+  border: 1px solid #a9956870;
+  border-left: 3px solid #dfc08b;
+  border-radius: 2px;
+  z-index: 4;
+  pointer-events: none;
+}
+.dialogue[hidden] {
+  display: none;
+}
+.dialogue strong {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #dfc08b;
+}
+.dialogue p {
+  margin: 8px 0 0;
+  line-height: 1.5;
+}
+.mobile-landscape .dialogue {
+  top: 45px;
+  padding: 10px 14px;
+  font-size: 12px;
+}
 .touch-pad {
   position: absolute;
   left: 18px;

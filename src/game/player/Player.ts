@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { physics } from '../config/physics';
+import { physics, type PlayerPhysicsConfig } from '../config/physics';
 import { PlayerController } from './PlayerController';
 import { cornerCorrection, edgeCorrection, type Rect } from './CollisionAssist';
 import type { PlayerIntent } from '../input/Input';
@@ -7,17 +7,20 @@ import type { Point } from '../levels/types';
 import { animatePlayer } from './animations';
 export class Player {
   readonly sprite: Phaser.Physics.Arcade.Sprite;
-  readonly controller = new PlayerController(physics);
+  readonly controller: PlayerController;
   constructor(
     scene: Phaser.Scene,
     spawn: Point,
     private readonly solids: readonly Rect[],
+    private readonly config: Readonly<PlayerPhysicsConfig> = physics,
+    private readonly texture = 'sophie',
   ) {
+    this.controller = new PlayerController(config);
     this.sprite = scene.physics.add
       .sprite(
         spawn.x,
         spawn.y - (32 - physics.collisionInsetBottom),
-        'sophie',
+        texture,
         0,
       )
       .setDepth(10);
@@ -67,15 +70,17 @@ export class Player {
             bounds,
             nextY,
             this.solids,
-            physics.cornerCorrectionPixels,
+            this.config.cornerCorrectionPixels,
             this.controller.facing,
           )
-        : edgeCorrection(
-            bounds,
-            nextY,
-            this.solids,
-            physics.edgeForgivenessPixels,
-          );
+        : !result.grounded && result.vy > 0
+          ? edgeCorrection(
+              bounds,
+              nextY,
+              this.solids,
+              this.config.edgeForgivenessPixels,
+            )
+          : 0;
     if (correction) {
       this.sprite.x += correction;
       b.updateFromGameObject();
@@ -90,13 +95,27 @@ export class Player {
       this.body.velocity.x,
       this.body.velocity.y,
       this.grounded,
+      this.texture,
     );
   }
   respawn(spawn: Point) {
     this.controller.reset();
-    this.body.reset(spawn.x, spawn.y - (32 - physics.collisionInsetBottom));
+    this.place(spawn);
+    this.sprite.clearTint();
+  }
+  place(feet: Point) {
+    this.body.reset(feet.x, feet.y - (32 - physics.collisionInsetBottom));
+    // Arcade reset() uses the sprite's top-left before applying body insets.
+    // Synchronize immediately for scripted placement and the next fixed tick.
+    this.body.updateFromGameObject();
+    this.body.prev.copy(this.body.position);
+    this.body.prevFrame.copy(this.body.position);
     this.body.setVelocity(0, 0);
     this.body.resetFlags();
-    this.sprite.clearTint();
+  }
+  translate(dx: number, dy: number) {
+    this.sprite.x += dx;
+    this.sprite.y += dy;
+    this.body.updateFromGameObject();
   }
 }

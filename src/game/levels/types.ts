@@ -5,7 +5,42 @@ export interface Point {
 }
 export interface PlatformDefinition extends Rect {
   id: string;
-  style: 'home' | 'brick' | 'warehouse';
+  style: 'home' | 'brick' | 'warehouse' | 'steel' | 'crate' | 'catwalk';
+}
+export interface MovingPlatformDefinition {
+  id: string;
+  start: Point;
+  end: Point;
+  width: number;
+  height: number;
+  speed: number;
+  pauseMs?: number;
+  phaseMs?: number;
+}
+export interface ConveyorDefinition {
+  platformId: string;
+  speed: number;
+}
+export interface ShutterDefinition extends Rect {
+  id: string;
+  periodMs: number;
+  openMs: number;
+  phaseMs?: number;
+}
+export interface ElevatorDefinition {
+  id: string;
+  x: number;
+  width: number;
+  bottomY: number;
+  topY: number;
+  rideMs: number;
+}
+export interface FinaleDefinition {
+  runwayEnd: number;
+  runwayY: number;
+  landing: Point;
+  jimmyLanding: Point;
+  triggerX: number;
 }
 export interface TreatDefinition extends Point {
   id: string;
@@ -30,6 +65,14 @@ export interface LevelDefinition {
   name: string;
   /** Asset path relative to public/, played on repeat during gameplay. */
   music?: string;
+  theme?: 'rooftops' | 'warehouse';
+  nextLevel?: string;
+  companionSpawn?: Point;
+  movingPlatforms?: MovingPlatformDefinition[];
+  conveyors?: ConveyorDefinition[];
+  shutters?: ShutterDefinition[];
+  elevator?: ElevatorDefinition;
+  finale?: FinaleDefinition;
   width: number;
   height: number;
   fallY: number;
@@ -69,9 +112,14 @@ export function validateLevel(level: LevelDefinition): void {
     !level.platforms.length
   )
     fail('missing spawn, exit, or terrain');
-  const ids = [...level.platforms, ...level.treats, ...level.checkpoints].map(
-    (x) => x.id,
-  );
+  const ids = [
+    ...level.platforms,
+    ...level.treats,
+    ...level.checkpoints,
+    ...(level.movingPlatforms ?? []),
+    ...(level.shutters ?? []),
+    ...(level.elevator ? [level.elevator] : []),
+  ].map((x) => x.id);
   if (new Set(ids).size !== ids.length || ids.some((id) => !id))
     fail('entity IDs must be unique');
   for (const p of level.platforms)
@@ -109,4 +157,48 @@ export function validateLevel(level: LevelDefinition): void {
       (i > 0 && level.sections[i]!.fromX <= level.sections[i - 1]!.fromX)
     )
       fail('sections must be ordered');
+  for (const p of level.movingPlatforms ?? []) {
+    if (
+      !pointValid(p.start) ||
+      !pointValid(p.end) ||
+      !rectValid({ ...p.start, width: p.width, height: p.height }) ||
+      !Number.isFinite(p.speed) ||
+      p.speed <= 0 ||
+      p.width <= 0 ||
+      p.height <= 0 ||
+      (p.pauseMs ?? 0) < 0
+    )
+      fail(`invalid moving platform ${p.id}`);
+    for (const end of [p.start, p.end])
+      if (
+        end.x < 0 ||
+        end.x + p.width > level.width ||
+        end.y < 0 ||
+        end.y >= level.fallY
+      )
+        fail(`moving platform ${p.id} out of bounds`);
+  }
+  for (const belt of level.conveyors ?? [])
+    if (
+      !level.platforms.some((p) => p.id === belt.platformId) ||
+      !Number.isFinite(belt.speed)
+    )
+      fail('invalid conveyor');
+  for (const gate of level.shutters ?? [])
+    if (!rectValid(gate) || gate.openMs <= 0 || gate.periodMs <= gate.openMs)
+      fail('invalid shutter');
+  if (
+    level.elevator &&
+    (level.elevator.rideMs < 5000 ||
+      level.elevator.rideMs > 8000 ||
+      level.elevator.topY >= level.elevator.bottomY)
+  )
+    fail('invalid elevator');
+  if (
+    level.finale &&
+    (!safe(level.finale.landing) ||
+      !safe(level.finale.jimmyLanding) ||
+      level.finale.triggerX <= level.finale.runwayEnd)
+  )
+    fail('invalid finale');
 }

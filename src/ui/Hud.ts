@@ -1,4 +1,4 @@
-import type { TutorialDefinition } from '../game/levels/types';
+import type { LevelDefinition, TutorialDefinition } from '../game/levels/types';
 export const boneSvg = `<svg viewBox="0 0 28 16" aria-hidden="true" shape-rendering="crispEdges"><path d="M2 1h5v2h2v3h10V3h2V1h5v2h2v4h-2v2h2v4h-2v2h-5v-2h-2v-3H9v3H7v2H2v-2H0V9h2V7H0V3h2z" fill="currentColor"/></svg>`;
 export class Hud {
   private readonly bones: HTMLElement[];
@@ -10,6 +10,7 @@ export class Hud {
   private readonly continueButton: HTMLButtonElement;
   private readonly fade: HTMLElement;
   private readonly tutorial: HTMLElement;
+  private readonly dialogue: HTMLElement;
   private lastSection = '';
   private lastCharges = -1;
   constructor(root: HTMLElement) {
@@ -31,6 +32,42 @@ export class Hud {
     this.continueButton = root.querySelector('#continue')!;
     this.fade = root.querySelector('#fade')!;
     this.tutorial = root.querySelector('.tutorial-card')!;
+    this.dialogue = document.createElement('aside');
+    this.dialogue.className = 'dialogue';
+    this.dialogue.setAttribute('role', 'status');
+    this.dialogue.setAttribute('aria-live', 'polite');
+    this.dialogue.hidden = true;
+    root.querySelector('.game-shell')!.append(this.dialogue);
+  }
+  setLevel(level: LevelDefinition) {
+    const warehouse = level.theme === 'warehouse';
+    document.querySelector('.chapter > span:last-child')!.innerHTML = warehouse
+      ? 'Chapter 02 <i></i> The Warehouse'
+      : 'Chapter 01 <i></i> Attic Escape';
+    document.querySelector('.chapter-number')!.textContent = warehouse
+      ? '02 — 02'
+      : '01 — 02';
+    document
+      .querySelector('#world')!
+      .setAttribute(
+        'aria-label',
+        warehouse
+          ? 'Sophie and Jimmy exploring a warehouse'
+          : 'Sophie, a dachshund, exploring neighborhood rooftops',
+      );
+    this.lastSection = '';
+    this.showDialogue();
+  }
+  showDialogue(text?: string, speaker = 'JIMMY') {
+    this.dialogue.hidden = !text;
+    if (text && this.dialogue.dataset.text !== text) {
+      this.dialogue.dataset.text = text;
+      const label = document.createElement('strong');
+      label.textContent = speaker;
+      const line = document.createElement('p');
+      line.textContent = text;
+      this.dialogue.replaceChildren(label, line);
+    }
   }
   bind(onPause: () => void, onRetry: () => void, onContinue: () => void) {
     document.querySelector('#pause')!.addEventListener('click', () => {
@@ -112,7 +149,7 @@ export class Hud {
   showEnding() {
     this.overlay.hidden = false;
     this.overlay.classList.add('ending');
-    this.overlayNote.textContent = 'SOPHIE WILL BE BACK';
+    this.overlayNote.textContent = 'SOPHIE & JIMMY WILL BE BACK';
     this.overlayTitle.textContent = 'TO BE CONTINUED';
     this.continueButton.innerHTML = 'Play again <span>↺</span>';
   }
