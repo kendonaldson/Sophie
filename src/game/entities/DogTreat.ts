@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import type { TreatDefinition } from '../levels/types';
+import { treatConfig } from '../config/collectibles';
 export function createTreatTexture(scene: Phaser.Scene) {
   const g = scene.add.graphics();
   g.fillStyle(0x785b3e)
@@ -20,7 +21,10 @@ export function createTreatTexture(scene: Phaser.Scene) {
 export class DogTreat {
   readonly sprite: Phaser.GameObjects.Image;
   readonly glow: Phaser.GameObjects.Arc;
-  collected = false;
+  private respawnRemaining = 0;
+  get collected() {
+    return this.respawnRemaining > 0;
+  }
   constructor(
     scene: Phaser.Scene,
     readonly definition: TreatDefinition,
@@ -33,14 +37,21 @@ export class DogTreat {
       .setDepth(6);
   }
   collect() {
-    this.collected = true;
+    if (this.collected) return;
+    this.respawnRemaining = treatConfig.respawnMs;
     this.sprite.setVisible(false);
     this.glow.setVisible(false);
   }
   restore() {
-    this.collected = false;
+    this.respawnRemaining = 0;
     this.sprite.setVisible(true);
     this.glow.setVisible(true);
+  }
+  step(ms: number) {
+    if (!this.collected) return;
+    this.respawnRemaining -= ms;
+    // Ignore floating-point residue at the boundary across different time steps.
+    if (this.respawnRemaining <= 1e-6) this.restore();
   }
   update(time: number) {
     this.sprite.y = this.definition.y + Math.round(Math.sin(time / 240) * 2);

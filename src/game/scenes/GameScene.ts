@@ -408,6 +408,7 @@ export class GameScene extends Phaser.Scene {
     if (this.paused || this.orientationBlocked || this.leavingScene) return;
     this.music?.step(ms);
     this.elapsed += ms;
+    for (const treat of this.treats) treat.step(ms);
     if (this.fadeInMs > 0) {
       this.fadeInMs = Math.max(0, this.fadeInMs - ms);
       this.hud.setFade(
