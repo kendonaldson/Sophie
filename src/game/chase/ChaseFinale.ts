@@ -1,6 +1,11 @@
 import type { Point } from '../levels/types';
 import type { SpeechLine } from '../../ui/SpeechBubble';
 import { chaseTuning as t, type ChaseDefinition } from './config';
+import { sfxConfig } from '../audio/config';
+import type { JimmySuperJumpOutput } from '../audio/Sfx';
+import { physics } from '../config/physics';
+const launchStart =
+  t.settleMs + t.gotchaMs + t.quietMs + t.homeMs + t.lookMs + t.crouchMs;
 const phases = [
   ['settle', t.settleMs],
   ['gotcha', t.gotchaMs],
@@ -20,9 +25,16 @@ export class ChaseFinale {
     readonly def: ChaseDefinition['deadEnd'],
     private readonly from: { sophie: Point; jimmy: Point },
     private readonly top: number,
+    private readonly sfx?: JimmySuperJumpOutput,
   ) {}
   tick(ms: number) {
+    const previous = this.elapsed;
     this.elapsed += ms;
+    const anticipation = launchStart - sfxConfig.jimmySuperJump.anticipationMs;
+    if (previous < anticipation && this.elapsed >= anticipation)
+      this.sfx?.jimmySuperJumpAnticipation();
+    if (previous < launchStart && this.elapsed >= launchStart)
+      this.sfx?.jimmySuperJump();
   }
   get state(): { phase: ChaseFinalePhase; progress: number } {
     let time = this.elapsed;
@@ -69,15 +81,21 @@ export class ChaseFinale {
       actors.jimmy.x += 25 * (phase === 'crouch' ? p : 1);
       actors.sophie.y -= 12 * (phase === 'crouch' ? p : 1);
       if (phase === 'launch') {
-        const lift = (this.def.feetY - this.top + 110) * p * p;
+        // Include the decorative pixels below the collision feet at the audio peak.
+        const lift =
+          (this.def.feetY - this.top + physics.collisionInsetBottom + 1) *
+          p *
+          p;
         actors.sophie.y -= lift;
         actors.jimmy.y -= lift;
         actors.sophie.x += p * 8;
         actors.jimmy.x += p * 8;
       }
     } else if (['empty', 'punchline', 'fade', 'complete'].includes(phase)) {
-      actors.sophie.y = this.top - 110;
-      actors.jimmy.y = this.top - 110;
+      actors.sophie.y = this.top - physics.collisionInsetBottom - 1 - 12;
+      actors.jimmy.y = this.top - physics.collisionInsetBottom - 1;
+      actors.sophie.x += 8;
+      actors.jimmy.x += 33;
     }
     return actors;
   }

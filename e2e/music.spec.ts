@@ -7,6 +7,7 @@ const chapters = [
     url: '/?test&level=warehouse',
     track: 'factory-pulse.mp3',
   },
+  { name: 'chase', url: '/?test&level=the-chase', track: 'pixel-dash.mp3' },
 ];
 
 for (const chapter of chapters)

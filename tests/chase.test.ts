@@ -141,7 +141,7 @@ describe('the skyscraper punchline', () => {
     expect(f.state.phase).toBe('empty');
     expect(f.line).toBeUndefined();
     for (const p of Object.values(f.actors))
-      expect(p.y).toBeLessThan(def.view.top - 64);
+      expect(p.y + physics.collisionInsetBottom).toBeLessThan(def.view.top);
     f.tick(t.emptyMs);
     expect(f.line).toEqual({
       speaker: 'offscreen',

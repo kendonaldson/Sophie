@@ -37,7 +37,7 @@ export class ChaseRun {
     private readonly sophie: Player,
     private readonly jimmy: Jimmy,
     private readonly hud: Hud,
-    sfx: SfxOutput,
+    private readonly sfx: SfxOutput,
   ) {
     this.def = level.chase!;
     this.recovery = new ChaseRecovery(level.fallY);
@@ -133,6 +133,7 @@ export class ChaseRun {
         this.def.deadEnd,
         { sophie: this.sophie.feet, jimmy: j.feet },
         this.def.view.top,
+        this.sfx,
       );
       this.jimmy.history.reset();
       this.line = undefined;
@@ -167,7 +168,13 @@ export class ChaseRun {
           true,
         );
     }
-    this.jimmy.effects.update(ms, this.jimmy.actor.sprite, phase === 'launch');
+    if (phase === 'empty') this.jimmy.effects.clear();
+    else
+      this.jimmy.effects.update(
+        ms,
+        this.jimmy.actor.sprite,
+        phase === 'launch',
+      );
     this.hud.setFade(finale.fade);
     this.line = finale.line;
     return phase === 'complete';

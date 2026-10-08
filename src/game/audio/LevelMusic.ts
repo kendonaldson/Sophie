@@ -5,6 +5,7 @@ export class LevelMusic {
   private activated = false;
   private destroyed = false;
   private asset?: string;
+  private fade?: { from: number; duration: number; elapsed: number };
 
   constructor(host: HTMLElement, asset?: string) {
     this.audio = document.createElement('audio');
@@ -41,7 +42,29 @@ export class LevelMusic {
     this.audio.currentTime = 0;
   }
   setVolume(volume: number) {
-    this.audio.volume = volume;
+    this.fade = undefined;
+    this.audio.volume = Number.isFinite(volume)
+      ? Math.max(0, Math.min(1, volume))
+      : 0;
+    this.sync();
+  }
+  /** Driven by the scene clock so pause/portrait also freeze the fade. */
+  fadeOut(durationMs: number) {
+    this.fade = {
+      from: this.audio.volume,
+      duration: Number.isFinite(durationMs) ? Math.max(1, durationMs) : 1,
+      elapsed: 0,
+    };
+  }
+  step(ms: number) {
+    if (!this.fade || !this.active || document.hidden) return;
+    this.fade.elapsed = Math.min(this.fade.duration, this.fade.elapsed + ms);
+    this.audio.volume =
+      this.fade.from * (1 - this.fade.elapsed / this.fade.duration);
+    if (this.fade.elapsed === this.fade.duration) {
+      this.fade = undefined;
+      this.sync();
+    }
   }
 
   private onGesture = () => {
@@ -51,14 +74,19 @@ export class LevelMusic {
 
   private sync = () => {
     if (this.destroyed) return;
-    if (!this.active || document.hidden) {
+    if (!this.active || document.hidden || this.audio.volume === 0) {
       this.audio.pause();
     } else if (this.asset && this.activated && this.audio.paused) {
       // Call synchronously inside the gesture for mobile autoplay policies. Keep the
       // listeners so a denied/interrupted attempt can retry on the next interaction.
       void this.audio.play().then(
         () => {
-          if (this.destroyed || !this.active || document.hidden)
+          if (
+            this.destroyed ||
+            !this.active ||
+            document.hidden ||
+            this.audio.volume === 0
+          )
             this.audio.pause();
         },
         () => {

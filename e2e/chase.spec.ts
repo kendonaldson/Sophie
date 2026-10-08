@@ -197,6 +197,8 @@ test('only the dead end stops scrolling, launches both dogs upward, and ends aft
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await openChase(page);
+  await page.keyboard.press('KeyA');
+  await expect(page.locator('audio')).toHaveJSProperty('paused', false);
   await page.evaluate(() => {
     const a = window.__sophie!;
     a.chaseSection(6680);
@@ -211,8 +213,24 @@ test('only the dead end stops scrolling, launches both dogs upward, and ends aft
   const stopped = await state(page);
   expect(stopped.chase!.enabled).toBe(false);
   expect(stopped.chase!.phase).toBe('settle');
-  await expect(page.locator('audio')).toHaveJSProperty('paused', true);
-  await tick(page, t.settleMs + 20);
+  const music = page.locator('audio');
+  await expect(music).toHaveJSProperty('paused', false);
+  await expect(music).toHaveJSProperty('volume', 0.5);
+  await tick(page, t.musicFadeMs / 2);
+  const volume = await music.evaluate((a: HTMLAudioElement) => a.volume);
+  expect(volume).toBeGreaterThan(0);
+  expect(volume).toBeLessThan(0.5);
+  await page.keyboard.press('Escape');
+  await tick(page, 1000);
+  await expect(music).toHaveJSProperty('volume', volume);
+  await page.keyboard.press('Escape');
+  await tick(page, t.musicFadeMs / 2 + 10);
+  await expect(music).toHaveJSProperty('volume', 0);
+  await expect(music).toHaveJSProperty('paused', true);
+  expect((await state(page)).chase!.phase).toBe('settle');
+  await page.keyboard.press('KeyA');
+  await expect(music).toHaveJSProperty('paused', true);
+  await tick(page, t.settleMs - t.musicFadeMs + 10);
   await expect(page.locator('.chase-ui p')).toHaveText('Gotcha.');
   await expect(page.locator('.chase-ui .story-bubble')).toHaveAttribute(
     'data-speaker',
@@ -226,8 +244,8 @@ test('only the dead end stops scrolling, launches both dogs upward, and ends aft
   await tick(page, t.homeMs + t.lookMs + t.crouchMs + t.launchMs);
   const empty = await state(page);
   expect(empty.chase!.phase).toBe('empty');
-  expect(empty.y).toBeLessThan(56);
-  expect(empty.jimmy!.y).toBeLessThan(56);
+  expect(empty.y + 6).toBeLessThan(120);
+  expect(empty.jimmy!.y + 6).toBeLessThan(120);
   await expect(page.locator('.chase-ui .story-bubble')).toBeHidden();
   await expect(
     page.getByRole('heading', { name: 'TO BE CONTINUED' }),
@@ -238,12 +256,16 @@ test('only the dead end stops scrolling, launches both dogs upward, and ends aft
     ['Jimmy', 'sophie'].sort(),
   );
   await tick(page, t.punchlineMs + t.fadeMs);
+  await expect(music).toHaveJSProperty('volume', 0);
+  await expect(music).toHaveJSProperty('paused', true);
   await expect(
     page.getByRole('heading', { name: 'TO BE CONTINUED' }),
   ).toBeVisible();
   await expect(page.locator('#fade')).toHaveCSS('opacity', '1');
   await page.getByRole('button', { name: 'Play again' }).click();
   expect((await state(page)).levelId).toBe('attic-escape');
+  await expect(music).toHaveJSProperty('volume', 0.5);
+  await expect(music).toHaveJSProperty('paused', false);
   await expect(page.locator('.chase-ui')).toHaveCount(0);
   await expect(page.locator('#app')).not.toHaveClass(/chase/);
   expect(errors).toEqual([]);

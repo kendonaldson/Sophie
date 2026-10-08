@@ -1,5 +1,6 @@
 import type { ForcedScrollConfig } from '../rendering/ForcedScroll';
 import type { Point } from '../levels/types';
+import { sfxConfig } from '../audio/config';
 export interface ChaseDefinition {
   scroll: ForcedScrollConfig;
   view: { width: number; height: number; top: number };
@@ -19,12 +20,13 @@ export const chaseTuning = {
   recoverySeparation: 185,
   stuckMs: 280,
   settleMs: 850,
+  musicFadeMs: 650,
   gotchaMs: 1250,
   quietMs: 500,
   homeMs: 2100,
   lookMs: 650,
   crouchMs: 420,
-  launchMs: 700,
+  launchMs: sfxConfig.jimmySuperJump.launchMs,
   emptyMs: 650,
   punchlineMs: 2200,
   fadeMs: 750,

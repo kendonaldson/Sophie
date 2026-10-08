@@ -21,7 +21,7 @@ export const chase: LevelDefinition = {
     x: 180 - (physics.maxRunSpeed * companionConfig.followDelayMs) / 1000,
     y: 420,
   },
-  music: 'assets/audio/chase-loop.mp3',
+  music: 'assets/audio/pixel-dash.mp3',
   platforms: [
     surface('quiet-street', 0, 420, 980),
     surface('hydrant', 530, 392, 24, 28, 'hydrant'),

@@ -34,7 +34,7 @@ test('production interlude hands off to the playable chase without exposing test
   await expect(page.locator('audio')).toHaveCount(1);
   await expect(page.locator('audio')).toHaveAttribute(
     'src',
-    /assets\/audio\/chase-loop.mp3$/,
+    /assets\/audio\/pixel-dash.mp3$/,
   );
   await expect(page.locator('audio')).toHaveJSProperty('loop', true);
   await expect(page.locator('.story-ui')).toHaveCount(0);
@@ -254,7 +254,7 @@ test('built URLs and original/generated images use the configured deployment pat
   for (const file of [
     'rooftop-dash.mp3',
     'factory-pulse.mp3',
-    'chase-loop.mp3',
+    'pixel-dash.mp3',
   ]) {
     const track = await request.get(
       new URL(`assets/audio/${file}`, baseURL!).href,

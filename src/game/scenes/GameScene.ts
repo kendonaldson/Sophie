@@ -19,6 +19,7 @@ import { atticEscape } from '../levels/atticEscape';
 import { warehouse } from '../levels/warehouse';
 import { chase } from '../levels/chase';
 import { ChaseRun } from '../chase/ChaseRun';
+import { chaseTuning } from '../chase/config';
 import { ChaseArt } from '../rendering/ChaseArt';
 import { Checkpoints } from '../levels/Checkpoints';
 import { loadLevel } from '../levels/LevelLoader';
@@ -108,6 +109,7 @@ export class GameScene extends Phaser.Scene {
       new KeyboardInput(),
       new TouchControls(shell, (mode) => {
         this.orientationBlocked = mode === 'mobile-portrait';
+        if (this.orientationBlocked) this.sfx.stopJimmySuperJump();
         this.syncMusic();
         this.accumulator = 0;
         this.clearInput();
@@ -135,6 +137,7 @@ export class GameScene extends Phaser.Scene {
       this.events.off('shutdown', cleanup);
       this.events.off('destroy', cleanup);
       this.music?.destroy();
+      this.sfx.stopJimmySuperJump();
       this.hud.showDialogue();
       unbindHud();
       this.debugSelector?.destroy();
@@ -170,6 +173,7 @@ export class GameScene extends Phaser.Scene {
     }
   }
   private buildLevel(level: LevelDefinition, fade = false) {
+    this.sfx.stopJimmySuperJump();
     this.chase?.destroy();
     this.chase = undefined;
     this.colliders.forEach((c) => c.destroy());
@@ -277,10 +281,7 @@ export class GameScene extends Phaser.Scene {
   };
   private syncMusic() {
     this.music?.setActive(
-      !this.paused &&
-        !this.orientationBlocked &&
-        !this.ending &&
-        !this.chase?.finale,
+      !this.paused && !this.orientationBlocked && !this.ending,
     );
   }
   private clearInput() {
@@ -292,6 +293,7 @@ export class GameScene extends Phaser.Scene {
   private togglePause() {
     if (this.ending) return;
     this.paused = !this.paused;
+    if (this.paused) this.sfx.stopJimmySuperJump();
     this.syncMusic();
     this.clearInput();
     this.accumulator = 0;
@@ -343,6 +345,7 @@ export class GameScene extends Phaser.Scene {
   }
   private step(ms: number, intent: PlayerIntent) {
     if (this.paused || this.orientationBlocked || this.leavingScene) return;
+    this.music?.step(ms);
     this.elapsed += ms;
     if (this.fadeInMs > 0) {
       this.fadeInMs = Math.max(0, this.fadeInMs - ms);
@@ -377,11 +380,13 @@ export class GameScene extends Phaser.Scene {
         this.ending = true;
         this.hud.showEnding();
       }
-      this.effects.update(
-        ms,
-        this.player.sprite,
-        this.chase.finale.state.phase === 'launch',
-      );
+      if (this.chase.finale.state.phase === 'empty') this.effects.clear();
+      else
+        this.effects.update(
+          ms,
+          this.player.sprite,
+          this.chase.finale.state.phase === 'launch',
+        );
       return;
     }
     if (this.chase) intent = this.chase.intent(ms, intent);
@@ -531,6 +536,7 @@ export class GameScene extends Phaser.Scene {
       if (this.chase.afterStep(ms)) this.beginRespawn();
       if (this.chase.finale) {
         this.clearInput();
+        this.music?.fadeOut(chaseTuning.musicFadeMs);
         this.syncMusic();
       }
     }
@@ -553,7 +559,12 @@ export class GameScene extends Phaser.Scene {
       )
     ) {
       this.clearInput();
-      this.sling = new FinalSling(finale, this.player, this.jimmy.actor);
+      this.sling = new FinalSling(
+        finale,
+        this.player,
+        this.jimmy.actor,
+        this.sfx,
+      );
     }
     if (!this.chase && overlaps(this.player.body, this.level.exit)) {
       this.clearInput();

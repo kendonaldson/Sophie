@@ -1,10 +1,13 @@
 import { devices, expect, test, type Page } from '@playwright/test';
+import { sfxConfig } from '../src/game/audio/config';
 
 interface ToneRecord {
   waveform: string;
   pitch: number;
   duration: number;
   at: number;
+  peakPitch?: number;
+  peakAfter?: number;
 }
 declare global {
   interface Window {
@@ -35,13 +38,27 @@ async function probeAudio(page: Page) {
         const start = node.start.bind(node),
           stop = node.stop.bind(node);
         let at = 0;
-        const record = { waveform: '', pitch: 0, duration: 0, at: 0 };
+        const record: ToneRecord = {
+          waveform: '',
+          pitch: 0,
+          duration: 0,
+          at: 0,
+        };
         const setFrequency = node.frequency.setValueAtTime.bind(node.frequency);
         // The instantaneous value can still be its default before the audio
         // thread processes this quantum. Probe scheduled pitch instead.
         node.frequency.setValueAtTime = (value, when) => {
           record.pitch = value;
           return setFrequency(value, when);
+        };
+        const setCurve = node.frequency.setValueCurveAtTime.bind(
+          node.frequency,
+        );
+        node.frequency.setValueCurveAtTime = (values, when, duration) => {
+          record.pitch = values[0]!;
+          record.peakPitch = values[values.length - 1]!;
+          record.peakAfter = duration;
+          return setCurve(values, when, duration);
         };
         node.start = (when = 0) => {
           at = when;
@@ -356,3 +373,116 @@ test('the chase reuses interlude audio for movement and off-screen dialogue, inc
   expect((await audioState(page)).contexts).toBe(1);
   expect(errors).toEqual([]);
 });
+
+for (const available of [true, false])
+  test(`Jimmy's two scripted launches complete with ${available ? 'shared procedural' : 'unavailable'} audio`, async ({
+    page,
+  }) => {
+    await probeAudio(page);
+    if (!available)
+      await page.addInitScript(() => {
+        Object.defineProperty(window, 'AudioContext', { value: undefined });
+        Object.defineProperty(window, 'webkitAudioContext', {
+          value: undefined,
+        });
+      });
+    const errors = collectErrors(page);
+    await page.goto('/?test&level=warehouse');
+    await page.waitForFunction(() => window.__sophie?.snapshot().jimmy);
+    await page.evaluate(() => {
+      window.__sophie!.manual(true);
+      window.__sophie!.advance(430);
+    });
+    await page.keyboard.press('KeyA');
+    const ordinary = await page.evaluate(() => {
+      const a = window.__sophie!;
+      a.advance(1, { jumpPressed: true, jumpHeld: true });
+      return a.advance(40, { jumpHeld: true });
+    });
+    expect(ordinary.jimmy!.vy).toBeLessThan(0);
+    expect(
+      (await audioState(page)).tones.filter(
+        (t) => t.pitch === sfxConfig.jimmySuperJump.anticipationStartFrequency,
+      ),
+    ).toHaveLength(0);
+    expect(
+      (await audioState(page)).tones.filter((t) => t.peakPitch),
+    ).toHaveLength(0);
+    await expect.poll(async () => (await audioState(page)).active).toBe(0);
+    const sling = await page.evaluate(() => {
+      const a = window.__sophie!;
+      a.checkpoint('final-runway');
+      a.advance(100, { moveX: 1 });
+      a.advance(9, { moveX: 1, dashPressed: true });
+      let s = a.advance(20, { moveX: 1, jumpPressed: true, jumpHeld: true });
+      for (let i = 0; i < 140 && !s.finale; i++)
+        s = a.advance(1, { moveX: 1, jumpHeld: true });
+      return s;
+    });
+    expect(sling.finale).toBe('freeze');
+    await expect.poll(async () => (await audioState(page)).active).toBe(0);
+    await page.evaluate(() => {
+      const a = window.__sophie!;
+      for (let i = 0; i < 300 && a.snapshot().finale !== 'sling'; i++)
+        a.advance(1);
+    });
+    const afterSling = await audioState(page);
+    const lowSprings = afterSling.tones.filter(
+      (t) => t.pitch === sfxConfig.jimmySuperJump.anticipationStartFrequency,
+    );
+    expect(lowSprings).toHaveLength(available ? 1 : 0);
+    const launches = afterSling.tones.filter((t) => t.peakPitch);
+    expect(launches).toHaveLength(available ? 1 : 0);
+    if (available) {
+      expect(launches[0]!.peakPitch).toBe(
+        sfxConfig.jimmySuperJump.endFrequency,
+      );
+      expect(launches[0]!.peakAfter).toBeCloseTo(
+        sfxConfig.jimmySuperJump.launchMs / 1000,
+      );
+    }
+    const landed = await page.evaluate(() => window.__sophie!.advance(150));
+    expect(landed.finaleComplete).toBe(true);
+    expect(landed.grounded).toBe(true);
+    const moved = await page.evaluate(() =>
+      window.__sophie!.advance(10, { moveX: 1 }),
+    );
+    expect(moved.x).toBeGreaterThan(landed.x);
+    await expect(page.locator('audio')).toHaveJSProperty('volume', 0.5);
+
+    await page.evaluate(() => {
+      const a = window.__sophie!;
+      a.loadLevel('the-chase');
+      a.manual(true);
+      a.chaseSection(6730);
+      a.advance(1);
+      for (let i = 0; i < 800 && a.snapshot().chase!.phase !== 'launch'; i++)
+        a.advance(1);
+    });
+    expect(
+      (await audioState(page)).tones.filter((t) => t.peakPitch),
+    ).toHaveLength(available ? 2 : 0);
+    await expect(page.locator('audio')).toHaveJSProperty('volume', 0);
+    await expect(page.locator('audio')).toHaveJSProperty('paused', true);
+    // Interrupt a live sweep: no hanging spring, replay on resume, or music restart.
+    await page.keyboard.press('Escape');
+    await expect.poll(async () => (await audioState(page)).active).toBe(0);
+    await page.keyboard.press('Escape');
+    const empty = await page.evaluate(() => window.__sophie!.advance(30));
+    expect(empty.chase!.phase).toBe('empty');
+    expect(empty.y + 6).toBeLessThan(120);
+    expect(empty.jimmy!.y + 6).toBeLessThan(120);
+    const joke = await page.evaluate(() => window.__sophie!.advance(80));
+    expect(joke.chase!.line).toBe('WHAT IN THE WORLD?!');
+    await expect(page.locator('.chase-ui p')).toHaveText('WHAT IN THE WORLD?!');
+    await page.evaluate(() => window.__sophie!.advance(400));
+    await expect(
+      page.getByRole('heading', { name: 'TO BE CONTINUED' }),
+    ).toBeVisible();
+    expect(
+      (await audioState(page)).tones.filter((t) => t.peakPitch),
+    ).toHaveLength(available ? 2 : 0);
+    expect((await audioState(page)).contexts).toBe(available ? 1 : 0);
+    await expect(page.locator('audio')).toHaveJSProperty('paused', true);
+    expect(errors).toEqual([]);
+  });

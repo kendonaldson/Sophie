@@ -1,10 +1,13 @@
 import type { FinaleDefinition, Point } from '../levels/types';
 import type { Player } from '../player/Player';
+import { sfxConfig } from '../audio/config';
+import type { JimmySuperJumpOutput } from '../audio/Sfx';
 export const slingTiming = {
   freezeMs: 400,
   catchMs: 550,
   contactMs: 150,
   flightMs: 1100,
+  riseMs: sfxConfig.jimmySuperJump.launchMs,
 } as const;
 const catchStart = slingTiming.freezeMs;
 const contactStart = catchStart + slingTiming.catchMs;
@@ -39,6 +42,7 @@ export class FinalSling {
     private readonly def: FinaleDefinition,
     private readonly sophie: Player,
     private readonly jimmy: Player,
+    private readonly sfx?: JimmySuperJumpOutput,
   ) {
     this.from = { ...sophie.feet };
     this.jimmyFrom = { ...jimmy.feet };
@@ -57,7 +61,13 @@ export class FinalSling {
   }
   step(ms: number) {
     if (this.done) return;
+    const previous = this.elapsed;
     this.elapsed += ms;
+    const anticipation = flightStart - sfxConfig.jimmySuperJump.anticipationMs;
+    if (previous < anticipation && this.elapsed >= anticipation)
+      this.sfx?.jimmySuperJumpAnticipation();
+    if (previous < flightStart && this.elapsed >= flightStart)
+      this.sfx?.jimmySuperJump();
     const contact = { x: this.from.x - 23, y: this.from.y + 7 };
     this.sophie.sprite.anims.stop();
     this.jimmy.sprite.anims.stop();
@@ -94,8 +104,21 @@ export class FinalSling {
       );
       this.sophie.sprite.setScale(1);
       this.jimmy.sprite.setScale(1);
-      this.sophie.place(mix(this.from, this.def.landing, t, 140));
-      this.jimmy.place(mix(contact, this.def.jimmyLanding, t, 110));
+      // Reach each arc's crest with the rising sweep, then coast to the safe
+      // landing. Keep the existing route and total recovery time intact.
+      const flight = (from: Point, to: Point, lift: number) => {
+        const peak = (4 * lift - (to.y - from.y)) / (8 * lift);
+        const elapsed = this.elapsed - flightStart;
+        const progress =
+          elapsed <= slingTiming.riseMs
+            ? (peak * elapsed) / slingTiming.riseMs
+            : peak +
+              ((1 - peak) * (elapsed - slingTiming.riseMs)) /
+                (slingTiming.flightMs - slingTiming.riseMs);
+        return mix(from, to, Math.min(1, progress), lift);
+      };
+      this.sophie.place(flight(this.from, this.def.landing, 140));
+      this.jimmy.place(flight(contact, this.def.jimmyLanding, 110));
       if (t >= 1) {
         this.sophie.respawn(this.def.landing);
         this.jimmy.respawn(this.def.jimmyLanding);

@@ -15,6 +15,7 @@ class Parameter {
   setValueAtTime = vi.fn();
   linearRampToValueAtTime = vi.fn();
   exponentialRampToValueAtTime = vi.fn();
+  setValueCurveAtTime = vi.fn();
 }
 class Node {
   gain = new Parameter();
@@ -240,6 +241,57 @@ describe('procedural SFX lifecycle and safety', () => {
     expect([NaN, Infinity, -Infinity, -1, 0.5, 2].map(clampVolume)).toEqual([
       0, 0, 0, 0, 0.5, 1,
     ]);
+  });
+  it('shares a bounded spring voice, accelerates its sweep to the launch peak, and cleans up independently', () => {
+    const { sfx, context, factory } = setup();
+    const c = sfxConfig.jimmySuperJump;
+    sfx.jimmySuperJumpAnticipation();
+    sfx.jimmySuperJump();
+    expect(factory).not.toHaveBeenCalled();
+    sfx.unlockFromGesture();
+    sfx.jimmySuperJumpAnticipation();
+    const spring = context.sources[0]!;
+    expect(spring.type).toBe(c.anticipationWaveform);
+    expect(spring.frequency.setValueAtTime).toHaveBeenCalledWith(
+      c.anticipationStartFrequency,
+      0,
+    );
+    expect(spring.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(
+      c.anticipationEndFrequency,
+      c.anticipationMs / 1000,
+    );
+    context.currentTime = c.anticipationMs / 1000;
+    sfx.jimmySuperJump();
+    const launch = context.sources[1]!;
+    const [curve, at, duration] = launch.frequency.setValueCurveAtTime.mock
+      .calls[0]! as [Float32Array, number, number];
+    expect(launch.type).toBe(c.waveform);
+    expect(at).toBe(context.currentTime);
+    expect(duration).toBeCloseTo(c.launchMs / 1000);
+    expect(curve[0]).toBe(c.startFrequency);
+    expect(curve[64]).toBe(c.endFrequency);
+    expect(curve[32]! - curve[0]!).toBeLessThan(curve[64]! - curve[32]!);
+    expect(context.gains[2]!.gain.setValueAtTime).toHaveBeenCalledWith(
+      c.volume,
+      at + c.launchMs / 1000,
+    );
+    expect(launch.stop).toHaveBeenCalledWith(
+      at + (c.launchMs + c.releaseMs) / 1000,
+    );
+    sfx.jump();
+    sfx.stopDialogue();
+    expect(launch.disconnect).not.toHaveBeenCalled();
+    sfx.stopJimmySuperJump();
+    expect(launch.disconnect).toHaveBeenCalledOnce();
+    expect(context.sources[2]!.disconnect).not.toHaveBeenCalled();
+    context.finish();
+    expect(
+      context.sources.every((n) => n.disconnect.mock.calls.length === 1),
+    ).toBe(true);
+    sfx.setEnabled(false);
+    sfx.jimmySuperJumpAnticipation();
+    sfx.jimmySuperJump();
+    expect(context.sources).toHaveLength(3);
   });
 });
 
