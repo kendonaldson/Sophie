@@ -743,6 +743,62 @@ Use focused integration hooks or test-only progression mechanisms where appropri
 
 ---
 
+## Audio / Sound Design
+
+Audio should reinforce the game's cute retro platformer identity.
+
+Prefer lightweight procedural 8-bit sound effects for simple gameplay cues rather than adding binary audio assets unnecessarily.
+
+### SFX Style
+
+Effects should be:
+
+- short
+- responsive
+- playful
+- clearly readable over music
+- retro / 8-bit inspired
+- light rather than harsh or realistic
+
+Avoid:
+
+- realistic Foley
+- cinematic impact sounds
+- aggressive distortion
+- excessive reverb
+- loud or fatiguing effects
+
+### Core Procedural Effects
+
+Jump:
+- short bouncy upward pitch sweep
+- square or triangle-wave character
+- cute "bweep / boing" feel
+- roughly 80-140 ms
+
+Dash:
+- short synthetic swoosh
+- filtered noise and/or pitched oscillator sweep
+- crisp "fwip / shwoop" character
+- roughly 100-180 ms
+- only play when a dash actually succeeds
+
+Dialogue:
+- short 8-bit "boop" sounds as text is revealed
+- do not sound on every space or punctuation mark
+- rate-limit the cadence so dialogue does not become a buzz
+- slight pitch variation between notes
+
+Character dialogue should have subtly different sound profiles:
+
+- Sophie: somewhat higher pitch
+- Jimmy: somewhat lower pitch
+- off-screen human speaker: lower/neutral, but not threatening
+
+These are text sounds, not synthesized speech.
+
+---
+
 ## CI and Deployment
 
 GitHub Actions is the CI/CD mechanism.
