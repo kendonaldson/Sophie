@@ -9,6 +9,10 @@ export class ChaseRecovery {
   constructor(private readonly fallY: number) {}
   private elapsed = 0;
   private samples: { time: number; point: ChaseTrace }[] = [];
+  reset() {
+    this.elapsed = 0;
+    this.samples = [];
+  }
   record(ms: number, point: ChaseTrace) {
     this.elapsed += ms;
     this.samples.push({ time: this.elapsed, point: { ...point } });

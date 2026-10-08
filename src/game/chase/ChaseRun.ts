@@ -3,7 +3,7 @@ import type Phaser from 'phaser';
 import type { Player } from '../player/Player';
 import type { Jimmy } from '../companion/Jimmy';
 import { noInput, type PlayerIntent } from '../input/Input';
-import type { LevelDefinition } from '../levels/types';
+import type { LevelDefinition, Point } from '../levels/types';
 import type { Hud } from '../../ui/Hud';
 import { SpeechBubble, type SpeechLine } from '../../ui/SpeechBubble';
 import { ForcedScroll } from '../rendering/ForcedScroll';
@@ -18,10 +18,7 @@ export class ChaseRun {
   private callUntil = t.openingLineMs as number;
   private nextCall = 0;
   private lastCallEnd = 0;
-  private line?: SpeechLine = {
-    speaker: 'sophie',
-    text: "Run, Jimmy, or we'll be caught!",
-  };
+  private line?: SpeechLine;
   private readonly root = document.createElement('div');
   private readonly bubble: SpeechBubble;
   private readonly recovery: ChaseRecovery;
@@ -51,18 +48,46 @@ export class ChaseRun {
     host.append(this.root);
     this.bubble = new SpeechBubble(host, this.root, sfx);
     document.querySelector('#app')!.classList.add('chase-mode');
-    this.sophie.respawn(level.playerSpawn);
-    this.jimmy.reconcile(level.playerSpawn);
+    this.reset(level.playerSpawn);
+  }
+  reset(spawn: Point) {
+    const opening = spawn.x === this.level.playerSpawn.x;
+    this.elapsed = 0;
+    this.callUntil = opening ? t.openingLineMs : 0;
+    this.lastCallEnd = 0;
+    // Calls from earlier streets must not pile up when retrying the bulldozer.
+    this.nextCall = this.def.calls.filter(
+      (call) => call.fromX < spawn.x,
+    ).length;
+    this.line = opening
+      ? { speaker: 'sophie', text: "Run, Jimmy, or we'll be caught!" }
+      : undefined;
+    this.finale = undefined;
+    this.scroll.reset(spawn.x);
+    this.recovery.reset();
+    this.stuckMs = 0;
+    this.recoveryFade = 0;
+    this.sophie.respawn(spawn);
+    this.jimmy.reconcile(spawn);
     this.jimmy.enabled = true;
-    this.jimmy.actor.respawn(level.companionSpawn!);
+    this.jimmy.recoveries = 0;
+    this.jimmy.lastIntent = noInput();
+    this.jimmy.actor.respawn({
+      x: spawn.x - (this.level.playerSpawn.x - this.level.companionSpawn!.x),
+      y: spawn.y,
+    });
+    this.previousJimmyX = this.jimmy.actor.feet.x;
     // Both arrive running. Seed the pre-entry movement so Jimmy does not brake
     // while waiting for the first delayed sample from this scene.
     this.jimmy.history.step(this.jimmy.history.delayMs, {
       ...noInput(),
       moveX: 1,
     });
-    for (const actor of [sophie, jimmy.actor])
+    for (const actor of [this.sophie, this.jimmy.actor]) {
       actor.body.setVelocityX(physics.maxRunSpeed);
+      actor.sprite.anims.resume();
+    }
+    document.querySelector('#app')!.classList.remove('chase-finale');
     this.present();
   }
   intent(ms: number, input: PlayerIntent): PlayerIntent {

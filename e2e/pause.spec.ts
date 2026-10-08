@@ -101,9 +101,10 @@ test('Restart restarts Interlude 1 and scene changes keep one set of menu handle
   });
   await pause(page);
   await page.getByRole('button', { name: 'Restart', exact: true }).click();
-  await page.waitForFunction(
-    () => window.__sophieStory?.snapshot().index === 0,
-  );
+  await page.waitForFunction(() => {
+    const story = window.__sophieStory?.snapshot();
+    return story?.index === 0 && !story.paused;
+  });
   expect(
     await page.evaluate(() => window.__sophieStory!.snapshot().paused),
   ).toBe(false);
@@ -296,12 +297,27 @@ test.describe('mobile pause and fullscreen', () => {
       touchPoints: [],
     });
     await page.evaluate(() => window.__sophie!.manual(true));
-    await page.setViewportSize({ width: 390, height: 844 });
+    // Emulate physical rotation without resizing the native fullscreen window,
+    // which current Chromium rejects through Browser.setWindowBounds.
+    const rotate = (width: number, height: number) =>
+      session.send('Emulation.setDeviceMetricsOverride', {
+        width,
+        height,
+        screenWidth: width,
+        screenHeight: height,
+        deviceScaleFactor: 1,
+        mobile: true,
+        screenOrientation: {
+          type: width > height ? 'landscapePrimary' : 'portraitPrimary',
+          angle: width > height ? 90 : 0,
+        },
+      });
+    await rotate(390, 844);
     await expect(page.locator('.rotate-overlay')).toBeVisible();
     const before = await snapshot(page);
     await page.evaluate(() => window.__sophie!.advance(120));
     expect((await snapshot(page)).y).toBe(before.y);
-    await page.setViewportSize({ width: 844, height: 390 });
+    await rotate(844, 390);
     await expect(page.locator('.rotate-overlay')).toHaveCount(0);
     await pause(page);
     await page

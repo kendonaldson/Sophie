@@ -53,13 +53,14 @@ test('chase starts running, supports keyboard jumping/dashing, and advances inde
   expect(later.characters.sort()).toEqual(['Jimmy', 'sophie'].sort());
   expect(errors).toEqual([]);
 });
-test('falling behind resets the whole chase quickly: camera, both dogs, bones, charges and dialogue', async ({
+test('the bulldozer checkpoint restores camera, both dogs, bones, charges and later dialogue on every retry', async ({
   page,
 }) => {
   await openChase(page);
   await page.evaluate(() => {
     const api = window.__sophie!;
     api.chaseSection(4430);
+    api.advance(1, { moveX: 1 });
     api.advance(30, { moveX: 1, jumpPressed: true, jumpHeld: true });
     for (let i = 0; i < 3; i++)
       api.advance(24, {
@@ -70,6 +71,7 @@ test('falling behind resets the whole chase quickly: camera, both dogs, bones, c
       });
   });
   expect((await state(page)).treats).toHaveLength(2);
+  expect((await state(page)).checkpoint).toBe('before-bulldozer');
   await page.evaluate(() => {
     const a = window.__sophie!,
       s = a.snapshot();
@@ -79,24 +81,61 @@ test('falling behind resets the whole chase quickly: camera, both dogs, bones, c
   expect((await state(page)).respawning).toBe(true);
   const reset = await tick(page, 190);
   expect(reset.chase!.attempts).toBe(1);
+  expect(reset.x).toBeGreaterThanOrEqual(4200);
+  expect(reset.x).toBeLessThan(4205);
+  expect(reset.jimmy!.x).toBeGreaterThanOrEqual(4146);
+  expect(reset.jimmy!.x).toBeLessThan(4151);
+  expect(reset.chase!.x).toBeGreaterThanOrEqual(3910);
+  expect(reset.chase!.x).toBeLessThan(3913);
+  expect(reset.chase!.speed).toBe(156);
+  expect(reset.charges).toBe(1);
+  expect(reset.treats).toEqual([]);
+  expect(reset.checkpoint).toBe('before-bulldozer');
+  expect(reset.jimmy!.recoveries).toBe(0);
+  expect(reset.chase!.nextCall).toBe(3);
+  expect(reset.chase!.line).toBeUndefined();
+  await expect(page.locator('#section')).toHaveText('Over the top');
+  await expect(page.locator('#hint')).toContainText('Catch each bone');
+  // Pits and keyboard retries retain the same earned checkpoint.
+  await page.evaluate(() => {
+    window.__sophie!.place({ x: 4300, y: 660 });
+    window.__sophie!.advance(1);
+  });
+  const fall = await tick(page, 190);
+  expect(fall.x).toBeGreaterThanOrEqual(4200);
+  expect(fall.x).toBeLessThan(4205);
+  expect(fall.chase!.attempts).toBe(2);
+  await page.keyboard.press('KeyR');
+  const retry = await tick(page, 190);
+  expect(retry.checkpoint).toBe('before-bulldozer');
+  expect(retry.chase!.attempts).toBe(3);
+  expect(retry.x).toBeLessThan(4205);
+  await page.getByRole('button', { name: 'Pause game', exact: true }).click();
+  await page.getByRole('button', { name: 'Restart', exact: true }).click();
+  const restarted = await state(page);
+  expect(restarted.checkpoint).toBe('spawn');
+  expect(restarted.x).toBe(180);
+  expect(restarted.chase!.attempts).toBe(0);
+});
+test('failures before reaching the runway still retry the opening of the chase', async ({
+  page,
+}) => {
+  await openChase(page);
+  await page.evaluate(() => {
+    const a = window.__sophie!;
+    a.chaseSection(3000);
+    a.advance(1);
+    a.place({ x: 3000, y: 660 });
+    a.advance(1);
+  });
+  const reset = await tick(page, 190);
+  expect(reset.checkpoint).toBe('spawn');
   expect(reset.x).toBeLessThan(185);
   expect(reset.jimmy!.x).toBeLessThan(170);
   expect(reset.chase!.x).toBeLessThan(3);
   expect(reset.chase!.speed).toBe(134);
-  expect(reset.charges).toBe(1);
-  expect(reset.treats).toEqual([]);
-  expect(reset.checkpoint).toBe('spawn');
-  expect(reset.jimmy!.recoveries).toBe(0);
   expect(reset.chase!.nextCall).toBe(0);
   expect(reset.chase!.line).toBe("Run, Jimmy, or we'll be caught!");
-  // A pit uses exactly the same full-run reset, not a progression checkpoint.
-  await page.evaluate(() => {
-    window.__sophie!.place({ x: 800, y: 660 });
-    window.__sophie!.advance(1);
-  });
-  const fall = await tick(page, 190);
-  expect(fall.x).toBeLessThan(185);
-  expect(fall.chase!.attempts).toBe(2);
 });
 test('Jimmy recovers from a missed jump and a stuck position without stealing bones or failing the player', async ({
   page,
@@ -132,6 +171,49 @@ test('Jimmy recovers from a missed jump and a stuck position without stealing bo
   s = await state(page);
   expect(s.respawning).toBe(false);
   expect(s.chase!.phase).toBe('settle');
+});
+test('the earned checkpoint repeatedly provides a playable bulldozer approach for keyboard and touch timing', async ({
+  page,
+}) => {
+  await openChase(page);
+  const results = await page.evaluate(() => {
+    const a = window.__sophie!;
+    a.chaseSection(4100);
+    a.advance(1, { moveX: 1 });
+    const results = [];
+    for (const dashSource of [undefined, 'touch'] as const) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        a.place({ x: a.snapshot().x, y: 660 });
+        a.advance(1);
+        const retry = a.advance(22);
+        a.advance(154, { moveX: 1 });
+        a.advance(30, { moveX: 1, jumpPressed: true, jumpHeld: true });
+        for (let i = 0; i < 3; i++)
+          a.advance(24, {
+            moveX: 1,
+            aimY: -1,
+            jumpHeld: true,
+            dashPressed: true,
+            dashSource,
+          });
+        const landed = a.advance(70, { moveX: 1, jumpHeld: true });
+        results.push({ retry, landed });
+      }
+    }
+    return results;
+  });
+  for (const { retry, landed } of results) {
+    expect(retry.checkpoint).toBe('before-bulldozer');
+    expect(retry.x).toBe(4200);
+    expect(retry.charges).toBe(1);
+    expect(retry.treats).toEqual([]);
+    expect(retry.jimmy!.vx).toBe(180);
+    expect(landed.grounded).toBe(true);
+    expect(landed.x).toBeGreaterThan(4680);
+    expect(landed.y).toBe(184);
+    expect(landed.treats).toHaveLength(2);
+    expect(landed.characters.sort()).toEqual(['Jimmy', 'sophie'].sort());
+  }
 });
 test('real physics clears the bulldozer with both bone refills across forgiving dash timings', async ({
   page,
@@ -277,6 +359,35 @@ test.describe('mobile chase', () => {
     hasTouch: true,
     isMobile: true,
     userAgent: devices['iPhone 13'].userAgent,
+  });
+  test('the earned bulldozer retry keeps the tutorial and controls, and pauses safely in portrait', async ({
+    page,
+  }) => {
+    await openChase(page);
+    await page.evaluate(() => {
+      const a = window.__sophie!;
+      a.chaseSection(4100);
+      a.advance(1);
+      a.place({ x: 4300, y: 660 });
+      a.advance(1);
+    });
+    const retry = await tick(page, 190);
+    expect(retry.checkpoint).toBe('before-bulldozer');
+    await expect(page.locator('.touch-controls')).toBeVisible();
+    await expect(page.locator('#hint')).toContainText('Catch each bone');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.locator('.rotate-overlay')).toBeVisible();
+    const paused = await tick(page, 1500);
+    expect(paused.chase).toEqual(retry.chase);
+    expect(paused.x).toBe(retry.x);
+    await page.setViewportSize({ width: 844, height: 390 });
+    await expect(page.locator('.touch-controls')).toBeVisible();
+    const running = await page.evaluate(() =>
+      window.__sophie!.advance(40, { moveX: 1 }),
+    );
+    expect(running.x).toBeGreaterThan(retry.x);
+    expect(running.respawning).toBe(false);
+    expect(running.checkpoint).toBe('before-bulldozer');
   });
   test('keeps the full-axis four-arrow controller, freezes in portrait and hides input at the finale', async ({
     page,
