@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "assets": "node scripts/prepare-sprites.mjs",
+    "assets": "node scripts/prepare-sprites.mjs && node scripts/prepare-jimmy.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "typecheck": "tsc --noEmit",
@@ -26,6 +26,7 @@
     "@types/node": "^24.0.0",
     "eslint": "^9.39.0",
     "globals": "^16.4.0",
+    "jpeg-js": "^0.4.4",
     "pngjs": "^7.0.0",
     "prettier": "^3.6.0",
     "typescript": "^5.9.0",

@@ -32,4 +32,9 @@ export class Checkpoints {
   reset() {
     this.index = -1;
   }
+  restore(id: string) {
+    const index = this.level.checkpoints.findIndex((cp) => cp.id === id);
+    if (index < 0) throw new Error(`Unknown checkpoint ${id}`);
+    this.index = index;
+  }
 }

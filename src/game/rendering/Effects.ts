@@ -38,7 +38,7 @@ export class Effects {
           .image(
             Math.round(sprite.x),
             Math.round(sprite.y),
-            'sophie',
+            sprite.texture.key,
             sprite.frame.name,
           )
           .setFlipX(sprite.flipX)

@@ -13,6 +13,7 @@ export const atticEscape: LevelDefinition = {
   id: 'attic-escape',
   name: 'Attic Escape',
   music: 'assets/audio/rooftop-dash.mp3',
+  nextLevel: 'warehouse',
   width: 3780,
   height: 900,
   fallY: 790,

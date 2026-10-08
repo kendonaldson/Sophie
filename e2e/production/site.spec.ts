@@ -24,7 +24,7 @@ test('built application loads assets, draws, accepts input, and survives resize 
     if (r.status() >= 400) errors.push(`${r.status()} ${r.url()}`);
     if (r.url().includes('/assets/')) assets.push(r.url());
   });
-  await page.goto('./');
+  await page.goto('./?test&level=warehouse');
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
   await expect
@@ -117,7 +117,11 @@ test('built URLs and original/generated images use the configured deployment pat
     const response = await request.get(new URL(url, baseURL!).href);
     expect(response.ok(), url).toBe(true);
   }
-  for (const file of ['assets/sophie.png', 'assets/sophie-source.png']) {
+  for (const file of [
+    'assets/sophie.png',
+    'assets/sophie-source.png',
+    'assets/jimmy.png',
+  ]) {
     const response = await request.get(new URL(file, baseURL!).href);
     expect(response.ok()).toBe(true);
     const bytes = await response.body();
@@ -126,11 +130,13 @@ test('built URLs and original/generated images use the configured deployment pat
     ]);
     expect(bytes.length).toBeGreaterThan(1000);
   }
-  const track = await request.get(
-    new URL('assets/audio/rooftop-dash.mp3', baseURL!).href,
-  );
-  expect(track.ok()).toBe(true);
-  expect(await track.body()).toEqual(
-    readFileSync('public/assets/audio/rooftop-dash.mp3'),
-  );
+  for (const file of ['rooftop-dash.mp3', 'factory-pulse.mp3']) {
+    const track = await request.get(
+      new URL(`assets/audio/${file}`, baseURL!).href,
+    );
+    expect(track.ok()).toBe(true);
+    expect(await track.body()).toEqual(
+      readFileSync(`public/assets/audio/${file}`),
+    );
+  }
 });

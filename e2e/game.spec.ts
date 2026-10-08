@@ -187,7 +187,7 @@ test('loads Level 1 without console errors; real keyboard movement, jump, dash, 
   await expect.poll(async () => (await snapshot(page)).paused).toBe(false);
   expect(errors).toEqual([]);
 });
-test('full route uses high jump, long jump, treat recharge, second dash, factory ending', async ({
+test('full rooftop route uses the learned moves and transitions straight into the warehouse', async ({
   page,
 }) => {
   await boot(page, true);
@@ -217,27 +217,22 @@ test('full route uses high jump, long jump, treat recharge, second dash, factory
   await expect(page.locator('.tutorial-card')).toBeHidden();
   await runTo(page, atticEscape.exit.x - 24);
   await advance(page, 110, { moveX: 1 });
+  expect((await snapshot(page)).levelId).toBe('warehouse');
   await expect(
     page.getByRole('heading', { name: 'TO BE CONTINUED' }),
-  ).toBeVisible();
-  expect(
-    await page
-      .locator('#overlay')
-      .evaluate((e) => getComputedStyle(e).backgroundColor),
-  ).toBe('rgb(0, 0, 0)');
-  const end = await snapshot(page);
-  await expect(music).toHaveJSProperty('paused', true);
-  await advance(page, 100, { moveX: 1, jumpPressed: true, dashPressed: true });
-  expect((await snapshot(page)).x).toBe(end.x);
-  await page.getByRole('button', { name: 'Play again' }).click();
+  ).toBeHidden();
+  await advance(page, 500);
+  const inside = await snapshot(page);
+  expect(inside.levelId).toBe('warehouse');
+  expect(inside.intro).toBe(false);
+  expect(inside.jimmy?.enabled).toBe(true);
+  expect(inside.ending).toBe(false);
+  await expect(music).toHaveCount(1);
+  await expect(music).toHaveAttribute('src', '/assets/audio/factory-pulse.mp3');
   await expect(music).toHaveJSProperty('paused', false);
-  expect(
-    await music.evaluate((a: HTMLAudioElement) => a.currentTime),
-  ).toBeLessThan(5);
-  s = await advance(page, 1);
-  expect(s.x).toBe(160);
-  expect(s.charges).toBe(1);
-  expect(s.ending).toBe(false);
+  await expect
+    .poll(() => music.evaluate((a: HTMLAudioElement) => a.currentTime))
+    .toBeGreaterThan(0);
 });
 test('missing the final treat gives no airborne recharge and quickly returns to safe anchor', async ({
   page,
