@@ -1,6 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { PlayerIntent } from '../src/game/input/Input';
 import type { GameSnapshot } from '../src/game/scenes/TestApi';
+import { atticEscape } from '../src/game/levels/atticEscape';
+const factory = atticEscape.platforms.find((p) => p.id === 'warehouse')!;
 async function boot(page: Page, manual = false) {
   await page.goto('/?test');
   await page.waitForFunction(() => Boolean(window.__sophie));
@@ -33,7 +35,12 @@ async function runTo(page: Page, x: number) {
     return a.snapshot();
   }, x);
 }
-async function reachFinalRoof(page: Page, dashStart = 2140, dashFrames = 12) {
+async function reachFinalRoof(
+  page: Page,
+  dashStart = 2140,
+  dashFrames = 12,
+  finalApproachX = 2720,
+) {
   await advance(page, 70);
   await runTo(page, 407);
   await advance(page, 80, { moveX: 1, jumpPressed: true, jumpHeld: true });
@@ -70,11 +77,58 @@ async function reachFinalRoof(page: Page, dashStart = 2140, dashFrames = 12) {
   s = await advance(page, 76, { moveX: 1, jumpPressed: true, jumpHeld: true });
   expect(s.vx).toBeGreaterThan(s.physics.maxRunSpeed);
   expect(s.checkpoint).toBe('long');
-  await runTo(page, 2746);
+  await runTo(page, finalApproachX);
   s = await snapshot(page);
   expect(s.charges).toBe(1);
   expect(s.checkpoint).toBe('combo');
-  await expect(page.locator('.tutorial-card')).toBeHidden();
+  await expect(
+    page.getByRole('heading', { name: 'Long jump + dash', exact: true }),
+  ).toBeVisible();
+  await expect(page.locator('.tutorial-card')).toContainText(
+    'Catch the bone, then press ↑ + → + X.',
+  );
+}
+async function finalLongJump(page: Page, dashFrames = 9) {
+  await advance(page, dashFrames, { moveX: 1, dashPressed: true });
+  const launch = await advance(page, 1, {
+    moveX: 1,
+    jumpPressed: true,
+    jumpHeld: true,
+  });
+  expect(launch.charges).toBe(0);
+  expect(launch.vx).toBeGreaterThan(launch.physics.maxRunSpeed);
+}
+async function collectFinalBone(page: Page) {
+  const collected = await page.evaluate(() => {
+    const a = window.__sophie!;
+    for (let i = 0; i < 180; i++) {
+      const s = a.snapshot();
+      if (s.treats.includes('crossing-treat') || s.respawning) return s;
+      a.advance(1, { moveX: 1, jumpHeld: true });
+    }
+    return a.snapshot();
+  });
+  expect(collected.treats).toContain('crossing-treat');
+  expect(collected.charges).toBe(1);
+  expect(collected.grounded).toBe(false);
+  return collected;
+}
+async function finishFinalAttempt(page: Page) {
+  return page.evaluate((factory) => {
+    const a = window.__sophie!;
+    for (let i = 0; i < 240; i++) {
+      const s = a.snapshot();
+      if (s.respawning || (s.grounded && s.x >= factory.x - 15)) return s;
+      a.advance(1, { moveX: 1, jumpHeld: true });
+    }
+    return a.snapshot();
+  }, factory);
+}
+async function retryFinalRoof(page: Page, x: number) {
+  await page.keyboard.press('KeyR');
+  await advance(page, 24);
+  await runTo(page, x);
+  expect((await snapshot(page)).grounded).toBe(true);
 }
 test('first long-jump gap allows earlier takeoff and varied dash-to-jump timing', async ({
   page,
@@ -146,7 +200,8 @@ test('full route uses high jump, long jump, treat recharge, second dash, factory
     a.currentTime = 20;
   });
   await reachFinalRoof(page);
-  await advance(page, 24, { moveX: 1, jumpPressed: true, jumpHeld: true });
+  await finalLongJump(page);
+  await collectFinalBone(page);
   let s = await advance(page, 21, {
     moveX: 1,
     aimY: -1,
@@ -155,16 +210,12 @@ test('full route uses high jump, long jump, treat recharge, second dash, factory
   });
   expect(s.charges).toBe(0);
   expect(s.grounded).toBe(false);
-  s = await advance(page, 40, { moveX: 1, jumpHeld: true });
-  expect(s.treats).toContain('crossing-treat');
-  expect(s.charges).toBe(1);
-  expect(s.grounded).toBe(false);
-  s = await advance(page, 21, { moveX: 1, dashPressed: true, jumpHeld: true });
-  expect(s.charges).toBe(0);
-  s = await advance(page, 70, { moveX: 1, jumpHeld: true });
+  s = await finishFinalAttempt(page);
   expect(s.grounded).toBe(true);
-  expect(s.x).toBeGreaterThan(3100);
-  await runTo(page, 3430);
+  expect(s.y).toBe(factory.y);
+  await runTo(page, factory.x + 25);
+  await expect(page.locator('.tutorial-card')).toBeHidden();
+  await runTo(page, atticEscape.exit.x - 24);
   await advance(page, 110, { moveX: 1 });
   await expect(
     page.getByRole('heading', { name: 'TO BE CONTINUED' }),
@@ -224,20 +275,107 @@ test('collected traversal treat returns after a failed attempt', async ({
 }) => {
   await boot(page, true);
   await reachFinalRoof(page);
-  await advance(page, 24, { moveX: 1, jumpPressed: true, jumpHeld: true });
-  await advance(page, 21, {
-    moveX: 1,
-    aimY: -1,
-    dashPressed: true,
-    jumpHeld: true,
-  });
-  let s = await advance(page, 40, { moveX: 1, jumpHeld: true });
-  expect(s.treats).toContain('crossing-treat');
-  await advance(page, 190);
-  s = await advance(page, 24);
+  await finalLongJump(page);
+  await collectFinalBone(page);
+  const failed = await finishFinalAttempt(page);
+  expect(failed.respawning).toBe(true);
+  expect(failed.grounded).toBe(false);
+  let s = await advance(page, 24);
   expect(s.checkpoint).toBe('combo');
   expect(s.treats).not.toContain('crossing-treat');
   expect(s.charges).toBe(1);
+  // Retry traverses the same route and really collects the restored bone again.
+  await runTo(page, 2720);
+  await finalLongJump(page);
+  await collectFinalBone(page);
+  s = await advance(page, 21, {
+    moveX: 1,
+    aimY: -1,
+    jumpHeld: true,
+    dashPressed: true,
+  });
+  expect(s.charges).toBe(0);
+  expect((await finishFinalAttempt(page)).grounded).toBe(true);
+});
+
+test('final long jump plus bone dash allows varied takeoff and reaction timing', async ({
+  page,
+}) => {
+  await boot(page, true);
+  await reachFinalRoof(page, 2140, 12, 2700);
+  for (const [start, dashFrames, reactionFrames] of [
+    [2700, 6, 0],
+    [2710, 9, 6],
+    [2720, 12, 12],
+    [2740, 15, 0],
+    [2750, 6, 12],
+  ]) {
+    await retryFinalRoof(page, start!);
+    await finalLongJump(page, dashFrames!);
+    await collectFinalBone(page);
+    await advance(page, reactionFrames!, { moveX: 1, jumpHeld: true });
+    await advance(page, 21, {
+      moveX: 1,
+      aimY: -1,
+      dashPressed: true,
+      jumpHeld: true,
+    });
+    const landed = await finishFinalAttempt(page);
+    expect(
+      landed.respawning,
+      JSON.stringify({ start, dashFrames, reactionFrames, landed }),
+    ).toBe(false);
+    expect(landed.grounded).toBe(true);
+    expect(landed.y).toBe(factory.y);
+  }
+});
+
+test('even the latest long jump cannot clear the factory gap without a second dash', async ({
+  page,
+}) => {
+  await boot(page, true);
+  await reachFinalRoof(page);
+  // Start with the body at the roof lip and sweep the entire combo window,
+  // including jumping after the horizontal dash has already left the roof.
+  for (let delay = 1; delay <= 23; delay++) {
+    await retryFinalRoof(page, 2763);
+    await advance(page, delay, { moveX: 1, dashPressed: true });
+    await advance(page, 1, { moveX: 1, jumpPressed: true, jumpHeld: true });
+    const failed = await finishFinalAttempt(page);
+    expect(failed.respawning, `dash-to-jump delay ${delay}`).toBe(true);
+    expect(failed.grounded).toBe(false);
+    expect(failed.checkpoint).toBe('combo');
+  }
+});
+
+test('an ordinary jump and air dash cannot reach the final refill', async ({
+  page,
+}) => {
+  await boot(page, true);
+  await reachFinalRoof(page);
+  for (const start of [2746, 2780]) {
+    for (const delay of [1, 18, 36, 54, 72, 90, 108]) {
+      for (const aimY of [-1, 0] as const) {
+        // The later launch uses coyote time after walking off the lip.
+        await retryFinalRoof(page, 2746);
+        await runTo(page, start);
+        await advance(page, delay, {
+          moveX: 1,
+          jumpPressed: true,
+          jumpHeld: true,
+        });
+        await advance(page, 21, {
+          moveX: 1,
+          aimY,
+          dashPressed: true,
+          jumpHeld: true,
+        });
+        const failed = await finishFinalAttempt(page);
+        expect(failed.treats).not.toContain('crossing-treat');
+        expect(failed.respawning).toBe(true);
+      }
+    }
+  }
 });
 test('resize leaves physics unchanged and keeps the world sharp and DOM HUD usable', async ({
   page,
