@@ -1,11 +1,25 @@
 import type { Rect } from '../player/CollisionAssist';
+import type { ChaseDefinition } from '../chase/config';
 export interface Point {
   x: number;
   y: number;
 }
 export interface PlatformDefinition extends Rect {
   id: string;
-  style: 'home' | 'brick' | 'warehouse' | 'steel' | 'crate' | 'catwalk';
+  style:
+    | 'home'
+    | 'brick'
+    | 'warehouse'
+    | 'steel'
+    | 'crate'
+    | 'catwalk'
+    | 'street'
+    | 'hydrant'
+    | 'mailbox'
+    | 'bush'
+    | 'barrier'
+    | 'bulldozer'
+    | 'engine';
 }
 export interface MovingPlatformDefinition {
   id: string;
@@ -65,7 +79,8 @@ export interface LevelDefinition {
   name: string;
   /** Asset path relative to public/, played on repeat during gameplay. */
   music?: string;
-  theme?: 'rooftops' | 'warehouse';
+  theme?: 'rooftops' | 'warehouse' | 'chase';
+  chase?: ChaseDefinition;
   nextLevel?: string;
   companionSpawn?: Point;
   movingPlatforms?: MovingPlatformDefinition[];
@@ -131,6 +146,46 @@ export function validateLevel(level: LevelDefinition): void {
         Math.abs(s.y - p.y) < 1 && p.x >= s.x + 32 && p.x <= s.x + s.width - 32,
     );
   if (!safe(level.playerSpawn)) fail('spawn must stand on safe terrain');
+  if (level.chase) {
+    const { scroll, view, deadEnd, calls } = level.chase;
+    if (
+      !level.companionSpawn ||
+      !safe(level.companionSpawn) ||
+      !safe(deadEnd.sophie) ||
+      !safe(deadEnd.jimmy) ||
+      !Number.isFinite(deadEnd.triggerX) ||
+      deadEnd.triggerX <= level.playerSpawn.x ||
+      deadEnd.triggerX >= level.width ||
+      !Number.isFinite(deadEnd.feetY) ||
+      ![
+        scroll.initialSpeed,
+        scroll.acceleration,
+        scroll.lookAhead,
+        view.width,
+        view.height,
+      ].every((n) => Number.isFinite(n) && n > 0) ||
+      !Number.isFinite(scroll.boundaryInset) ||
+      scroll.boundaryInset < 0 ||
+      scroll.boundaryInset >= scroll.lookAhead ||
+      !Number.isFinite(view.top) ||
+      view.top < 0 ||
+      view.top + view.height > level.height ||
+      scroll.stages.some(
+        (stage, i) =>
+          !Number.isFinite(stage.fromX) ||
+          !Number.isFinite(stage.speed) ||
+          stage.speed <= 0 ||
+          (i > 0 && stage.fromX <= scroll.stages[i - 1]!.fromX),
+      ) ||
+      calls.some(
+        (call, i) =>
+          !Number.isFinite(call.fromX) ||
+          !call.text ||
+          (i > 0 && call.fromX <= calls[i - 1]!.fromX),
+      )
+    )
+      fail('invalid chase configuration');
+  }
   for (const cp of level.checkpoints)
     if (
       !rectValid(cp.area) ||

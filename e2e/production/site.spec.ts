@@ -2,7 +2,7 @@ import { devices, expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { interludeLines } from '../../src/game/story/interlude1';
 
-test('production interlude plays through to the only ending without exposing test APIs', async ({
+test('production interlude hands off to the playable chase without exposing test APIs', async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -21,17 +21,29 @@ test('production interlude plays through to the only ending without exposing tes
         .getByRole('button', { name: 'Continue · X', exact: true })
         .click();
   }
+  await expect(page.locator('.chase-ui p')).toHaveText(
+    "Run, Jimmy, or we'll be caught!",
+  );
+  await expect(page.locator('#section')).toHaveText('The Chase');
   await expect(
     page.getByRole('heading', { name: 'TO BE CONTINUED' }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   expect(
     await page.evaluate(() => [window.__sophie, window.__sophieStory]),
   ).toEqual([undefined, undefined]);
-  await expect(page.locator('audio')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Play again' }).click();
-  await expect(page.locator('#section')).toHaveText('Open air');
   await expect(page.locator('audio')).toHaveCount(1);
+  await expect(page.locator('audio')).toHaveAttribute(
+    'src',
+    /assets\/audio\/chase-loop.mp3$/,
+  );
+  await expect(page.locator('audio')).toHaveJSProperty('loop', true);
   await expect(page.locator('.story-ui')).toHaveCount(0);
+  await page
+    .getByRole('combobox', { name: 'Debug level', exact: true })
+    .selectOption('attic-escape');
+  await page.getByRole('button', { name: 'Load', exact: true }).click();
+  await expect(page.locator('#section')).toHaveText('Open air');
+  await expect(page.locator('.chase-ui')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 
@@ -239,7 +251,11 @@ test('built URLs and original/generated images use the configured deployment pat
     ]);
     expect(bytes.length).toBeGreaterThan(1000);
   }
-  for (const file of ['rooftop-dash.mp3', 'factory-pulse.mp3']) {
+  for (const file of [
+    'rooftop-dash.mp3',
+    'factory-pulse.mp3',
+    'chase-loop.mp3',
+  ]) {
     const track = await request.get(
       new URL(`assets/audio/${file}`, baseURL!).href,
     );

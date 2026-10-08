@@ -813,3 +813,42 @@ kbd {
   line-height: 1.35;
   margin-top: 5px;
 }
+
+.chase-ui {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+.chase-ui .story-bubble {
+  left: 18px;
+  top: 72px;
+  max-width: min(360px, 58%);
+  padding: 9px 13px;
+  font-size: 14px;
+}
+.chase-ui .story-bubble strong {
+  font-size: 9px;
+}
+.chase-ui .story-bubble p {
+  margin-top: 3px;
+}
+.chase-mode .game-shell {
+  background: #243d48;
+}
+.chase-finale .world-ui,
+.chase-finale .touch-controls {
+  visibility: hidden;
+  pointer-events: none;
+}
+.chase-finale .chase-ui .story-bubble {
+  top: 20%;
+}
+@media (max-height: 500px) {
+  .chase-ui .story-bubble {
+    top: 48px;
+    padding: 7px 10px;
+    font-size: 12px;
+    max-width: 47%;
+  }
+}

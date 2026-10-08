@@ -1,0 +1,115 @@
+import { physics } from '../config/physics';
+import { companionConfig } from '../companion/config';
+import type { LevelDefinition, PlatformDefinition } from './types';
+const surface = (
+  id: string,
+  x: number,
+  y: number,
+  width: number,
+  height = 180,
+  style: PlatformDefinition['style'] = 'street',
+): PlatformDefinition => ({ id, x, y, width, height, style });
+export const chase: LevelDefinition = {
+  id: 'the-chase',
+  name: 'The Chase',
+  theme: 'chase',
+  width: 7200,
+  height: 800,
+  fallY: 650,
+  playerSpawn: { x: 180, y: 420 },
+  companionSpawn: {
+    x: 180 - (physics.maxRunSpeed * companionConfig.followDelayMs) / 1000,
+    y: 420,
+  },
+  music: 'assets/audio/chase-loop.mp3',
+  platforms: [
+    surface('quiet-street', 0, 420, 980),
+    surface('hydrant', 530, 392, 24, 28, 'hydrant'),
+    surface('mailbox', 775, 382, 32, 38, 'mailbox'),
+    surface('after-pothole', 1040, 420, 540),
+    surface('bush', 1290, 388, 64, 32, 'bush'),
+    surface('roadworks', 1690, 420, 520),
+    surface('barricade-one', 1905, 388, 55, 32, 'barrier'),
+    surface('road-plate', 2350, 406, 205, 18, 'steel'),
+    surface('broken-road', 2710, 420, 540),
+    surface('yard-step', 2980, 390, 115, 30, 'crate'),
+    surface('yard-high', 3095, 350, 155, 70, 'crate'),
+    surface('pallet-stack', 3375, 385, 260, 90, 'crate'),
+    surface('yard-deck', 3690, 315, 230, 20, 'catwalk'),
+    surface('dozer-runway', 3990, 420, 570),
+    // The tall cab is a real solid, not a scripted launch or a lethal hazard.
+    surface('bulldozer', 4680, 184, 145, 236, 'bulldozer'),
+    surface('dozer-engine', 4825, 310, 100, 110, 'engine'),
+    surface('dozer-landing', 4925, 420, 415),
+    surface('panic-crate', 5130, 386, 90, 34, 'crate'),
+    surface('panic-road', 5420, 420, 305),
+    surface('panic-barrier', 5480, 388, 52, 32, 'barrier'),
+    surface('panic-step', 5630, 384, 95, 36, 'crate'),
+    surface('high-freight', 5725, 344, 150, 76, 'crate'),
+    surface('scaffold-bridge', 6010, 365, 210, 18, 'catwalk'),
+    surface('last-scaffold', 6330, 390, 170, 18, 'catwalk'),
+    surface('dead-end-floor', 6500, 420, 700),
+    surface('unfinished-wall', 6980, 60, 80, 360, 'steel'),
+  ],
+  treats: [
+    { id: 'dozer-bone-one', x: 4510, y: 310 },
+    { id: 'dozer-bone-two', x: 4575, y: 245 },
+  ],
+  checkpoints: [],
+  sections: [
+    {
+      fromX: 0,
+      title: 'The Chase',
+      hint: 'Keep right! Z / Space to jump. The left edge will catch you.',
+    },
+    {
+      fromX: 1650,
+      title: 'Under construction',
+      hint: 'Read the orange edges. Jump, steer, and dash through the broken road.',
+    },
+    {
+      fromX: 2900,
+      title: 'A very bad shortcut',
+      hint: 'Jump between the crates. Up + X adds height when you need it.',
+    },
+    {
+      fromX: 4050,
+      title: 'Over the top',
+      hint: 'Jump, then dash up-right. Catch each bone and dash up-right again.',
+    },
+    {
+      fromX: 5000,
+      title: 'Absolutely no stopping',
+      hint: 'Crates, road, scaffolds. Keep going!',
+    },
+    { fromX: 6400, title: 'Nowhere to go', hint: 'Well. This is awkward.' },
+  ],
+  chase: {
+    scroll: {
+      initialSpeed: 134,
+      acceleration: 12,
+      lookAhead: 290,
+      boundaryInset: 10,
+      stages: [
+        { fromX: 1690, speed: 146 },
+        { fromX: 2980, speed: 156 },
+        { fromX: 5000, speed: 172 },
+      ],
+    },
+    view: { width: 640, height: 360, top: 120 },
+    deadEnd: {
+      triggerX: 6700,
+      feetY: 420,
+      sophie: { x: 6810, y: 420 },
+      jimmy: { x: 6765, y: 420 },
+    },
+    calls: [
+      { fromX: 1160, text: "Don't run!" },
+      { fromX: 2200, text: 'Come here!' },
+      { fromX: 3520, text: 'Stop!' },
+      { fromX: 5050, text: 'Hey!' },
+      { fromX: 6170, text: 'Come back here!' },
+    ],
+  },
+  exit: { x: 6700, y: 385, width: 200, height: 35 },
+};

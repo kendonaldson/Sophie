@@ -16,6 +16,9 @@ import { createAnimations } from '../player/animations';
 import { overlaps } from '../player/CollisionAssist';
 import { atticEscape } from '../levels/atticEscape';
 import { warehouse } from '../levels/warehouse';
+import { chase } from '../levels/chase';
+import { ChaseRun } from '../chase/ChaseRun';
+import { ChaseArt } from '../rendering/ChaseArt';
 import { Checkpoints } from '../levels/Checkpoints';
 import { loadLevel } from '../levels/LevelLoader';
 import { createTreatTexture, type DogTreat } from '../entities/DogTreat';
@@ -30,6 +33,8 @@ import type { Hud } from '../../ui/Hud';
 import type { LevelDefinition } from '../levels/types';
 import type { GameTestApi } from './TestApi';
 import { sceneDestinations } from './destinations';
+const playableLevel = (id: string) =>
+  id === chase.id ? chase : id === warehouse.id ? warehouse : atticEscape;
 export class GameScene extends Phaser.Scene {
   private player!: Player;
   private inputSource!: InputSource;
@@ -38,7 +43,9 @@ export class GameScene extends Phaser.Scene {
   private debugSelector?: DebugLevelSelector;
   private checkpoints!: Checkpoints;
   private treats: DogTreat[] = [];
-  private art!: WorldArt | WarehouseArt;
+  private art!: WorldArt | WarehouseArt | ChaseArt;
+  private chase?: ChaseRun;
+  private chaseAttempts = 0;
   private effects!: Effects;
   private machinery?: Machinery;
   private jimmy?: Jimmy;
@@ -67,8 +74,7 @@ export class GameScene extends Phaser.Scene {
     super('Game');
   }
   init(data: { levelId?: string } = {}) {
-    if (data.levelId)
-      this.level = data.levelId === 'warehouse' ? warehouse : atticEscape;
+    if (data.levelId) this.level = playableLevel(data.levelId);
     this.manual = false;
     this.leavingScene = false;
     this.debugFinaleEnabled = true;
@@ -113,7 +119,7 @@ export class GameScene extends Phaser.Scene {
       (level) =>
         level.id === 'interlude-1'
           ? this.startInterlude()
-          : this.buildLevel(level.id === 'warehouse' ? warehouse : atticEscape),
+          : this.buildLevel(playableLevel(level.id)),
     );
     const unbindHud = this.hud.bind(
       () => this.togglePause(),
@@ -134,6 +140,8 @@ export class GameScene extends Phaser.Scene {
       window.removeEventListener('blur', this.onBlur);
       document.removeEventListener('visibilitychange', this.onVisibility);
       this.effects?.clear();
+      this.chase?.destroy();
+      this.chase = undefined;
       this.jimmy?.effects.clear();
       this.colliders = [];
       this.terrain = undefined;
@@ -150,13 +158,17 @@ export class GameScene extends Phaser.Scene {
       this.installTestApi();
       if (
         !this.testEntryApplied &&
-        new URLSearchParams(location.search).get('level') === 'warehouse'
+        new URLSearchParams(location.search).has('level')
       )
-        this.buildLevel(warehouse);
+        this.buildLevel(
+          playableLevel(new URLSearchParams(location.search).get('level')!),
+        );
       this.testEntryApplied = true;
     }
   }
   private buildLevel(level: LevelDefinition, fade = false) {
+    this.chase?.destroy();
+    this.chase = undefined;
     this.colliders.forEach((c) => c.destroy());
     this.colliders = [];
     this.terrain?.destroy(true);
@@ -175,7 +187,7 @@ export class GameScene extends Phaser.Scene {
     this.elapsed = 0;
     this.accumulator = 0;
     this.exitWalkMs = 0;
-    this.introMs = level.companionSpawn ? 3400 : 0;
+    this.introMs = level.theme === 'warehouse' ? 3400 : 0;
     this.fadeInMs = fade ? simulation.endingFadeMs : 0;
     this.physics.world.setBounds(
       0,
@@ -206,13 +218,23 @@ export class GameScene extends Phaser.Scene {
           this.physics.add.collider(actor.sprite, this.machinery.group),
         );
     }
-    this.art = this.machinery
-      ? new WarehouseArt(this, level, this.machinery)
-      : new WorldArt(this, level);
+    this.art = level.chase
+      ? new ChaseArt(this, level)
+      : this.machinery
+        ? new WarehouseArt(this, level, this.machinery)
+        : new WorldArt(this, level);
     this.effects = new Effects(this);
     this.followCamera = new FollowCamera(this.cameras.main, level);
     this.followCamera.snap(this.player);
     this.clearInput();
+    if (level.chase)
+      this.chase = new ChaseRun(
+        this,
+        level,
+        this.player,
+        this.jimmy!,
+        this.hud,
+      );
     this.hud.showPause(false);
     this.hud.setFade(fade ? 1 : 0);
     this.hud.setLevel(level);
@@ -244,7 +266,10 @@ export class GameScene extends Phaser.Scene {
   };
   private syncMusic() {
     this.music?.setActive(
-      !this.paused && !this.orientationBlocked && !this.ending,
+      !this.paused &&
+        !this.orientationBlocked &&
+        !this.ending &&
+        !this.chase?.finale,
     );
   }
   private clearInput() {
@@ -272,7 +297,8 @@ export class GameScene extends Phaser.Scene {
     if (
       this.ending ||
       this.respawnRemaining ||
-      (this.sling && !this.sling.done)
+      (this.sling && !this.sling.done) ||
+      this.chase?.finale
     )
       return;
     this.paused = false;
@@ -282,6 +308,11 @@ export class GameScene extends Phaser.Scene {
     this.clearInput();
   }
   private resetPlayer() {
+    if (this.level.chase) {
+      this.chaseAttempts++;
+      this.buildLevel(this.level);
+      return;
+    }
     const spawn = this.checkpoints.spawn;
     this.machinery?.reset(spawn);
     this.player.respawn(spawn);
@@ -308,6 +339,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (this.ending) {
+      if (this.level.chase) return;
       this.endingMs += ms;
       this.hud.setFade(Math.min(1, this.endingMs / simulation.endingFadeMs));
       if (this.endingMs >= simulation.endingFadeMs) {
@@ -329,6 +361,19 @@ export class GameScene extends Phaser.Scene {
       }
       return;
     }
+    if (this.chase?.finale) {
+      if (this.chase.stepFinale(ms)) {
+        this.ending = true;
+        this.hud.showEnding();
+      }
+      this.effects.update(
+        ms,
+        this.player.sprite,
+        this.chase.finale.state.phase === 'launch',
+      );
+      return;
+    }
+    if (this.chase) intent = this.chase.intent(ms, intent);
     if (this.exitWalkMs > 0) {
       this.exitWalkMs = Math.max(0, this.exitWalkMs - ms);
       const door = this.level.exit;
@@ -464,13 +509,20 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.checkpoints.update(this.player.feet, this.player.grounded);
-    if (!riding)
+    if (!riding && !this.chase)
       this.jimmy?.afterStep(
         ms,
         this.player,
         this.checkpoints.spawn,
         this.machinery?.waitingAtGate(this.jimmy.actor),
       );
+    if (this.chase) {
+      if (this.chase.afterStep(ms)) this.beginRespawn();
+      if (this.chase.finale) {
+        this.clearInput();
+        this.syncMusic();
+      }
+    }
     const fallY =
       this.level.theme === 'warehouse'
         ? Math.min(this.level.fallY, this.checkpoints.spawn.y + 260)
@@ -492,7 +544,7 @@ export class GameScene extends Phaser.Scene {
       this.clearInput();
       this.sling = new FinalSling(finale, this.player, this.jimmy.actor);
     }
-    if (overlaps(this.player.body, this.level.exit)) {
+    if (!this.chase && overlaps(this.player.body, this.level.exit)) {
       this.clearInput();
       if (this.jimmy && this.finaleComplete) this.exitWalkMs = 750;
       else if (!this.jimmy) this.finishLevel();
@@ -522,17 +574,24 @@ export class GameScene extends Phaser.Scene {
         if (this.leavingScene) return;
       }
     }
-    if ((!this.sling || this.sling.done) && !this.exitWalkMs) {
+    if (
+      (!this.sling || this.sling.done) &&
+      !this.exitWalkMs &&
+      !this.chase?.finale
+    ) {
       this.player.render();
       this.jimmy?.actor.render();
     }
-    this.followCamera.update(
-      Math.min(delta, simulation.maxFrameMs),
-      this.player,
-    );
+    if (this.chase) this.chase.present();
+    else
+      this.followCamera.update(
+        Math.min(delta, simulation.maxFrameMs),
+        this.player,
+      );
     const c = this.cameras.main;
     if (this.art instanceof WarehouseArt)
       this.art.update(c.width, c.height, c.scrollX, c.scrollY, c.zoom);
+    else if (this.art instanceof ChaseArt) this.art.update();
     else this.art.update(c.width, c.height, c.scrollX);
     const section =
       [...this.level.sections]
@@ -586,6 +645,12 @@ export class GameScene extends Phaser.Scene {
           id: g.definition.id,
           open: g.open,
         })),
+        chase: this.chase
+          ? { ...this.chase.snapshot(), attempts: this.chaseAttempts }
+          : undefined,
+        characters: this.children.list
+          .filter((c) => c instanceof Phaser.GameObjects.Sprite)
+          .map((c) => c.name || (c as Phaser.GameObjects.Sprite).texture.key),
         intro: this.introMs > 0,
         finale: this.sling?.phase,
         finaleComplete: this.finaleComplete,
@@ -606,8 +671,20 @@ export class GameScene extends Phaser.Scene {
         return api.snapshot();
       },
       restart: () => this.restart(),
-      loadLevel: (id) =>
-        this.buildLevel(id === 'warehouse' ? warehouse : atticEscape),
+      loadLevel: (id) => this.buildLevel(playableLevel(id)),
+      chaseSection: (x) => {
+        if (!this.chase) throw new Error('Not in the chase');
+        const platform = [...this.level.platforms]
+          .reverse()
+          .find((p) => x >= p.x + 16 && x <= p.x + p.width - 16);
+        if (!platform) throw new Error('No safe chase platform');
+        this.player.respawn({ x, y: platform.y });
+        this.jimmy!.reconcile(this.player.feet);
+        this.chase.scroll.x = Math.max(
+          0,
+          x - this.level.chase!.scroll.lookAhead,
+        );
+      },
       checkpoint: (id) => {
         this.introMs = 0;
         this.hud.showDialogue();
