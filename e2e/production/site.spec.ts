@@ -1,0 +1,113 @@
+import { expect, test } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+
+test('built application loads assets, draws, accepts input, and survives resize under its base path', async ({
+  page,
+  baseURL,
+}) => {
+  const errors: string[] = [];
+  const assets: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => {
+    if (m.type() === 'error') errors.push(m.text());
+  });
+  page.on('requestfailed', (r) =>
+    errors.push(`${r.method()} ${r.url()}: ${r.failure()?.errorText}`),
+  );
+  page.on('response', (r) => {
+    if (r.status() >= 400) errors.push(`${r.status()} ${r.url()}`);
+    if (r.url().includes('/assets/')) assets.push(r.url());
+  });
+  await page.goto('./');
+  const canvas = page.locator('canvas');
+  await expect(canvas).toBeVisible();
+  await expect
+    .poll(() => assets.some((url) => url.endsWith('/assets/sophie.png')))
+    .toBe(true);
+  await expect(page.locator('#section')).toHaveText('Open air');
+  expect(await page.evaluate(() => window.__sophie)).toBeUndefined();
+  // Keep a sample in the test's page context; no production debug API is needed.
+  await page.waitForTimeout(180);
+  await canvas.evaluate((c) => {
+    const a = c as HTMLCanvasElement;
+    (window as Window & { pixelBaseline?: Uint8ClampedArray }).pixelBaseline = a
+      .getContext('2d')!
+      .getImageData(0, 0, a.width, a.height).data;
+  });
+  await page.keyboard.down('ArrowRight');
+  await page.waitForTimeout(520);
+  await page.keyboard.up('ArrowRight');
+  await page.keyboard.press('Escape');
+  await expect(
+    page.getByRole('heading', { name: 'A little breather.' }),
+  ).toBeVisible();
+  const changedFraction = await canvas.evaluate((c) => {
+    const a = c as HTMLCanvasElement,
+      after = a.getContext('2d')!.getImageData(0, 0, a.width, a.height).data;
+    const before = (window as Window & { pixelBaseline?: Uint8ClampedArray })
+      .pixelBaseline!;
+    let changed = 0;
+    for (let i = 0; i < after.length; i += 4)
+      if (
+        after[i] !== before[i] ||
+        after[i + 1] !== before[i + 1] ||
+        after[i + 2] !== before[i + 2]
+      )
+        changed++;
+    return changed / (a.width * a.height);
+  });
+  expect(changedFraction).toBeGreaterThan(0.0025);
+  await page.getByRole('button', { name: 'Keep exploring' }).click();
+  await page.keyboard.down('KeyZ');
+  await page.keyboard.down('ArrowRight');
+  await page.keyboard.press('KeyX');
+  await expect(page.locator('#dash-hud')).toHaveAttribute(
+    'aria-label',
+    '0 of 2 dash charges available',
+  );
+  await page.keyboard.up('KeyZ');
+  await page.keyboard.up('ArrowRight');
+  await page.keyboard.press('Escape');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(100);
+  expect(
+    await canvas.evaluate((c) => getComputedStyle(c).imageRendering),
+  ).toMatch(/pixelated|crisp-edges/);
+  expect(
+    await canvas.evaluate(
+      (c) => (c as HTMLCanvasElement).getContext('2d')!.imageSmoothingEnabled,
+    ),
+  ).toBe(false);
+  await expect(page.locator('#dash-hud')).toBeVisible();
+  const hud = await page.locator('#dash-hud').boundingBox();
+  expect(hud!.x + hud!.width).toBeLessThanOrEqual(390);
+  expect(assets.every((url) => url.startsWith(baseURL!))).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('built URLs and original/generated images use the configured deployment path', async ({
+  request,
+  baseURL,
+}) => {
+  const html = readFileSync('dist/index.html', 'utf8');
+  const basePath = new URL(baseURL!).pathname;
+  const urls = Array.from(
+    html.matchAll(/(?:src|href)="([^"]+)"/g),
+    (match) => match[1]!,
+  );
+  expect(urls.length).toBeGreaterThan(2);
+  for (const url of urls) {
+    expect(url.startsWith(basePath)).toBe(true);
+    const response = await request.get(new URL(url, baseURL!).href);
+    expect(response.ok(), url).toBe(true);
+  }
+  for (const file of ['assets/sophie.png', 'assets/sophie-source.png']) {
+    const response = await request.get(new URL(file, baseURL!).href);
+    expect(response.ok()).toBe(true);
+    const bytes = await response.body();
+    expect(Array.from(bytes.subarray(0, 8))).toEqual([
+      137, 80, 78, 71, 13, 10, 26, 10,
+    ]);
+    expect(bytes.length).toBeGreaterThan(1000);
+  }
+});

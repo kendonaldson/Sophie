@@ -1,0 +1,578 @@
+:root {
+  font-family: Arial, Helvetica, sans-serif;
+  color: #f1eadc;
+  background: #15262a;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  font-size: 14px;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  font: inherit;
+  cursor: pointer;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid #edc780;
+  outline-offset: 6px;
+}
+button {
+  border: 0;
+}
+#app {
+  max-width: 1920px;
+  margin: 0 auto;
+  padding: 0 40px;
+}
+.masthead {
+  height: 102px;
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+.wordmark {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: bold;
+  font-size: 45px;
+  letter-spacing: -2.5px;
+  color: #f5efdf;
+  text-decoration: none;
+  line-height: 1;
+}
+.wordmark-dot {
+  color: #edbc71;
+}
+.chapter {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  border-left: 1px solid #45504c;
+  padding-left: 28px;
+  font-size: 12px;
+  letter-spacing: 0.3px;
+  color: #c9ccbd;
+}
+.eyebrow {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2.2px;
+  color: #9aa69b;
+}
+.chapter i {
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  background: #9aa69b;
+  margin: 0 10px;
+  vertical-align: middle;
+}
+.quiet-button {
+  margin-left: auto;
+  background: transparent;
+  color: #c9ccbd;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+}
+.pause-icon {
+  width: 10px;
+  height: 12px;
+  background: linear-gradient(
+    to right,
+    currentColor 0 3px,
+    transparent 3px 7px,
+    currentColor 7px
+  );
+  margin-right: 4px;
+}
+.button-label {
+  font-size: 12px;
+}
+.game-shell {
+  height: calc(100dvh - 228px);
+  min-height: 360px;
+  max-height: 1000px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #54605a;
+  border-radius: 3px;
+  background: #1e3035;
+  box-shadow: 0 12px 40px #0b1c2440;
+}
+#world {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+canvas {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+.world-ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 25px 27px;
+}
+.location {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  color: #324345;
+  background: #f4e8d4c9;
+  padding: 9px 12px;
+  border-radius: 2px;
+}
+.location-dot {
+  width: 5px;
+  height: 5px;
+  background: #607d65;
+  box-shadow: 0 0 0 3px #607d6518;
+}
+.dash-hud {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 15px;
+  background: #192d32df;
+  border: 1px solid #d9d3b626;
+  border-radius: 3px;
+}
+.dash-hud .eyebrow {
+  color: #c5cab8;
+  font-size: 8px;
+  letter-spacing: 1.8px;
+}
+.bones {
+  display: flex;
+  gap: 10px;
+}
+.bone {
+  width: 28px;
+  height: 16px;
+  display: block;
+  position: relative;
+}
+.bone svg {
+  width: 28px;
+  height: 16px;
+  display: block;
+}
+.bone-empty {
+  position: absolute;
+  color: #51615e;
+  filter: drop-shadow(0 1px #071e24);
+}
+.bone-fill {
+  position: absolute;
+  color: #f4d493;
+  clip-path: inset(0 calc(100% - var(--fill, 0%)) 0 0);
+}
+.available .bone-fill {
+  filter: drop-shadow(0 1px #805c3b);
+}
+.vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 85px #17303515;
+}
+#fade {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  pointer-events: none;
+  opacity: 0;
+}
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  background: #16272ded;
+  z-index: 5;
+}
+.overlay[hidden] {
+  display: none;
+}
+.overlay h1 {
+  font-family: Georgia, serif;
+  font-size: clamp(28px, 5vw, 50px);
+  font-weight: normal;
+  margin: 20px 10px 32px;
+}
+.overlay.ending {
+  background: #000;
+}
+.overlay.ending h1 {
+  font-family: Arial, sans-serif;
+  font-size: clamp(19px, 3vw, 32px);
+  font-weight: 500;
+  letter-spacing: 7px;
+  text-align: center;
+}
+.primary-button {
+  background: #e5bd7f;
+  color: #25363a;
+  padding: 13px 20px;
+  border-radius: 2px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.primary-button span {
+  margin-left: 25px;
+}
+.below-world {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 62px;
+  border-bottom: 1px solid #3c4c4b;
+}
+.hint-mark {
+  color: #e5bd7f;
+  font-size: 18px;
+}
+#hint {
+  color: #d0d2c0;
+  font-size: 12px;
+  letter-spacing: 0.1px;
+  line-height: 1.5;
+  margin-right: 15px;
+}
+.retry-button {
+  margin-left: auto;
+  flex-shrink: 0;
+  background: none;
+  color: #8d9f98;
+  font-size: 18px;
+  padding: 10px 0 10px 10px;
+}
+.retry-button span {
+  font-size: 11px;
+  margin-left: 6px;
+}
+.retry-button:hover,
+.quiet-button:hover {
+  color: #f2d292;
+}
+footer {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  color: #8e9f98;
+  font-size: 11px;
+}
+footer > span:first-child {
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-size: 13px;
+  letter-spacing: 0.2px;
+}
+.key-guide {
+  display: flex;
+  gap: 22px;
+  font-size: 10px;
+}
+.key-guide > span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+kbd {
+  font-family: inherit;
+  font-size: 9px;
+  padding: 3px 5px;
+  min-width: 19px;
+  text-align: center;
+  border: 1px solid #50605a;
+  border-radius: 3px;
+  color: #c1c7b9;
+  box-shadow: 0 1px #071b21;
+}
+.chapter-number {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #72877f;
+}
+.keyboard-notice {
+  display: none;
+  font-size: 11px;
+  color: #b4bcae;
+  text-align: center;
+}
+@media (max-width: 900px) {
+  #app {
+    padding: 0 20px;
+  }
+  .key-guide {
+    gap: 12px;
+  }
+  .key-guide > span:last-child {
+    display: none;
+  }
+  .chapter-number {
+    display: none;
+  }
+  .world-ui {
+    padding: 18px;
+  }
+}
+@media (max-width: 620px) {
+  #app {
+    padding: 0 12px;
+  }
+  .masthead {
+    height: 83px;
+    gap: 15px;
+  }
+  .wordmark {
+    font-size: 37px;
+  }
+  .chapter {
+    padding-left: 15px;
+    gap: 6px;
+    font-size: 10px;
+  }
+  .eyebrow {
+    font-size: 7px;
+    letter-spacing: 1.4px;
+  }
+  .button-label {
+    display: none;
+  }
+  .game-shell {
+    height: calc(100dvh - 232px);
+    min-height: 320px;
+  }
+  .world-ui {
+    padding: 12px;
+  }
+  .location {
+    font-size: 9px;
+    padding: 8px;
+  }
+  .dash-hud {
+    padding: 9px;
+    gap: 9px;
+  }
+  .dash-hud > .eyebrow {
+    display: none;
+  }
+  .bones {
+    gap: 6px;
+  }
+  .retry-button span {
+    display: none;
+  }
+  #hint {
+    font-size: 11px;
+  }
+  footer {
+    height: 55px;
+  }
+  .key-guide {
+    display: none;
+  }
+  .keyboard-notice {
+    display: block;
+  }
+  .overlay.ending h1 {
+    letter-spacing: 4px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto;
+  }
+}
+/* These elements are mounted only for identified phones/tablets. Desktop has no
+   touch controls, invisible hit targets, reserved space, or orientation overlay. */
+.touch-controls {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.touch-pad {
+  position: absolute;
+  left: 18px;
+  bottom: 16px;
+  width: 108px;
+  height: 108px;
+  border: 1px solid #e9d8b56b;
+  background: #1c303ba6;
+  border-radius: 50%;
+  pointer-events: auto;
+  touch-action: none;
+  box-shadow: 0 2px 12px #14283040;
+  color: #f4e5ca;
+  display: grid;
+  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  align-items: center;
+  justify-items: center;
+  font-size: 22px;
+}
+.pad-up {
+  grid-area: 1/2;
+}
+.pad-left {
+  grid-area: 2/1;
+}
+.pad-right {
+  grid-area: 2/3;
+}
+.pad-down {
+  grid-area: 3/2;
+}
+.pad-dot {
+  grid-area: 2/2;
+  width: 24px;
+  height: 24px;
+  background: #e9d8b550;
+  border: 1px solid #e9d8b573;
+  border-radius: 50%;
+  transform: translate(var(--stick-x, 0px), var(--stick-y, 0px));
+  pointer-events: none;
+}
+.touch-actions {
+  position: absolute;
+  right: 18px;
+  bottom: 23px;
+  display: flex;
+  gap: 17px;
+  align-items: flex-end;
+}
+.touch-button {
+  width: 64px;
+  height: 64px;
+  border: 1px solid #e9d8b577;
+  border-radius: 50%;
+  background: #1c303bbf;
+  color: #f6e6c9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  pointer-events: auto;
+  touch-action: none;
+  padding: 0;
+  box-shadow: 0 2px 12px #14283040;
+}
+.touch-button b {
+  font-size: 23px;
+  font-weight: 500;
+}
+.touch-button span {
+  font-size: 8px;
+  letter-spacing: 1px;
+}
+.touch-dash {
+  margin-bottom: 20px;
+  border-color: #eec889b3;
+  background: #b5905566;
+}
+.touch-button.pressed {
+  background: #d1b07ccb;
+  color: #172a30;
+  transform: scale(0.94);
+}
+.rotate-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: #17292df5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+}
+.rotate-overlay h1 {
+  font-family: Georgia, serif;
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.25;
+  max-width: 300px;
+}
+.rotate-overlay p {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #afbaae;
+}
+.rotate-symbol {
+  font-size: 45px;
+  color: #e5bd7f;
+}
+.mobile-landscape {
+  padding: 0 12px !important;
+}
+.mobile-landscape .masthead {
+  height: 52px;
+  gap: 20px;
+}
+.mobile-landscape .wordmark {
+  font-size: 32px;
+}
+.mobile-landscape .chapter {
+  padding-left: 20px;
+  font-size: 10px;
+  gap: 4px;
+}
+.mobile-landscape .chapter .eyebrow {
+  font-size: 7px;
+}
+.mobile-landscape .game-shell {
+  height: calc(100dvh - 98px);
+  min-height: 0;
+}
+.mobile-landscape .world-ui {
+  padding: 12px 15px;
+}
+.mobile-landscape .location {
+  padding: 7px 10px;
+  font-size: 9px;
+}
+.mobile-landscape .dash-hud {
+  padding: 8px 10px;
+}
+.mobile-landscape .below-world {
+  min-height: 46px;
+  height: 46px;
+}
+.mobile-landscape #hint {
+  font-size: 11px;
+}
+.mobile-landscape footer,
+.mobile-landscape .keyboard-notice,
+.mobile-portrait .keyboard-notice {
+  display: none;
+}
