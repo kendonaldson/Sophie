@@ -9,6 +9,7 @@ import {
 } from '../input/Input';
 import { CombinedInput } from '../input/CombinedInput';
 import { TouchControls } from '../../ui/mobile/TouchControls';
+import { DebugLevelSelector } from '../../ui/DebugLevelSelector';
 import { LevelMusic } from '../audio/LevelMusic';
 import { Player } from '../player/Player';
 import { createAnimations } from '../player/animations';
@@ -33,6 +34,7 @@ export class GameScene extends Phaser.Scene {
   private inputSource!: InputSource;
   private orientationBlocked = false;
   private music?: LevelMusic;
+  private debugSelector?: DebugLevelSelector;
   private checkpoints!: Checkpoints;
   private treats: DogTreat[] = [];
   private art!: WorldArt | WarehouseArt;
@@ -94,6 +96,12 @@ export class GameScene extends Phaser.Scene {
       }),
     );
     this.buildLevel(this.level);
+    this.debugSelector = new DebugLevelSelector(
+      document.querySelector<HTMLElement>('#app')!,
+      [atticEscape, warehouse],
+      this.level,
+      (level) => this.buildLevel(level),
+    );
     this.hud.bind(
       () => this.togglePause(),
       () => this.beginRespawn(),
@@ -106,6 +114,7 @@ export class GameScene extends Phaser.Scene {
       this.events.off('shutdown', cleanup);
       this.events.off('destroy', cleanup);
       this.music?.destroy();
+      this.debugSelector?.destroy();
       this.inputSource.destroy();
       window.removeEventListener('keydown', this.onCommand);
       window.removeEventListener('blur', this.onBlur);
@@ -183,6 +192,7 @@ export class GameScene extends Phaser.Scene {
     this.hud.showPause(false);
     this.hud.setFade(fade ? 1 : 0);
     this.hud.setLevel(level);
+    this.debugSelector?.setLevel(level);
     this.music?.setVolume(0.5);
     this.music?.setTrack(level.music);
     this.syncMusic();
@@ -191,7 +201,11 @@ export class GameScene extends Phaser.Scene {
     return this.jimmy ? [this.player, this.jimmy.actor] : [this.player];
   }
   private onCommand = (event: KeyboardEvent) => {
-    if (event.repeat) return;
+    if (
+      event.repeat ||
+      (event.target instanceof HTMLElement && event.target.closest('select'))
+    )
+      return;
     if (event.code === 'Escape') {
       event.preventDefault();
       this.togglePause();

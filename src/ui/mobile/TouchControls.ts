@@ -5,14 +5,10 @@ import {
 } from '../../game/input/Input';
 import { readGameplayMode, type GameplayMode } from './capabilities';
 const padDirections = [
-  [-1, -1],
   [0, -1],
-  [1, -1],
   [-1, 0],
   [1, 0],
-  [-1, 1],
   [0, 1],
-  [1, 1],
 ] as const;
 /** Pointer capture keeps drag aiming and simultaneous movement/jump/dash reliable. */
 export class TouchControls implements InputSource {
@@ -123,7 +119,9 @@ export class TouchControls implements InputSource {
       .forEach((arrow) => {
         arrow.classList.toggle(
           'active',
-          Number(arrow.dataset.x) === moveX && Number(arrow.dataset.y) === aimY,
+          (Number(arrow.dataset.x) !== 0 &&
+            Number(arrow.dataset.x) === moveX) ||
+            (Number(arrow.dataset.y) !== 0 && Number(arrow.dataset.y) === aimY),
         );
       });
   }

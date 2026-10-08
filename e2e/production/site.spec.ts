@@ -1,5 +1,80 @@
-import { expect, test } from '@playwright/test';
+import { devices, expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+
+test.describe('deployed debug selector on mobile', () => {
+  test.use({
+    viewport: { width: 844, height: 390 },
+    hasTouch: true,
+    isMobile: true,
+    userAgent: devices['iPhone 13'].userAgent,
+  });
+  test('loads either chapter using #debug on the Pages base path', async ({
+    page,
+    baseURL,
+  }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await page.goto('./#debug');
+    const selector = page.getByRole('combobox', {
+      name: 'Debug level',
+      exact: true,
+    });
+    const load = page.getByRole('button', { name: 'Load', exact: true });
+    await expect(selector).toBeVisible();
+    await expect(selector).toHaveValue('attic-escape');
+    await expect(page.locator('.pad-direction')).toHaveCount(4);
+    expect(await page.evaluate(() => window.__sophie)).toBeUndefined();
+    await selector.selectOption('warehouse');
+    await load.tap();
+    await expect(page.locator('#world')).toHaveAttribute(
+      'aria-label',
+      'Sophie and Jimmy exploring a warehouse',
+    );
+    const music = page.locator('audio');
+    await expect(music).toHaveAttribute(
+      'src',
+      new URL('assets/audio/factory-pulse.mp3', baseURL!).pathname,
+    );
+    await expect(music).toHaveJSProperty('loop', true);
+    await expect
+      .poll(() =>
+        music.evaluate((audio: HTMLAudioElement) => audio.currentTime),
+      )
+      .toBeGreaterThan(0);
+    await page.getByRole('button', { name: 'Pause game' }).tap();
+    await selector.selectOption('attic-escape');
+    await load.tap();
+    await expect(page.locator('#section')).toHaveText('Open air');
+    await expect(
+      page.getByRole('button', { name: 'Pause game' }),
+    ).toBeVisible();
+    await expect(music).toHaveAttribute(
+      'src',
+      new URL('assets/audio/rooftop-dash.mp3', baseURL!).pathname,
+    );
+    await expect(page.locator('canvas')).toHaveCount(1);
+    await expect(music).toHaveCount(1);
+    for (const size of [
+      { width: 844, height: 390 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(size);
+      const box = (await page.locator('.debug-level-selector').boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(size.width);
+      const pause = (await page.locator('#pause').boundingBox())!;
+      expect(box.x + box.width).toBeLessThanOrEqual(pause.x);
+      expect(pause.x + pause.width).toBeLessThanOrEqual(size.width);
+    }
+    await page.evaluate(() => {
+      location.hash = '';
+    });
+    await expect(selector).toHaveCount(0);
+    await expect(page.locator('.chapter')).toBeVisible();
+    expect(await page.evaluate(() => window.__sophie)).toBeUndefined();
+    expect(errors).toEqual([]);
+  });
+});
 
 test('built application loads assets, draws, accepts input, and survives resize under its base path', async ({
   page,

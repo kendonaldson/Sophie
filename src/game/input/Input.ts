@@ -42,7 +42,7 @@ export class KeyboardInput implements InputSource {
     if (
       !this.gameKeys.has(event.code) ||
       (event.target instanceof HTMLElement &&
-        event.target.closest('button, input'))
+        event.target.closest('button, input, select'))
     )
       return;
     event.preventDefault();

@@ -7,12 +7,12 @@ test.describe('phone controls', () => {
     isMobile: true,
     userAgent: devices['iPhone 13'].userAgent,
   });
-  test('all eight arrows aim real touch dashes, including diagonals while dragging and holding X', async ({
+  test('four arrows support all eight touch dash directions across the whole pad', async ({
     page,
   }) => {
     await page.goto('/?test');
     await page.waitForFunction(() => Boolean(window.__sophie));
-    await expect(page.locator('.pad-direction')).toHaveCount(8);
+    await expect(page.locator('.pad-direction')).toHaveCount(4);
     const pad = (await page.locator('.touch-pad').boundingBox())!;
     const dash = (await page
       .getByRole('button', { name: 'Dash', exact: true })
@@ -24,6 +24,17 @@ test.describe('phone controls', () => {
       y: pad.y + pad.height / 2,
     };
     const active = page.locator('.pad-direction.active');
+    const expectAim = async (x: number, y: number) => {
+      await expect(active).toHaveCount(Math.abs(x) + Math.abs(y));
+      if (x)
+        await expect(
+          page.locator(`.pad-direction.active[data-x="${x}"]`),
+        ).toHaveCount(1);
+      if (y)
+        await expect(
+          page.locator(`.pad-direction.active[data-y="${y}"]`),
+        ).toHaveCount(1);
+    };
     for (const [x, y] of [
       [-1, -1],
       [0, -1],
@@ -57,9 +68,7 @@ test.describe('phone controls', () => {
         type: 'touchMove',
         touchPoints: [direction],
       });
-      await expect(active).toHaveCount(1);
-      await expect(active).toHaveAttribute('data-x', String(x));
-      await expect(active).toHaveAttribute('data-y', String(y));
+      await expectAim(x!, y!);
       const dashed = page.waitForFunction(
         () => {
           const s = window.__sophie!.snapshot();
@@ -101,8 +110,7 @@ test.describe('phone controls', () => {
       type: 'touchMove',
       touchPoints: [{ id: 1, x: pad.x + pad.width + 12, y: pad.y - 12 }],
     });
-    await expect(active).toHaveAttribute('data-x', '1');
-    await expect(active).toHaveAttribute('data-y', '-1');
+    await expectAim(1, -1);
     await session.send('Input.dispatchTouchEvent', {
       type: 'touchMove',
       touchPoints: [center],
@@ -112,7 +120,7 @@ test.describe('phone controls', () => {
       type: 'touchMove',
       touchPoints: [{ id: 1, x: center.x - 28, y: center.y - 28 }],
     });
-    await expect(active).toHaveCount(1);
+    await expectAim(-1, -1);
     await session.send('Input.dispatchTouchEvent', {
       type: 'touchCancel',
       touchPoints: [],
