@@ -1,0 +1,151 @@
+import {
+  noInput,
+  type InputSource,
+  type PlayerIntent,
+} from '../../game/input/Input';
+import { readGameplayMode, type GameplayMode } from './capabilities';
+/** Pointer capture keeps drag aiming and simultaneous movement/jump/dash reliable. */
+export class TouchControls implements InputSource {
+  private root: HTMLElement | null = null;
+  private currentMode: GameplayMode = 'desktop';
+  private directionPointer: number | null = null;
+  private jumps = new Set<number>();
+  private dashes = new Set<number>();
+  private intent = noInput();
+  private pad: HTMLElement | null = null;
+  private readonly pointerMedia = matchMedia('(pointer: coarse)');
+  constructor(
+    private readonly host: HTMLElement,
+    private readonly onModeChange: (mode: GameplayMode) => void,
+  ) {
+    window.addEventListener('resize', this.refresh);
+    window.addEventListener('blur', this.clear);
+    this.pointerMedia.addEventListener('change', this.refresh);
+    this.refresh();
+  }
+  private refresh = () => {
+    const mode = readGameplayMode();
+    if (mode === this.currentMode && (mode === 'desktop' || this.root)) return;
+    this.clear();
+    this.root?.remove();
+    this.root = null;
+    this.pad = null;
+    this.currentMode = mode;
+    const app = document.querySelector('#app')!;
+    app.classList.toggle('mobile-landscape', mode === 'mobile-landscape');
+    app.classList.toggle('mobile-portrait', mode === 'mobile-portrait');
+    if (mode === 'mobile-portrait') {
+      this.root = document.createElement('div');
+      this.root.className = 'rotate-overlay';
+      this.root.setAttribute('role', 'status');
+      this.root.innerHTML =
+        '<span class="rotate-symbol" aria-hidden="true">↻</span><h1>Rotate your device to play</h1><p>Landscape gives Sophie room to run.</p>';
+      this.host.append(this.root);
+    } else if (mode === 'mobile-landscape') this.mountController();
+    this.onModeChange(mode);
+  };
+  private mountController() {
+    this.root = document.createElement('div');
+    this.root.className = 'touch-controls';
+    this.root.setAttribute('aria-label', 'Touch controller');
+    this.root.innerHTML =
+      '<div class="touch-pad" role="group" aria-label="Movement and eight-direction dash aim"><span class="pad-up" aria-hidden="true">↑</span><span class="pad-left" aria-hidden="true">←</span><span class="pad-right" aria-hidden="true">→</span><span class="pad-down" aria-hidden="true">↓</span><span class="pad-dot"></span></div><div class="touch-actions"><button class="touch-button touch-jump" aria-label="Jump"><b>Z</b><span>JUMP</span></button><button class="touch-button touch-dash" aria-label="Dash"><b>X</b><span>DASH</span></button></div>';
+    this.host.append(this.root);
+    this.pad = this.root.querySelector('.touch-pad');
+    this.pad!.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      if (this.directionPointer !== null) return;
+      this.directionPointer = event.pointerId;
+      this.pad!.setPointerCapture(event.pointerId);
+      this.aim(event);
+    });
+    this.pad!.addEventListener('pointermove', (event) => {
+      if (event.pointerId === this.directionPointer) {
+        event.preventDefault();
+        this.aim(event);
+      }
+    });
+    const stop = (event: PointerEvent) => {
+      if (event.pointerId === this.directionPointer) {
+        this.directionPointer = null;
+        this.intent.moveX = 0;
+        this.intent.aimY = 0;
+        this.pad?.style.setProperty('--stick-x', '0px');
+        this.pad?.style.setProperty('--stick-y', '0px');
+      }
+    };
+    for (const event of [
+      'pointerup',
+      'pointercancel',
+      'lostpointercapture',
+    ] as const)
+      this.pad!.addEventListener(event, stop);
+    this.bindButton(this.root.querySelector('.touch-jump')!, 'jump');
+    this.bindButton(this.root.querySelector('.touch-dash')!, 'dash');
+  }
+  private aim(event: PointerEvent) {
+    const box = this.pad!.getBoundingClientRect(),
+      dx = (event.clientX - box.x - box.width / 2) / (box.width / 2),
+      dy = (event.clientY - box.y - box.height / 2) / (box.height / 2);
+    const angle =
+      (Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * Math.PI) / 4;
+    const active = Math.hypot(dx, dy) > 0.2;
+    this.intent.moveX = active
+      ? (Math.round(Math.cos(angle)) as -1 | 0 | 1)
+      : 0;
+    this.intent.aimY = active ? (Math.round(Math.sin(angle)) as -1 | 0 | 1) : 0;
+    this.pad!.style.setProperty('--stick-x', `${this.intent.moveX * 12}px`);
+    this.pad!.style.setProperty('--stick-y', `${this.intent.aimY * 12}px`);
+  }
+  private bindButton(button: HTMLButtonElement, kind: 'jump' | 'dash') {
+    const pointers = kind === 'jump' ? this.jumps : this.dashes;
+    button.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      button.setPointerCapture(event.pointerId);
+      pointers.add(event.pointerId);
+      button.classList.add('pressed');
+      if (kind === 'jump') {
+        this.intent.jumpPressed = true;
+        this.intent.jumpHeld = true;
+      } else this.intent.dashPressed = true;
+    });
+    const stop = (event: PointerEvent) => {
+      pointers.delete(event.pointerId);
+      button.classList.toggle('pressed', pointers.size > 0);
+      if (kind === 'jump') this.intent.jumpHeld = pointers.size > 0;
+    };
+    for (const event of [
+      'pointerup',
+      'pointercancel',
+      'lostpointercapture',
+    ] as const)
+      button.addEventListener(event, stop);
+  }
+  sample(): PlayerIntent {
+    const intent = { ...this.intent };
+    this.intent.jumpPressed = false;
+    this.intent.dashPressed = false;
+    return intent;
+  }
+  clear = () => {
+    this.intent = noInput();
+    this.directionPointer = null;
+    this.jumps.clear();
+    this.dashes.clear();
+    this.root
+      ?.querySelectorAll('.pressed')
+      .forEach((b) => b.classList.remove('pressed'));
+    this.pad?.style.setProperty('--stick-x', '0px');
+    this.pad?.style.setProperty('--stick-y', '0px');
+  };
+  destroy() {
+    window.removeEventListener('resize', this.refresh);
+    window.removeEventListener('blur', this.clear);
+    this.pointerMedia.removeEventListener('change', this.refresh);
+    this.root?.remove();
+    this.root = null;
+    document
+      .querySelector('#app')
+      ?.classList.remove('mobile-landscape', 'mobile-portrait');
+  }
+}
