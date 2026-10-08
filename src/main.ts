@@ -6,6 +6,7 @@ import { InterludeScene } from './game/scenes/InterludeScene';
 import { viewportSize, watchViewport } from './game/rendering/Viewport';
 import { Sfx } from './game/audio/Sfx';
 const sfx = new Sfx();
+const debugSettings = { infiniteDash: false };
 sfx.bindGestures();
 const hud = new Hud(document.querySelector<HTMLElement>('#app')!, sfx);
 const container = document.querySelector<HTMLElement>('#world')!;
@@ -29,7 +30,10 @@ const game = new Phaser.Game({
       fixedStep: false,
     },
   },
-  scene: [new GameScene(hud, sfx), new InterludeScene(hud, sfx)],
+  scene: [
+    new GameScene(hud, sfx, debugSettings),
+    new InterludeScene(hud, sfx, debugSettings),
+  ],
   // Music streams through LevelMusic; SFX own the only Web Audio context.
   audio: { noAudio: true },
   banner: false,

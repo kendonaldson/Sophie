@@ -1,4 +1,7 @@
 type Destination = { id: string; name: string };
+export interface DebugSettings {
+  infiniteDash: boolean;
+}
 
 /** Available in the deployed game only while the URL fragment is exactly #debug. */
 export class DebugLevelSelector {
@@ -10,6 +13,7 @@ export class DebugLevelSelector {
     private readonly levels: readonly Destination[],
     private currentLevel: Destination,
     private readonly onLoad: (level: Destination) => void,
+    private readonly settings: DebugSettings,
   ) {
     window.addEventListener('hashchange', this.refresh);
     this.refresh();
@@ -19,9 +23,13 @@ export class DebugLevelSelector {
     this.currentLevel = level;
     if (this.select) this.select.value = level.id;
   }
+  get infiniteDash() {
+    return location.hash === '#debug' && this.settings.infiniteDash;
+  }
 
   private refresh = () => {
     if (location.hash !== '#debug') {
+      this.settings.infiniteDash = false;
       this.remove();
       return;
     }
@@ -41,7 +49,18 @@ export class DebugLevelSelector {
     const load = document.createElement('button');
     load.type = 'submit';
     load.textContent = 'Load';
-    this.form.append(label, load);
+    const infiniteLabel = document.createElement('label');
+    infiniteLabel.className = 'debug-infinite-dash';
+    const infinite = document.createElement('input');
+    infinite.type = 'checkbox';
+    infinite.checked = this.settings.infiniteDash;
+    infinite.addEventListener('change', () => {
+      this.settings.infiniteDash =
+        location.hash === '#debug' && infinite.checked;
+      infinite.blur();
+    });
+    infiniteLabel.append(infinite, 'Infinite dash');
+    this.form.append(label, load, infiniteLabel);
     this.form.addEventListener('submit', (event) => {
       event.preventDefault();
       const level = this.levels.find(

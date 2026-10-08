@@ -23,6 +23,7 @@ button {
 }
 button:focus-visible,
 select:focus-visible,
+input:focus-visible,
 a:focus-visible {
   outline: 2px solid #edc780;
   outline-offset: 6px;
@@ -86,7 +87,7 @@ button {
   gap: 8px;
   flex: 1;
   min-width: 0;
-  max-width: 330px;
+  max-width: 460px;
 }
 .debug-level-selector label {
   display: grid;
@@ -112,6 +113,20 @@ button {
 }
 .debug-level-selector button {
   flex-shrink: 0;
+}
+.debug-level-selector .debug-infinite-dash {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.debug-infinite-dash input {
+  margin: 0;
+  accent-color: #edc780;
 }
 .quiet-button {
   margin-left: auto;
@@ -430,6 +445,15 @@ kbd {
   }
 }
 @media (max-width: 620px) {
+  .debug-level-selector {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 8px;
+  }
+  .debug-level-selector .debug-infinite-dash {
+    grid-column: 1 / -1;
+    min-height: 20px;
+  }
   #app {
     padding: 0 12px;
   }

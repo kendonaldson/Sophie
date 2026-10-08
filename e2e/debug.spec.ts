@@ -1,6 +1,116 @@
 import { test, expect } from '@playwright/test';
 import { atticEscape } from '../src/game/levels/atticEscape';
 import { warehouse } from '../src/game/levels/warehouse';
+import { chase } from '../src/game/levels/chase';
+
+test('infinite dash is opt-in, allows repeated airborne dashes, and restores normal limits on uncheck or hash removal', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto('/?test#debug');
+  await page.waitForFunction(() => window.__sophie?.snapshot().grounded);
+  const infinite = page.getByRole('checkbox', {
+    name: 'Infinite dash',
+    exact: true,
+  });
+  await expect(infinite).not.toBeChecked();
+  await page.evaluate(() => {
+    const a = window.__sophie!;
+    a.manual(true);
+    a.advance(1, { dashPressed: true, aimY: -1 });
+    a.advance(24);
+  });
+  expect(await page.evaluate(() => window.__sophie!.snapshot())).toMatchObject({
+    charges: 0,
+    grounded: false,
+  });
+  await infinite.check();
+  for (let i = 0; i < 4; i++) {
+    const dash = await page.evaluate(() =>
+      window.__sophie!.advance(1, { dashPressed: true, aimY: -1 }),
+    );
+    expect(dash).toMatchObject({ state: 'Dashing', charges: 0 });
+    await page.evaluate(() => window.__sophie!.advance(24));
+  }
+  await expect(page.locator('#dash-hud')).toHaveAttribute(
+    'aria-label',
+    '2 of 2 dash charges available',
+  );
+  await infinite.uncheck();
+  const disabled = await page.evaluate(() =>
+    window.__sophie!.advance(1, { dashPressed: true, aimY: -1 }),
+  );
+  expect(disabled.state).not.toBe('Dashing');
+  expect(disabled.charges).toBe(0);
+  await expect(page.locator('#dash-hud')).toHaveAttribute(
+    'aria-label',
+    '0 of 2 dash charges available',
+  );
+  await infinite.check();
+  await page.evaluate(() => {
+    location.hash = 'other';
+  });
+  await expect(infinite).toHaveCount(0);
+  const hidden = await page.evaluate(() =>
+    window.__sophie!.advance(1, { dashPressed: true }),
+  );
+  expect(hidden.state).not.toBe('Dashing');
+  expect(hidden.charges).toBe(0);
+  await page.evaluate(() => {
+    location.hash = 'debug';
+  });
+  await expect(infinite).not.toBeChecked();
+  expect(errors).toEqual([]);
+});
+
+test('infinite dash survives retries, level loads, and scene changes while debug remains enabled', async ({
+  page,
+}) => {
+  await page.goto('/?test#debug');
+  await page.waitForFunction(() => Boolean(window.__sophie));
+  const infinite = page.getByRole('checkbox', {
+    name: 'Infinite dash',
+    exact: true,
+  });
+  await infinite.check();
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(infinite).toBeChecked();
+  const level = page.getByRole('combobox', {
+    name: 'Debug level',
+    exact: true,
+  });
+  const load = page.getByRole('button', { name: 'Load', exact: true });
+  for (const id of [warehouse.id, 'interlude-1', chase.id, atticEscape.id]) {
+    await level.selectOption(id);
+    await load.click();
+    await expect(level).toHaveValue(id);
+    await expect(infinite).toBeChecked();
+    if (id === 'interlude-1') {
+      await page.waitForFunction(() => Boolean(window.__sophieStory));
+    } else {
+      await page.waitForFunction(
+        (id) => window.__sophie?.snapshot().levelId === id,
+        id,
+      );
+      const state = await page.evaluate(() => {
+        const a = window.__sophie!;
+        a.manual(true);
+        if (a.snapshot().intro) a.checkpoint(a.snapshot().checkpoint);
+        return a.advance(1, { dashPressed: true, aimY: -1 });
+      });
+      expect(state.state).toBe('Dashing');
+      expect(state.charges).toBe(1);
+    }
+  }
+  await infinite.focus();
+  await page.keyboard.press('KeyR');
+  expect(
+    (await page.evaluate(() => window.__sophie!.snapshot())).respawning,
+  ).toBe(false);
+  await page.keyboard.press('Space');
+  await expect(infinite).not.toBeChecked();
+});
 
 test('debug selector follows the hash, resets complete levels, and keeps keyboard navigation out of gameplay', async ({
   page,

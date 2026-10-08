@@ -33,7 +33,12 @@ export class PlayerController {
   ) {
     this.dash = new DashController(config);
   }
-  step(ms: number, input: PlayerIntent, motion: Motion): MovementResult {
+  step(
+    ms: number,
+    input: PlayerIntent,
+    motion: Motion,
+    infiniteDash = false,
+  ): MovementResult {
     const dt = ms / 1000,
       c = this.config;
     let { vx, vy, grounded } = motion;
@@ -74,7 +79,10 @@ export class PlayerController {
         ? { x: input.moveX, y: input.aimY, facing: this.facing }
         : undefined);
     const touchDash = this.pendingDash !== undefined;
-    if (request && this.dash.start(request.x, request.y, request.facing)) {
+    if (
+      request &&
+      this.dash.start(request.x, request.y, request.facing, infiniteDash)
+    ) {
       this.pendingDash = undefined;
       dashed = true;
       this.sfx?.dash();

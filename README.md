@@ -30,6 +30,8 @@ Without an arrow direction, dash follows the last horizontal facing direction. A
 
 Append `#debug` to the game URL, including the deployed site: [Open debug selector](https://kendonaldson.github.io/Sophie/#debug). Choose **Attic Escape**, **The Warehouse**, **Interlude 1**, or **The Chase** in the header and press **Load**. Loading starts that chapter fresh with its initial checkpoints, collectibles, actors, machinery, and camera, and selects its looping background music. Load the same selection again to restart that chapter. Normal chapter transitions update the selection too.
 
+The **Infinite dash** checkbox beside the picker lets Sophie dash repeatedly in the air without spending stored charges. Each dash keeps its normal speed, duration, direction controls, and sound. The bone HUD shows both charges available while enabled. The setting persists through retries, level loads, and scene transitions for this session; unchecking it restores ordinary dash limits using the stored charges. Removing `#debug` also switches it off, and adding the fragment again starts unchecked.
+
 Adding or removing `#debug` while playing shows or removes the selector without restarting the game. It works with touch or keyboard and only appears for that exact URL fragment. It does not enable the development-only `window.__sophie` or `window.__sophieStory` test APIs.
 
 ## Structure and tuning
@@ -83,7 +85,7 @@ The final gap is **880 world pixels** wide. A unit test bounds travel conservati
 
 An ordinary failed final attempt triggers the isolated `FinalSling` event only while airborne beyond the runway and descending near its height. The sequence freezes for 400 ms, gives Jimmy 550 ms to catch Sophie, compresses for 150 ms, and launches both along 1.1-second arcs to validated safe landings. Input returns immediately. No sling ability is added to `PlayerController`. A safe final walk takes both dogs through the door, which closes before the fade into Interlude 1.
 
-To add a level, create another `LevelDefinition` in `src/game/levels/` and pass it to `new GameScene(hud, sfx, yourLevel)` in `src/main.ts`. Coordinates describe the physical world; platform `y` is the roof surface and spawn/checkpoint `y` is the paw/ground line. Keep anchors at least 32 pixels inside a stable roof and include their spawn in the trigger area. Order checkpoints and tutorial sections by progression; IDs must be unique across terrain, treats, and anchors. The attic opening is optional. A future Tiled adapter can produce this data without changing `PlayerController`.
+To add a level, create another `LevelDefinition` in `src/game/levels/` and pass it to `new GameScene(hud, sfx, debugSettings, yourLevel)` in `src/main.ts`. Coordinates describe the physical world; platform `y` is the roof surface and spawn/checkpoint `y` is the paw/ground line. Keep anchors at least 32 pixels inside a stable roof and include their spawn in the trigger area. Order checkpoints and tutorial sections by progression; IDs must be unique across terrain, treats, and anchors. The attic opening is optional. A future Tiled adapter can produce this data without changing `PlayerController`.
 
 ## Interlude 1 — A little fresh air
 

@@ -57,13 +57,18 @@ export class Player {
         ))
     );
   }
-  beforeStep(ms: number, input: PlayerIntent) {
+  beforeStep(ms: number, input: PlayerIntent, infiniteDash = false) {
     const b = this.body;
-    const result = this.controller.step(ms, input, {
-      vx: b.velocity.x,
-      vy: b.velocity.y,
-      grounded: this.grounded,
-    });
+    const result = this.controller.step(
+      ms,
+      input,
+      {
+        vx: b.velocity.x,
+        vy: b.velocity.y,
+        grounded: this.grounded,
+      },
+      infiniteDash,
+    );
     const bounds = { x: b.x, y: b.y, width: b.width, height: b.height };
     const nextY = b.y + (result.vy * ms) / 1000;
     const correction =
