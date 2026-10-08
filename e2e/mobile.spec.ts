@@ -6,6 +6,118 @@ test.describe('phone controls', () => {
     isMobile: true,
     userAgent: devices['iPhone 13'].userAgent,
   });
+  test('all eight arrows aim real touch dashes, including diagonals while dragging and holding X', async ({
+    page,
+  }) => {
+    await page.goto('/?test');
+    await page.waitForFunction(() => Boolean(window.__sophie));
+    await expect(page.locator('.pad-direction')).toHaveCount(8);
+    const pad = (await page.locator('.touch-pad').boundingBox())!;
+    const dash = (await page
+      .getByRole('button', { name: 'Dash', exact: true })
+      .boundingBox())!;
+    const session = await page.context().newCDPSession(page);
+    const center = {
+      id: 1,
+      x: pad.x + pad.width / 2,
+      y: pad.y + pad.height / 2,
+    };
+    const active = page.locator('.pad-direction.active');
+    for (const [x, y] of [
+      [-1, -1],
+      [0, -1],
+      [1, -1],
+      [-1, 0],
+      [1, 0],
+      [-1, 1],
+      [0, 1],
+      [1, 1],
+    ]) {
+      // Start near the apex of a normal jump so downward dashes are measurable
+      // before the roof collision. Direction and dash come from real touch events.
+      await page.evaluate(() => {
+        const a = window.__sophie!;
+        a.manual(true);
+        a.restart();
+        a.advance(35, { jumpPressed: true, jumpHeld: true });
+        a.manual(false);
+      });
+      await session.send('Input.dispatchTouchEvent', {
+        type: 'touchStart',
+        touchPoints: [center],
+      });
+      await expect(active).toHaveCount(0);
+      const direction = {
+        id: 1,
+        x: center.x + x! * pad.width * 0.28,
+        y: center.y + y! * pad.height * 0.28,
+      };
+      await session.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [direction],
+      });
+      await expect(active).toHaveCount(1);
+      await expect(active).toHaveAttribute('data-x', String(x));
+      await expect(active).toHaveAttribute('data-y', String(y));
+      const dashed = page.waitForFunction(
+        () => {
+          const s = window.__sophie!.snapshot();
+          return s.state === 'Dashing' ? s : false;
+        },
+        undefined,
+        { polling: 'raf' },
+      );
+      await session.send('Input.dispatchTouchEvent', {
+        type: 'touchStart',
+        touchPoints: [
+          direction,
+          { id: 2, x: dash.x + dash.width / 2, y: dash.y + dash.height / 2 },
+        ],
+      });
+      const snapshot = await (await dashed).jsonValue();
+      if (!snapshot) throw new Error('Touch dash did not start');
+      const length = Math.hypot(x!, y!);
+      expect(snapshot.vx).toBeCloseTo(
+        (snapshot.physics.dashSpeed * x!) / length,
+      );
+      expect(snapshot.vy).toBeCloseTo(
+        (snapshot.physics.dashSpeed * y!) / length,
+      );
+      expect(snapshot.charges).toBe(0);
+      await session.send('Input.dispatchTouchEvent', {
+        type: 'touchEnd',
+        touchPoints: [],
+      });
+      await expect(active).toHaveCount(0);
+    }
+    // Pointer capture preserves diagonal aim outside the visible pad. The center
+    // dead zone and cancellation both release direction and its highlight.
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [center],
+    });
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ id: 1, x: pad.x + pad.width + 12, y: pad.y - 12 }],
+    });
+    await expect(active).toHaveAttribute('data-x', '1');
+    await expect(active).toHaveAttribute('data-y', '-1');
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [center],
+    });
+    await expect(active).toHaveCount(0);
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ id: 1, x: center.x - 28, y: center.y - 28 }],
+    });
+    await expect(active).toHaveCount(1);
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchCancel',
+      touchPoints: [],
+    });
+    await expect(active).toHaveCount(0);
+  });
   test('multi-touch supports movement, jumping and dash; orientation pauses without changing physics', async ({
     page,
   }) => {

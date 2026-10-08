@@ -485,21 +485,31 @@ kbd {
   color: #f4e5ca;
   display: grid;
   grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  padding: 8px;
   align-items: center;
   justify-items: center;
   font-size: 22px;
 }
-.pad-up {
-  grid-area: 1/2;
+.pad-direction {
+  width: 26px;
+  height: 26px;
+  padding: 4px;
+  border-radius: 50%;
+  pointer-events: none;
 }
-.pad-left {
-  grid-area: 2/1;
+.pad-direction svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
-.pad-right {
-  grid-area: 2/3;
-}
-.pad-down {
-  grid-area: 3/2;
+.pad-direction.active {
+  background: #edc780;
+  color: #172a30;
 }
 .pad-dot {
   grid-area: 2/2;
