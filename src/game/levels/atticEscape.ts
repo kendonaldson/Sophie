@@ -12,6 +12,7 @@ const checkpoint = (
 export const atticEscape: LevelDefinition = {
   id: 'attic-escape',
   name: 'Attic Escape',
+  music: 'assets/audio/rooftop-dash.mp3',
   width: 3600,
   height: 900,
   fallY: 790,

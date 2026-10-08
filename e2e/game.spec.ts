@@ -137,6 +137,14 @@ test('full route uses high jump, long jump, treat recharge, second dash, factory
   page,
 }) => {
   await boot(page, true);
+  await page.keyboard.press('ArrowRight');
+  const music = page.locator('audio');
+  await expect
+    .poll(() => music.evaluate((a: HTMLAudioElement) => a.currentTime))
+    .toBeGreaterThan(0);
+  await music.evaluate((a: HTMLAudioElement) => {
+    a.currentTime = 20;
+  });
   await reachFinalRoof(page);
   await advance(page, 24, { moveX: 1, jumpPressed: true, jumpHeld: true });
   let s = await advance(page, 21, {
@@ -167,9 +175,14 @@ test('full route uses high jump, long jump, treat recharge, second dash, factory
       .evaluate((e) => getComputedStyle(e).backgroundColor),
   ).toBe('rgb(0, 0, 0)');
   const end = await snapshot(page);
+  await expect(music).toHaveJSProperty('paused', true);
   await advance(page, 100, { moveX: 1, jumpPressed: true, dashPressed: true });
   expect((await snapshot(page)).x).toBe(end.x);
   await page.getByRole('button', { name: 'Play again' }).click();
+  await expect(music).toHaveJSProperty('paused', false);
+  expect(
+    await music.evaluate((a: HTMLAudioElement) => a.currentTime),
+  ).toBeLessThan(5);
   s = await advance(page, 1);
   expect(s.x).toBe(160);
   expect(s.charges).toBe(1);
