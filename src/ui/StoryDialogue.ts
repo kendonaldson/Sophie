@@ -1,3 +1,4 @@
+import type { SfxOutput } from '../game/audio/Sfx';
 import { SpeechBubble } from './SpeechBubble';
 import { readGameplayMode } from './mobile/capabilities';
 import type { StoryLine } from '../game/story/interlude1';
@@ -11,9 +12,10 @@ export class StoryDialogue {
     private readonly host: HTMLElement,
     onAdvance: () => void,
     private readonly onOrientation: (blocked: boolean) => void,
+    sfx: SfxOutput,
   ) {
     this.root.className = 'story-ui';
-    this.bubble = new SpeechBubble(host, this.root);
+    this.bubble = new SpeechBubble(host, this.root, sfx);
     this.next.className = 'story-next';
     this.next.type = 'button';
     this.next.textContent = 'Continue · X';
@@ -49,10 +51,14 @@ export class StoryDialogue {
     this.next.hidden = !line || line.cue === 'escape';
     this.next.disabled = !canAdvance;
   }
+  revealText(ms: number) {
+    this.bubble.revealText(ms);
+  }
   anchor(x: number, headY: number) {
     this.bubble.anchor(x, headY);
   }
   destroy() {
+    this.bubble.destroy();
     window.removeEventListener('resize', this.refresh);
     this.media.removeEventListener('change', this.refresh);
     this.root.remove();

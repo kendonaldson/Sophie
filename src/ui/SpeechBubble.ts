@@ -1,5 +1,8 @@
+import type { SfxOutput } from '../game/audio/Sfx';
+import type { DialogueSpeaker } from '../game/audio/config';
+import { DialogueReveal } from './DialogueReveal';
 export interface SpeechLine {
-  speaker: 'sophie' | 'jimmy' | 'offscreen';
+  speaker: DialogueSpeaker;
   text: string;
 }
 /** Shared native-resolution dialogue; off-screen speakers never need a world entity. */
@@ -8,31 +11,42 @@ export class SpeechBubble {
   private readonly label = document.createElement('strong');
   private readonly text = document.createElement('p');
   private line?: SpeechLine;
+  private readonly reveal: DialogueReveal;
   constructor(
     private readonly host: HTMLElement,
     parent: HTMLElement,
+    sfx: SfxOutput,
   ) {
+    this.reveal = new DialogueReveal(sfx);
     this.element.className = 'story-bubble';
     this.element.setAttribute('role', 'status');
     this.element.setAttribute('aria-live', 'polite');
     this.element.setAttribute('aria-atomic', 'true');
     this.element.append(this.label, this.text);
+    this.text.setAttribute('aria-hidden', 'true');
     parent.append(this.element);
   }
   show(line?: SpeechLine) {
     this.element.hidden = !line;
-    if (
-      !line ||
-      (line.text === this.line?.text && line.speaker === this.line.speaker)
-    )
+    if (line?.text === this.line?.text && line?.speaker === this.line?.speaker)
       return;
     this.line = line;
+    this.reveal.set(line?.text, line?.speaker);
+    this.text.textContent = '';
+    if (!line) return;
+    this.element.setAttribute('aria-label', `${line.speaker}: ${line.text}`);
     this.element.dataset.speaker = line.speaker;
     this.label.textContent =
       line.speaker === 'offscreen'
         ? 'A VOICE FROM OFF-SCREEN'
         : line.speaker.toUpperCase();
-    this.text.textContent = line.text;
+  }
+  revealText(ms: number) {
+    if (this.line) this.text.textContent = this.reveal.tick(ms);
+  }
+  destroy() {
+    this.reveal.set();
+    this.element.remove();
   }
   anchor(x: number, headY: number) {
     const bubble = this.element;

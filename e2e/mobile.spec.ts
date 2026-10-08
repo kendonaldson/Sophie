@@ -1,4 +1,5 @@
 import { test, expect, devices } from '@playwright/test';
+import { physics } from '../src/game/config/physics';
 import { atticEscape } from '../src/game/levels/atticEscape';
 test.describe('phone controls', () => {
   test.use({
@@ -177,7 +178,15 @@ test.describe('phone controls', () => {
           { polling: 'raf' },
         );
       } else {
-        await page.waitForTimeout(action === 'lift-60' ? 60 : 100);
+        // Measure from the actual dash, not from when the automation process
+        // notices it. Web Audio and CDP latency must not extend a 100 ms input
+        // sequence beyond the 250 ms touch combo window.
+        const delayMs = action === 'lift-60' ? 60 : 100;
+        await page.waitForFunction(
+          (targetX) => window.__sophie!.snapshot().x >= targetX,
+          2680 + (physics.dashSpeed * delayMs) / 1000,
+          { polling: 'raf' },
+        );
         await session.send('Input.dispatchTouchEvent', {
           type: 'touchEnd',
           // CDP ends the listed contact; the D-pad finger remains held.

@@ -1,3 +1,4 @@
+import type { SfxOutput } from '../audio/Sfx';
 import type Phaser from 'phaser';
 import type { Player } from '../player/Player';
 import type { Jimmy } from '../companion/Jimmy';
@@ -36,6 +37,7 @@ export class ChaseRun {
     private readonly sophie: Player,
     private readonly jimmy: Jimmy,
     private readonly hud: Hud,
+    sfx: SfxOutput,
   ) {
     this.def = level.chase!;
     this.recovery = new ChaseRecovery(level.fallY);
@@ -47,7 +49,7 @@ export class ChaseRun {
     this.root.className = 'chase-ui';
     const host = document.querySelector<HTMLElement>('.game-shell')!;
     host.append(this.root);
-    this.bubble = new SpeechBubble(host, this.root);
+    this.bubble = new SpeechBubble(host, this.root, sfx);
     document.querySelector('#app')!.classList.add('chase-mode');
     this.sophie.respawn(level.playerSpawn);
     this.jimmy.reconcile(level.playerSpawn);
@@ -194,6 +196,9 @@ export class ChaseRun {
         .fillStyle(0xf1bd7b, 0.22)
         .fillRect(Math.round(this.scroll.x), top, 3, height);
   }
+  revealText(ms: number) {
+    this.bubble.revealText(ms);
+  }
   snapshot() {
     return {
       x: this.scroll.x,
@@ -206,6 +211,7 @@ export class ChaseRun {
     };
   }
   destroy() {
+    this.bubble.destroy();
     this.root.remove();
     this.edge.destroy();
     const background = this.previousBackground;
