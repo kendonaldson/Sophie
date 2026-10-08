@@ -191,7 +191,7 @@ test('real physics clears the bulldozer with both bone refills across forgiving 
     expect(s.y).toBeGreaterThan(184);
   }
 });
-test('only the dead end stops scrolling, launches both dogs upward, and ends after the off-screen joke', async ({
+test('only the dead end stops scrolling, launches both dogs upward, and enters Level 4 after the off-screen joke', async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -255,17 +255,18 @@ test('only the dead end stops scrolling, launches both dogs upward, and ends aft
   expect((await state(page)).characters.sort()).toEqual(
     ['Jimmy', 'sophie'].sort(),
   );
-  await tick(page, t.punchlineMs + t.fadeMs);
-  await expect(music).toHaveJSProperty('volume', 0);
-  await expect(music).toHaveJSProperty('paused', true);
+  await tick(page, t.punchlineMs + t.fadeMs + 20);
+  expect((await state(page)).levelId).toBe('skyscraper');
+  expect((await state(page)).intro).toBe(true);
+  expect((await state(page)).y).toBeGreaterThan(4400);
   await expect(
     page.getByRole('heading', { name: 'TO BE CONTINUED' }),
-  ).toBeVisible();
-  await expect(page.locator('#fade')).toHaveCSS('opacity', '1');
-  await page.getByRole('button', { name: 'Play again' }).click();
-  expect((await state(page)).levelId).toBe('attic-escape');
+  ).toHaveCount(0);
+  await expect(music).toHaveAttribute('src', /city-lights-above.mp3$/);
   await expect(music).toHaveJSProperty('volume', 0.5);
   await expect(music).toHaveJSProperty('paused', false);
+  await tick(page, 1100);
+  expect((await state(page)).grounded).toBe(true);
   await expect(page.locator('.chase-ui')).toHaveCount(0);
   await expect(page.locator('#app')).not.toHaveClass(/chase/);
   expect(errors).toEqual([]);
@@ -300,10 +301,10 @@ test.describe('mobile chase', () => {
     });
     await expect(page.locator('.touch-controls')).toBeHidden();
     await tick(page, 11000);
+    expect((await state(page)).levelId).toBe('skyscraper');
     await expect(
       page.getByRole('heading', { name: 'TO BE CONTINUED' }),
-    ).toBeVisible();
-    await page.getByRole('button', { name: 'Play again' }).tap();
+    ).toHaveCount(0);
     await expect(page.locator('.touch-controls')).toBeVisible();
   });
 });

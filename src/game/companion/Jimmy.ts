@@ -57,17 +57,23 @@ export class Jimmy {
       );
     return this.actor.beforeStep(ms, intent);
   }
-  afterStep(ms: number, sophie: Player, checkpoint: Point, gateExit?: number) {
+  afterStep(
+    ms: number,
+    sophie: Player,
+    checkpoint: Point,
+    gateExit?: number,
+    direction: -1 | 1 = 1,
+  ) {
     const waitingForGate = gateExit !== undefined;
     if (waitingForGate && this.lastIntent.moveX > 0) this.gateExit = gateExit;
     const stable = this.level.platforms.find(
       (p) =>
         Math.abs(sophie.feet.y - p.y) < 0.2 &&
-        sophie.feet.x > p.x + 85 &&
-        sophie.feet.x < p.x + p.width - 32,
+        sophie.feet.x > p.x + (direction === 1 ? 85 : 32) &&
+        sophie.feet.x < p.x + p.width - (direction === 1 ? 32 : 85),
     );
     if (sophie.grounded && stable)
-      this.safe = { x: sophie.feet.x - 15, y: stable.y };
+      this.safe = { x: sophie.feet.x - direction * 15, y: stable.y };
     if (
       !waitingForGate &&
       this.lastIntent.moveX &&
@@ -86,9 +92,9 @@ export class Jimmy {
     if (this.enabled && lost && !this.fade) {
       // Prefer a safe point behind Sophie, never an arbitrary midair coordinate.
       const target =
-        this.safe.x <= sophie.feet.x
+        (sophie.feet.x - this.safe.x) * direction >= 0
           ? this.safe
-          : { x: checkpoint.x - 40, y: checkpoint.y };
+          : { x: checkpoint.x - direction * 40, y: checkpoint.y };
       this.actor.sprite.setAlpha(0);
       this.actor.respawn(target);
       this.history.reset();
@@ -107,10 +113,10 @@ export class Jimmy {
       this.actor.controller.dash.active,
     );
   }
-  reconcile(point: Point) {
+  reconcile(point: Point, direction: -1 | 1 = 1) {
     // The time delay creates the walking separation. A large additional spawn
     // offset would make every recorded takeoff happen before its real ledge.
-    this.safe = { x: Math.max(32, point.x - 15), y: point.y };
+    this.safe = { x: Math.max(32, point.x - direction * 15), y: point.y };
     this.actor.respawn(this.safe);
     this.actor.sprite.setAlpha(1).setScale(1);
     this.history.reset();

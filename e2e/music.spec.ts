@@ -1,6 +1,11 @@
 import { expect, test, devices } from '@playwright/test';
 
 const chapters = [
+  {
+    name: 'skyscraper',
+    url: '/?test&level=skyscraper',
+    track: 'city-lights-above.mp3',
+  },
   { name: 'rooftops', url: '/?test', track: 'rooftop-dash.mp3' },
   {
     name: 'warehouse',

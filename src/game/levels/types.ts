@@ -1,5 +1,7 @@
 import type { Rect } from '../player/CollisionAssist';
 import type { ChaseDefinition } from '../chase/config';
+import type { SkyscraperDefinition } from '../skyscraper/config';
+import { validateSkyscraper } from '../skyscraper/validate';
 export interface Point {
   x: number;
   y: number;
@@ -79,8 +81,9 @@ export interface LevelDefinition {
   name: string;
   /** Asset path relative to public/, played on repeat during gameplay. */
   music?: string;
-  theme?: 'rooftops' | 'warehouse' | 'chase';
+  theme?: 'rooftops' | 'warehouse' | 'chase' | 'skyscraper';
   chase?: ChaseDefinition;
+  skyscraper?: SkyscraperDefinition;
   nextLevel?: string;
   companionSpawn?: Point;
   movingPlatforms?: MovingPlatformDefinition[];
@@ -134,6 +137,8 @@ export function validateLevel(level: LevelDefinition): void {
     ...(level.movingPlatforms ?? []),
     ...(level.shutters ?? []),
     ...(level.elevator ? [level.elevator] : []),
+    ...(level.skyscraper?.lifts ?? []),
+    ...(level.skyscraper?.birds ?? []),
   ].map((x) => x.id);
   if (new Set(ids).size !== ids.length || ids.some((id) => !id))
     fail('entity IDs must be unique');
@@ -186,6 +191,7 @@ export function validateLevel(level: LevelDefinition): void {
     )
       fail('invalid chase configuration');
   }
+  if (level.skyscraper) validateSkyscraper(level, safe, fail);
   for (const cp of level.checkpoints)
     if (
       !rectValid(cp.area) ||

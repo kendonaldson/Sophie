@@ -47,25 +47,32 @@ export class Hud {
   setLevel(level: LevelDefinition) {
     const warehouse = level.theme === 'warehouse';
     const chase = level.theme === 'chase';
-    document.querySelector('.chapter > span:last-child')!.innerHTML = chase
-      ? 'Chapter 03 <i></i> The Chase'
-      : warehouse
-        ? 'Chapter 02 <i></i> The Warehouse'
-        : 'Chapter 01 <i></i> Attic Escape';
-    document.querySelector('.chapter-number')!.textContent = chase
-      ? '03 — 03'
-      : warehouse
-        ? '02 — 03'
-        : '01 — 03';
+    const skyscraper = level.theme === 'skyscraper';
+    document.querySelector('.chapter > span:last-child')!.innerHTML = skyscraper
+      ? 'Chapter 04 <i></i> The Skyscraper'
+      : chase
+        ? 'Chapter 03 <i></i> The Chase'
+        : warehouse
+          ? 'Chapter 02 <i></i> The Warehouse'
+          : 'Chapter 01 <i></i> Attic Escape';
+    document.querySelector('.chapter-number')!.textContent = skyscraper
+      ? '04 — 04'
+      : chase
+        ? '03 — 04'
+        : warehouse
+          ? '02 — 04'
+          : '01 — 04';
     document
       .querySelector('#world')!
       .setAttribute(
         'aria-label',
-        chase
-          ? 'Sophie and Jimmy escaping through a neighborhood and construction yard'
-          : warehouse
-            ? 'Sophie and Jimmy exploring a warehouse'
-            : 'Sophie, a dachshund, exploring neighborhood rooftops',
+        skyscraper
+          ? 'Sophie and Jimmy climbing the skyscraper above the nighttime city'
+          : chase
+            ? 'Sophie and Jimmy escaping through a neighborhood and construction yard'
+            : warehouse
+              ? 'Sophie and Jimmy exploring a warehouse'
+              : 'Sophie, a dachshund, exploring neighborhood rooftops',
       );
     this.lastSection = '';
     this.showDialogue();

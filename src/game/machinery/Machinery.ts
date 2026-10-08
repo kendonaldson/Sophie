@@ -38,6 +38,15 @@ export class Machinery {
       this.surfaces.push(
         this.makeSurface(p.id, platformPosition(p, 0), p.width, p.height),
       );
+    for (const lift of level.skyscraper?.lifts ?? [])
+      this.surfaces.push(
+        this.makeSurface(
+          lift.id,
+          { x: lift.x, y: lift.bottomY },
+          lift.width,
+          20,
+        ),
+      );
     if (level.elevator) {
       const e = level.elevator;
       this.elevator = this.makeSurface(
@@ -89,7 +98,9 @@ export class Machinery {
     );
     const dx = at.x - s.x,
       dy = at.y - s.y;
-    s.velocity = { x: (dx * 1000) / ms, y: (dy * 1000) / ms };
+    // Zero elapsed time denotes a reset, not a physical sweep or launch impulse.
+    s.velocity =
+      ms > 0 ? { x: (dx * 1000) / ms, y: (dy * 1000) / ms } : { x: 0, y: 0 };
     for (const a of riders) {
       a.translate(dx, dy);
       this.support.set(a, s.velocity);
@@ -99,9 +110,11 @@ export class Machinery {
     s.zone.setPosition(s.x + s.width / 2, s.y + s.height / 2);
     (s.zone.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
     // A purely visual weight dip: never changes collision geometry.
-    s.dip +=
-      ((riders.length > 1 ? 3 : riders.length ? 1 : 0) - s.dip) *
-      Math.min(1, ms / 100);
+    if (!ms) s.dip = 0;
+    else
+      s.dip +=
+        ((riders.length > 1 ? 3 : riders.length ? 1 : 0) - s.dip) *
+        Math.min(1, ms / 100);
   }
   step(ms: number, actors: Player[]) {
     this.elapsed += ms;
@@ -187,6 +200,22 @@ export class Machinery {
       actor.body.setVelocity(
         actor.body.velocity.x + velocity.x,
         actor.body.velocity.y + velocity.y,
+      );
+  }
+  moveConstructionLift(id: string, y: number, ms: number, actors: Player[]) {
+    const surface = this.surfaces.find((s) => s.id === id);
+    if (!surface) throw new Error(`Unknown lift ${id}`);
+    this.move(surface, { x: surface.x, y }, ms, actors);
+  }
+  resetMotion() {
+    this.elapsed = 0;
+    this.support.clear();
+    for (const def of this.level.movingPlatforms ?? [])
+      this.move(
+        this.surfaces.find((s) => s.id === def.id)!,
+        platformPosition(def, 0),
+        0,
+        [],
       );
   }
   get elevatorSurface() {

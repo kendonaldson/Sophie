@@ -295,6 +295,32 @@ describe('procedural SFX lifecycle and safety', () => {
   });
 });
 
+it('plays a short shared bird chirp, cleans up, and respects unavailable or disabled audio', () => {
+  const { sfx, context, factory } = setup();
+  const c = sfxConfig.birdSquawk;
+  sfx.birdSquawk();
+  expect(factory).not.toHaveBeenCalled();
+  sfx.unlockFromGesture();
+  sfx.birdSquawk();
+  const tone = context.sources[0]!;
+  expect(tone.type).toBe(c.waveform);
+  expect(tone.frequency.setValueAtTime).toHaveBeenCalledWith(
+    c.startFrequency,
+    0,
+  );
+  expect(tone.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(
+    c.peakFrequency,
+    (c.durationMs / 1000) * c.turnAt,
+  );
+  expect(tone.stop).toHaveBeenCalledWith(c.durationMs / 1000);
+  context.finish();
+  expect(tone.disconnect).toHaveBeenCalledOnce();
+  sfx.setEnabled(false);
+  sfx.birdSquawk();
+  expect(context.sources).toHaveLength(1);
+  expect(factory).toHaveBeenCalledOnce();
+});
+
 describe('dialogue reveal and character cadence', () => {
   it('skips spaces/punctuation, rate-limits across characters and speakers, and cancels only dialogue', () => {
     const { sfx, context } = setup();

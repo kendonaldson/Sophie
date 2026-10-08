@@ -1,6 +1,7 @@
 import type { PlayerIntent } from '../input/Input';
 import type { PlayerPhysicsConfig } from '../config/physics';
 import type { InterludeDirector } from '../story/InterludeDirector';
+import type { SkyscraperRun } from '../skyscraper/SkyscraperRun';
 export interface StoryTestApi {
   snapshot(): {
     phase: InterludeDirector['phase'];
@@ -57,6 +58,7 @@ export interface GameSnapshot {
     attempts: number;
   };
   characters: string[];
+  climb?: ReturnType<SkyscraperRun['snapshot']>;
   intro: boolean;
   finale?: string;
   finaleComplete: boolean;
@@ -66,7 +68,9 @@ export interface GameTestApi {
   manual(enabled: boolean): void;
   advance(frames: number, intent?: Partial<PlayerIntent>): GameSnapshot;
   restart(): void;
-  loadLevel(id: 'attic-escape' | 'warehouse' | 'the-chase'): void;
+  loadLevel(
+    id: 'attic-escape' | 'warehouse' | 'the-chase' | 'skyscraper',
+  ): void;
   chaseSection(x: number): void;
   checkpoint(id: string): void;
   platform(id: string): void;
