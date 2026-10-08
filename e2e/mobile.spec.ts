@@ -1,4 +1,5 @@
 import { test, expect, devices } from '@playwright/test';
+import { atticEscape } from '../src/game/levels/atticEscape';
 test.describe('phone controls', () => {
   test.use({
     viewport: { width: 844, height: 390 },
@@ -6,12 +7,12 @@ test.describe('phone controls', () => {
     isMobile: true,
     userAgent: devices['iPhone 13'].userAgent,
   });
-  test('all eight arrows aim real touch dashes, including diagonals while dragging and holding X', async ({
+  test('four arrows support all eight touch dash directions across the whole pad', async ({
     page,
   }) => {
     await page.goto('/?test');
     await page.waitForFunction(() => Boolean(window.__sophie));
-    await expect(page.locator('.pad-direction')).toHaveCount(8);
+    await expect(page.locator('.pad-direction')).toHaveCount(4);
     const pad = (await page.locator('.touch-pad').boundingBox())!;
     const dash = (await page
       .getByRole('button', { name: 'Dash', exact: true })
@@ -23,6 +24,17 @@ test.describe('phone controls', () => {
       y: pad.y + pad.height / 2,
     };
     const active = page.locator('.pad-direction.active');
+    const expectAim = async (x: number, y: number) => {
+      await expect(active).toHaveCount(Math.abs(x) + Math.abs(y));
+      if (x)
+        await expect(
+          page.locator(`.pad-direction.active[data-x="${x}"]`),
+        ).toHaveCount(1);
+      if (y)
+        await expect(
+          page.locator(`.pad-direction.active[data-y="${y}"]`),
+        ).toHaveCount(1);
+    };
     for (const [x, y] of [
       [-1, -1],
       [0, -1],
@@ -56,9 +68,7 @@ test.describe('phone controls', () => {
         type: 'touchMove',
         touchPoints: [direction],
       });
-      await expect(active).toHaveCount(1);
-      await expect(active).toHaveAttribute('data-x', String(x));
-      await expect(active).toHaveAttribute('data-y', String(y));
+      await expectAim(x!, y!);
       const dashed = page.waitForFunction(
         () => {
           const s = window.__sophie!.snapshot();
@@ -100,8 +110,7 @@ test.describe('phone controls', () => {
       type: 'touchMove',
       touchPoints: [{ id: 1, x: pad.x + pad.width + 12, y: pad.y - 12 }],
     });
-    await expect(active).toHaveAttribute('data-x', '1');
-    await expect(active).toHaveAttribute('data-y', '-1');
+    await expectAim(1, -1);
     await session.send('Input.dispatchTouchEvent', {
       type: 'touchMove',
       touchPoints: [center],
@@ -111,12 +120,130 @@ test.describe('phone controls', () => {
       type: 'touchMove',
       touchPoints: [{ id: 1, x: center.x - 28, y: center.y - 28 }],
     });
-    await expect(active).toHaveCount(1);
+    await expectAim(-1, -1);
     await session.send('Input.dispatchTouchEvent', {
       type: 'touchCancel',
       touchPoints: [],
     });
     await expect(active).toHaveCount(0);
+  });
+  test('the final rooftop gap can be crossed with touch dash then held jump without a second dash', async ({
+    page,
+  }) => {
+    await page.goto('/?test');
+    await page.waitForFunction(() => Boolean(window.__sophie));
+    const pad = (await page.locator('.touch-pad').boundingBox())!;
+    const dash = (await page
+      .getByRole('button', { name: 'Dash', exact: true })
+      .boundingBox())!;
+    const jump = (await page
+      .getByRole('button', { name: 'Jump', exact: true })
+      .boundingBox())!;
+    const session = await page.context().newCDPSession(page);
+    const direction = {
+      id: 1,
+      x: pad.x + pad.width * 0.87,
+      y: pad.y + pad.height / 2,
+    };
+    const factory = atticEscape.platforms.find((p) => p.id === 'warehouse')!;
+    const dashFinger = {
+      id: 2,
+      x: dash.x + dash.width / 2,
+      y: dash.y + dash.height / 2,
+    };
+    for (const action of ['lift-60', 'lift-100', 'slide-after-dash']) {
+      // Set up on the last safe roof, then use real held touch controls and
+      // release X before pressing Z, as with a single right thumb.
+      await page.evaluate(() => {
+        const a = window.__sophie!;
+        a.manual(true);
+        a.checkpoint('combo');
+        a.place({ x: 2680, y: 388 });
+        a.advance(1);
+        a.manual(false);
+      });
+      await session.send('Input.dispatchTouchEvent', {
+        type: 'touchStart',
+        touchPoints: [direction, dashFinger],
+      });
+      await page.waitForFunction(
+        () => window.__sophie!.snapshot().state === 'Dashing',
+      );
+      if (action === 'slide-after-dash') {
+        // Use the extra combo window after the 170 ms dash has completed.
+        await page.waitForFunction(
+          () => window.__sophie!.snapshot().state === 'Airborne',
+          undefined,
+          { polling: 'raf' },
+        );
+      } else {
+        await page.waitForTimeout(action === 'lift-60' ? 60 : 100);
+        await session.send('Input.dispatchTouchEvent', {
+          type: 'touchEnd',
+          // CDP ends the listed contact; the D-pad finger remains held.
+          touchPoints: [dashFinger],
+        });
+      }
+      await session.send('Input.dispatchTouchEvent', {
+        type: action === 'slide-after-dash' ? 'touchMove' : 'touchStart',
+        touchPoints: [
+          direction,
+          { id: 2, x: jump.x + jump.width / 2, y: jump.y + jump.height / 2 },
+        ],
+      });
+      const result = await page.waitForFunction((x) => {
+        const s = window.__sophie!.snapshot();
+        return s.respawning || (s.grounded && s.x >= x - 15) ? s : false;
+      }, factory.x);
+      const landed = await result.jsonValue();
+      await session.send('Input.dispatchTouchEvent', {
+        type: 'touchEnd',
+        touchPoints: [],
+      });
+      if (!landed) throw new Error('Final touch jump did not finish');
+      expect(landed.respawning, action).toBe(false);
+      expect(landed.grounded).toBe(true);
+      expect(landed.y).toBeCloseTo(factory.y, 0);
+    }
+  });
+  test('a thumb can slide from held jump to dash without a lift or repeated action, then cancel cleanly', async ({
+    page,
+  }) => {
+    await page.goto('/?test');
+    await page.waitForFunction(() => Boolean(window.__sophie));
+    const jump = page.locator('.touch-jump'),
+      dash = page.locator('.touch-dash');
+    const z = (await jump.boundingBox())!,
+      x = (await dash.boundingBox())!;
+    const session = await page.context().newCDPSession(page);
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ id: 1, x: z.x + z.width / 2, y: z.y + z.height / 2 }],
+    });
+    await page.waitForFunction(() => window.__sophie!.snapshot().vy < -100);
+    const finger = { id: 1, x: x.x + x.width / 2, y: x.y + x.height / 2 };
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [finger],
+    });
+    await expect(dash).toHaveClass(/pressed/);
+    await expect(jump).not.toHaveClass(/pressed/);
+    await page.waitForFunction(
+      () => window.__sophie!.snapshot().state === 'Dashing',
+    );
+    await page.waitForTimeout(200);
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ ...finger, x: finger.x + 2 }],
+    });
+    const ended = await page.evaluate(() => window.__sophie!.snapshot());
+    expect(ended.state).not.toBe('Dashing');
+    expect(ended.charges).toBe(0);
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchCancel',
+      touchPoints: [],
+    });
+    await expect(page.locator('.touch-button.pressed')).toHaveCount(0);
   });
   test('multi-touch supports movement, jumping and dash; orientation pauses without changing physics', async ({
     page,

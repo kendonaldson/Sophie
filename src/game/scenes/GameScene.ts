@@ -9,6 +9,7 @@ import {
 } from '../input/Input';
 import { CombinedInput } from '../input/CombinedInput';
 import { TouchControls } from '../../ui/mobile/TouchControls';
+import { DebugLevelSelector } from '../../ui/DebugLevelSelector';
 import { LevelMusic } from '../audio/LevelMusic';
 import { Player } from '../player/Player';
 import { createAnimations } from '../player/animations';
@@ -33,6 +34,7 @@ export class GameScene extends Phaser.Scene {
   private inputSource!: InputSource;
   private orientationBlocked = false;
   private music?: LevelMusic;
+  private debugSelector?: DebugLevelSelector;
   private checkpoints!: Checkpoints;
   private treats: DogTreat[] = [];
   private art!: WorldArt | WarehouseArt;
@@ -90,10 +92,16 @@ export class GameScene extends Phaser.Scene {
         this.orientationBlocked = mode === 'mobile-portrait';
         this.syncMusic();
         this.accumulator = 0;
-        this.inputSource?.clear();
+        this.clearInput();
       }),
     );
     this.buildLevel(this.level);
+    this.debugSelector = new DebugLevelSelector(
+      document.querySelector<HTMLElement>('#app')!,
+      [atticEscape, warehouse],
+      this.level,
+      (level) => this.buildLevel(level),
+    );
     this.hud.bind(
       () => this.togglePause(),
       () => this.beginRespawn(),
@@ -106,6 +114,7 @@ export class GameScene extends Phaser.Scene {
       this.events.off('shutdown', cleanup);
       this.events.off('destroy', cleanup);
       this.music?.destroy();
+      this.debugSelector?.destroy();
       this.inputSource.destroy();
       window.removeEventListener('keydown', this.onCommand);
       window.removeEventListener('blur', this.onBlur);
@@ -179,10 +188,11 @@ export class GameScene extends Phaser.Scene {
     this.effects = new Effects(this);
     this.followCamera = new FollowCamera(this.cameras.main, level);
     this.followCamera.snap(this.player);
-    this.inputSource.clear();
+    this.clearInput();
     this.hud.showPause(false);
     this.hud.setFade(fade ? 1 : 0);
     this.hud.setLevel(level);
+    this.debugSelector?.setLevel(level);
     this.music?.setVolume(0.5);
     this.music?.setTrack(level.music);
     this.syncMusic();
@@ -191,7 +201,11 @@ export class GameScene extends Phaser.Scene {
     return this.jimmy ? [this.player, this.jimmy.actor] : [this.player];
   }
   private onCommand = (event: KeyboardEvent) => {
-    if (event.repeat) return;
+    if (
+      event.repeat ||
+      (event.target instanceof HTMLElement && event.target.closest('select'))
+    )
+      return;
     if (event.code === 'Escape') {
       event.preventDefault();
       this.togglePause();
@@ -209,11 +223,17 @@ export class GameScene extends Phaser.Scene {
       !this.paused && !this.orientationBlocked && !this.ending,
     );
   }
+  private clearInput() {
+    this.inputSource?.clear();
+    this.player?.controller.clearBufferedInput();
+    this.jimmy?.actor.controller.clearBufferedInput();
+    this.jimmy?.history.reset();
+  }
   private togglePause() {
     if (this.ending) return;
     this.paused = !this.paused;
     this.syncMusic();
-    this.inputSource.clear();
+    this.clearInput();
     this.accumulator = 0;
     this.hud.showPause(this.paused);
     for (const actor of this.actors)
@@ -235,7 +255,7 @@ export class GameScene extends Phaser.Scene {
     this.syncMusic();
     this.hud.showPause(false);
     this.respawnRemaining = simulation.respawnMs;
-    this.inputSource.clear();
+    this.clearInput();
   }
   private resetPlayer() {
     const spawn = this.checkpoints.spawn;
@@ -313,7 +333,7 @@ export class GameScene extends Phaser.Scene {
       if (this.sling.done) {
         this.finaleComplete = true;
         this.jimmy?.history.reset();
-        this.inputSource.clear();
+        this.clearInput();
         this.checkpoints.update(this.player.feet, true);
       }
       return;
@@ -328,7 +348,7 @@ export class GameScene extends Phaser.Scene {
       if (!this.introMs) {
         this.hud.showDialogue();
         this.jimmy!.enabled = true;
-        this.inputSource.clear();
+        this.clearInput();
       }
       intent = noInput();
     }
@@ -445,11 +465,11 @@ export class GameScene extends Phaser.Scene {
         this.player.body.velocity.y,
       )
     ) {
-      this.inputSource.clear();
+      this.clearInput();
       this.sling = new FinalSling(finale, this.player, this.jimmy.actor);
     }
     if (overlaps(this.player.body, this.level.exit)) {
-      this.inputSource.clear();
+      this.clearInput();
       if (this.jimmy && this.finaleComplete) this.exitWalkMs = 750;
       else if (!this.jimmy) this.finishLevel();
     }
@@ -459,7 +479,7 @@ export class GameScene extends Phaser.Scene {
     this.endingMs = 0;
     this.hud.showDialogue();
     this.player.body.setVelocity(0, 0);
-    this.inputSource.clear();
+    this.clearInput();
     this.syncMusic();
   }
   update(_time: number, delta: number) {
@@ -541,7 +561,7 @@ export class GameScene extends Phaser.Scene {
       manual: (enabled) => {
         this.manual = enabled;
         this.accumulator = 0;
-        this.inputSource.clear();
+        this.clearInput();
       },
       advance: (frames, intent = {}) => {
         for (let i = 0; i < frames; i++)

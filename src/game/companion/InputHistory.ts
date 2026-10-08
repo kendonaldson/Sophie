@@ -3,12 +3,12 @@ import { noInput, type PlayerIntent } from '../input/Input';
 export class InputHistory {
   private entries: { time: number; input: PlayerIntent }[] = [];
   private time = 0;
-  private held = noInput();
+  private held: Pick<PlayerIntent, 'moveX' | 'aimY' | 'jumpHeld'> = noInput();
   constructor(readonly delayMs = 300) {}
   step(ms: number, input: PlayerIntent): PlayerIntent {
     this.entries.push({ time: this.time, input: { ...input } });
     const target = this.time - this.delayMs;
-    const result = { ...this.held, jumpPressed: false, dashPressed: false };
+    const result: PlayerIntent = { ...noInput(), ...this.held };
     while (this.entries.length && this.entries[0]!.time <= target + 1e-6) {
       const next = this.entries.shift()!.input;
       result.moveX = next.moveX;
@@ -16,7 +16,15 @@ export class InputHistory {
       result.jumpHeld = next.jumpHeld;
       result.jumpPressed ||= next.jumpPressed;
       result.dashPressed ||= next.dashPressed;
-      this.held = { ...next, jumpPressed: false, dashPressed: false };
+      if (next.jumpPressed && next.jumpSource)
+        result.jumpSource = next.jumpSource;
+      if (next.dashPressed && next.dashSource)
+        result.dashSource = next.dashSource;
+      this.held = {
+        moveX: next.moveX,
+        aimY: next.aimY,
+        jumpHeld: next.jumpHeld,
+      };
     }
     this.time += ms;
     return result;

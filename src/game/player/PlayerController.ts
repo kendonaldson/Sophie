@@ -1,4 +1,5 @@
 import type { PlayerPhysicsConfig } from '../config/physics';
+import { touchTiming } from '../config/touch';
 import type { PlayerIntent } from '../input/Input';
 import { DashController } from './DashController';
 export type PlayerState = 'Grounded' | 'Airborne' | 'Dashing';
@@ -24,6 +25,7 @@ export class PlayerController {
   private dashJumpMs = 0;
   private dashJumpVelocity = 0;
   private canCutJump = false;
+  private pendingDash?: { ms: number; x: number; y: number; facing: -1 | 1 };
   constructor(readonly config: Readonly<PlayerPhysicsConfig>) {
     this.dash = new DashController(config);
   }
@@ -35,23 +37,48 @@ export class PlayerController {
       dashed = false;
     this.coyoteMs = grounded ? c.coyoteTimeMs : Math.max(0, this.coyoteMs - ms);
     this.bufferMs = input.jumpPressed
-      ? c.jumpBufferMs
+      ? input.jumpSource === 'touch'
+        ? Math.max(c.jumpBufferMs, touchTiming.jumpBufferMs)
+        : c.jumpBufferMs
       : Math.max(0, this.bufferMs - ms);
     this.dashJumpMs = Math.max(0, this.dashJumpMs - ms);
+    if (this.pendingDash) {
+      this.pendingDash.ms -= ms;
+      if (this.pendingDash.ms <= 0) this.pendingDash = undefined;
+    }
     if (input.moveX) this.facing = input.moveX;
+    if (input.dashPressed) {
+      // Remember the direction of the tap, even if the thumb moves before a refill.
+      this.pendingDash =
+        input.dashSource === 'touch'
+          ? {
+              ms: touchTiming.dashBufferMs,
+              x: input.moveX,
+              y: input.aimY,
+              facing: this.facing,
+            }
+          : undefined;
+    }
     const dashEnded = this.dash.tick(ms, grounded);
     if (dashEnded) {
       vx *= c.dashExitMomentumRetention;
       vy *= c.dashExitMomentumRetention;
     }
-    if (
-      input.dashPressed &&
-      this.dash.start(input.moveX, input.aimY, this.facing)
-    ) {
+    const request =
+      this.pendingDash ??
+      (input.dashPressed
+        ? { x: input.moveX, y: input.aimY, facing: this.facing }
+        : undefined);
+    const touchDash = this.pendingDash !== undefined;
+    if (request && this.dash.start(request.x, request.y, request.facing)) {
+      this.pendingDash = undefined;
       dashed = true;
       this.canCutJump = false;
+      this.dashJumpMs = 0;
       if (grounded && this.dash.direction.y === 0) {
-        this.dashJumpMs = c.dashJumpWindowMs;
+        this.dashJumpMs = touchDash
+          ? Math.max(c.dashJumpWindowMs, touchTiming.dashJumpWindowMs)
+          : c.dashJumpWindowMs;
         this.dashJumpVelocity =
           this.dash.direction.x * c.dashSpeed * c.dashJumpMomentumRetention;
       }
@@ -69,6 +96,7 @@ export class PlayerController {
       jumped = true;
       this.coyoteMs = 0;
       this.bufferMs = 0;
+      this.pendingDash = undefined;
       this.canCutJump = true;
     }
     if (!this.dash.active) {
@@ -110,12 +138,16 @@ export class PlayerController {
         : 'Airborne';
     return { vx, vy, grounded, jumped, dashed };
   }
+  clearBufferedInput() {
+    this.bufferMs = 0;
+    this.pendingDash = undefined;
+    this.dashJumpMs = 0;
+    this.dashJumpVelocity = 0;
+  }
   reset() {
     this.dash.reset();
     this.coyoteMs = 0;
-    this.bufferMs = 0;
-    this.dashJumpMs = 0;
-    this.dashJumpVelocity = 0;
+    this.clearBufferedInput();
     this.canCutJump = false;
     this.state = 'Airborne';
     this.facing = 1;

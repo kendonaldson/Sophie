@@ -15,6 +15,8 @@ export class CombinedInput implements InputSource {
       jumpHeld: keyboard.jumpHeld || touch.jumpHeld,
       jumpPressed: keyboard.jumpPressed || touch.jumpPressed,
       dashPressed: keyboard.dashPressed || touch.dashPressed,
+      ...(touch.jumpPressed ? { jumpSource: 'touch' as const } : {}),
+      ...(touch.dashPressed ? { dashSource: 'touch' as const } : {}),
     };
   }
   clear() {

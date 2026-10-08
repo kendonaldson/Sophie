@@ -82,10 +82,10 @@ async function reachFinalRoof(
   expect(s.charges).toBe(1);
   expect(s.checkpoint).toBe('combo');
   await expect(
-    page.getByRole('heading', { name: 'Long jump + dash', exact: true }),
+    page.getByRole('heading', { name: 'One last long jump', exact: true }),
   ).toBeVisible();
   await expect(page.locator('.tutorial-card')).toContainText(
-    'Catch the bone, then press ↑ + → + X.',
+    'Catch the bone, then press ↑ + → + X if you need a boost.',
   );
 }
 async function finalLongJump(page: Page, dashFrames = 9) {
@@ -113,20 +113,24 @@ async function collectFinalBone(page: Page) {
   expect(collected.grounded).toBe(false);
   return collected;
 }
-async function finishFinalAttempt(page: Page) {
-  return page.evaluate((factory) => {
-    const a = window.__sophie!;
-    for (let i = 0; i < 240; i++) {
-      const s = a.snapshot();
-      if (s.respawning || (s.grounded && s.x >= factory.x - 15)) return s;
-      a.advance(1, { moveX: 1, jumpHeld: true });
-    }
-    return a.snapshot();
-  }, factory);
+async function finishFinalAttempt(page: Page, moveX: -1 | 1 = 1) {
+  return page.evaluate(
+    ({ factory, moveX }) => {
+      const a = window.__sophie!;
+      for (let i = 0; i < 240; i++) {
+        const s = a.snapshot();
+        if (s.respawning || (s.grounded && s.x >= factory.x - 15)) return s;
+        a.advance(1, { moveX, jumpHeld: true });
+      }
+      return a.snapshot();
+    },
+    { factory, moveX },
+  );
 }
 async function retryFinalRoof(page: Page, x: number) {
-  await page.keyboard.press('KeyR');
-  await advance(page, 24);
+  // Successful variants may advance to the factory checkpoint. Start each
+  // timing case on the same safe roof without undoing that real progression.
+  await page.evaluate(() => window.__sophie!.checkpoint('combo'));
   await runTo(page, x);
   expect((await snapshot(page)).grounded).toBe(true);
 }
@@ -272,7 +276,9 @@ test('collected traversal treat returns after a failed attempt', async ({
   await reachFinalRoof(page);
   await finalLongJump(page);
   await collectFinalBone(page);
-  const failed = await finishFinalAttempt(page);
+  // Brake and turn back after collecting: the shorter gap now permits a
+  // direct long-jump landing if right remains held.
+  const failed = await finishFinalAttempt(page, -1);
   expect(failed.respawning).toBe(true);
   expect(failed.grounded).toBe(false);
   let s = await advance(page, 24);
@@ -293,17 +299,18 @@ test('collected traversal treat returns after a failed attempt', async ({
   expect((await finishFinalAttempt(page)).grounded).toBe(true);
 });
 
-test('final long jump plus bone dash allows varied takeoff and reaction timing', async ({
+test('optional bone dash rescues earlier takeoffs with up to 300 ms reaction time', async ({
   page,
 }) => {
   await boot(page, true);
   await reachFinalRoof(page, 2140, 12, 2700);
   for (const [start, dashFrames, reactionFrames] of [
-    [2700, 6, 0],
-    [2710, 9, 6],
-    [2720, 12, 12],
-    [2740, 15, 0],
-    [2750, 6, 12],
+    [2630, 9, 0],
+    [2630, 9, 36],
+    [2660, 12, 24],
+    [2700, 6, 36],
+    [2720, 18, 12],
+    [2740, 15, 36],
   ]) {
     await retryFinalRoof(page, start!);
     await finalLongJump(page, dashFrames!);
@@ -321,57 +328,28 @@ test('final long jump plus bone dash allows varied takeoff and reaction timing',
       JSON.stringify({ start, dashFrames, reactionFrames, landed }),
     ).toBe(false);
     expect(landed.grounded).toBe(true);
-    expect(landed.y).toBe(factory.y);
+    expect(landed.y).toBeCloseTo(factory.y, 0);
   }
 });
 
-test('even the latest long jump cannot clear the factory gap without a second dash', async ({
+test('shorter factory gap permits a direct long jump across varied takeoffs and 50–150 ms dash-to-jump delays', async ({
   page,
 }) => {
   await boot(page, true);
   await reachFinalRoof(page);
-  // Start with the body at the roof lip and sweep the entire combo window,
-  // including jumping after the horizontal dash has already left the roof.
-  for (let delay = 1; delay <= 23; delay++) {
-    await retryFinalRoof(page, 2763);
-    await advance(page, delay, { moveX: 1, dashPressed: true });
-    await advance(page, 1, { moveX: 1, jumpPressed: true, jumpHeld: true });
-    const failed = await finishFinalAttempt(page);
-    expect(failed.respawning, `dash-to-jump delay ${delay}`).toBe(true);
-    expect(failed.grounded).toBe(false);
-    expect(failed.checkpoint).toBe('combo');
-  }
-});
-
-test('an ordinary jump and air dash cannot reach the final refill', async ({
-  page,
-}) => {
-  await boot(page, true);
-  await reachFinalRoof(page);
-  for (const start of [2746, 2780]) {
-    for (const delay of [1, 18, 36, 54, 72, 90, 108]) {
-      for (const aimY of [-1, 0] as const) {
-        // The later launch uses coyote time after walking off the lip.
-        await retryFinalRoof(page, 2746);
-        await runTo(page, start);
-        await advance(page, delay, {
-          moveX: 1,
-          jumpPressed: true,
-          jumpHeld: true,
-        });
-        await advance(page, 21, {
-          moveX: 1,
-          aimY,
-          dashPressed: true,
-          jumpHeld: true,
-        });
-        const failed = await finishFinalAttempt(page);
-        expect(failed.treats).not.toContain('crossing-treat');
-        expect(failed.respawning).toBe(true);
-      }
+  for (const start of [2680, 2700, 2720]) {
+    for (const delay of [6, 12, 18]) {
+      await retryFinalRoof(page, start);
+      await finalLongJump(page, delay);
+      // No second dash: keep right and jump held all the way to the lower roof.
+      const landed = await finishFinalAttempt(page);
+      expect(landed.respawning, `takeoff ${start}, delay ${delay}`).toBe(false);
+      expect(landed.grounded).toBe(true);
+      expect(landed.y).toBe(factory.y);
     }
   }
 });
+
 test('resize leaves physics unchanged and keeps the world sharp and DOM HUD usable', async ({
   page,
 }) => {

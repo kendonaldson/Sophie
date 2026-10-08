@@ -115,7 +115,16 @@ describe('combined input', () => {
       jumpPressed: true,
       jumpHeld: true,
       dashPressed: true,
+      dashSource: 'touch',
     });
+  });
+  it('marks touch jumps without changing an attached keyboard dash', () => {
+    const input = new CombinedInput(
+      source({ dashPressed: true }),
+      source({ jumpPressed: true, jumpHeld: true }),
+    ).sample();
+    expect(input.jumpSource).toBe('touch');
+    expect(input.dashSource).toBeUndefined();
   });
   it('clears and disposes both input sources', () => {
     const keys = source({}),

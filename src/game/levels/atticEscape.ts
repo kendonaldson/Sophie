@@ -14,7 +14,7 @@ export const atticEscape: LevelDefinition = {
   name: 'Attic Escape',
   music: 'assets/audio/rooftop-dash.mp3',
   nextLevel: 'warehouse',
-  width: 3780,
+  width: 3603,
   height: 900,
   fallY: 790,
   playerSpawn: { x: 160, y: 520 },
@@ -71,7 +71,7 @@ export const atticEscape: LevelDefinition = {
     },
     {
       id: 'warehouse',
-      x: 3280,
+      x: 3103,
       y: 450,
       width: 500,
       height: 450,
@@ -80,7 +80,7 @@ export const atticEscape: LevelDefinition = {
   ],
   treats: [
     { id: 'first-treat', x: 1260, y: 468 },
-    { id: 'crossing-treat', x: 3140, y: 415 },
+    { id: 'crossing-treat', x: 2963, y: 350 },
   ],
   checkpoints: [
     checkpoint('start', 160, 520),
@@ -89,7 +89,7 @@ export const atticEscape: LevelDefinition = {
     checkpoint('high', 1640, 500),
     checkpoint('long', 1950, 388, 145),
     checkpoint('combo', 2570, 388, 115),
-    checkpoint('factory', 3410, 450),
+    checkpoint('factory', 3233, 450),
   ],
   sections: [
     { fromX: 0, title: 'Open air', hint: '← → Move   ·   Z / Space Jump' },
@@ -132,21 +132,21 @@ export const atticEscape: LevelDefinition = {
     {
       fromX: 2470,
       title: 'One more leap',
-      hint: 'Long jump from the edge. Catch the bone, then ↑ + → + X to the factory.',
+      hint: 'Long jump to the lower factory roof. The bone gives you a spare dash.',
       tutorial: {
-        title: 'Long jump + dash',
+        title: 'One last long jump',
         steps: [
           'Near the edge: hold →, press X, then hold Z / Space.',
-          'Keep → and jump held to reach the bone for another dash.',
-          'Catch the bone, then press ↑ + → + X. Steer onto the lower roof.',
+          'Keep → and jump held to reach the lower factory roof.',
+          'Catch the bone, then press ↑ + → + X if you need a boost.',
         ],
       },
     },
     {
-      fromX: 3280,
+      fromX: 3103,
       title: 'What’s behind that door?',
       hint: 'The factory is quiet. A little too quiet.',
     },
   ],
-  exit: { x: 3634, y: 378, width: 48, height: 72 },
+  exit: { x: 3457, y: 378, width: 48, height: 72 },
 };

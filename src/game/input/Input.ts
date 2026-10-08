@@ -4,6 +4,9 @@ export interface PlayerIntent {
   jumpPressed: boolean;
   jumpHeld: boolean;
   dashPressed: boolean;
+  /** Per-action origin, so an attached keyboard retains its normal timing. */
+  jumpSource?: 'touch';
+  dashSource?: 'touch';
 }
 export const noInput = (): PlayerIntent => ({
   moveX: 0,
@@ -39,7 +42,7 @@ export class KeyboardInput implements InputSource {
     if (
       !this.gameKeys.has(event.code) ||
       (event.target instanceof HTMLElement &&
-        event.target.closest('button, input'))
+        event.target.closest('button, input, select'))
     )
       return;
     event.preventDefault();

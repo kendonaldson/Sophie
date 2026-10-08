@@ -22,6 +22,7 @@ button {
   cursor: pointer;
 }
 button:focus-visible,
+select:focus-visible,
 a:focus-visible {
   outline: 2px solid #edc780;
   outline-offset: 6px;
@@ -75,6 +76,42 @@ button {
   background: #9aa69b;
   margin: 0 10px;
   vertical-align: middle;
+}
+.debug-mode .chapter {
+  display: none;
+}
+.debug-level-selector {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  max-width: 330px;
+}
+.debug-level-selector label {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+  font-size: 9px;
+  color: #edc780;
+}
+.debug-level-selector select,
+.debug-level-selector button {
+  min-width: 0;
+  height: 32px;
+  border: 1px solid #a99568;
+  border-radius: 3px;
+  padding: 0 8px;
+  font:
+    12px Arial,
+    Helvetica,
+    sans-serif;
+  color: #f1eadc;
+  background: #1c303b;
+}
+.debug-level-selector button {
+  flex-shrink: 0;
 }
 .quiet-button {
   margin-left: auto;
