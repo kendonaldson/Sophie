@@ -1,7 +1,10 @@
 import Phaser from 'phaser';
 import type { Hud } from '../../ui/Hud';
 import { StoryDialogue } from '../../ui/StoryDialogue';
-import { DebugLevelSelector } from '../../ui/DebugLevelSelector';
+import {
+  DebugLevelSelector,
+  type DebugSettings,
+} from '../../ui/DebugLevelSelector';
 import { DialogueInput } from '../input/DialogueInput';
 import { createAnimations } from '../player/animations';
 import { Effects } from '../rendering/Effects';
@@ -28,6 +31,7 @@ export class InterludeScene extends Phaser.Scene {
   constructor(
     private readonly hud: Hud,
     private readonly sfx: SfxOutput,
+    private readonly debugSettings: DebugSettings,
   ) {
     super('Interlude1');
   }
@@ -93,6 +97,7 @@ export class InterludeScene extends Phaser.Scene {
         if (destination.id === c.id) this.scene.restart();
         else this.scene.start('Game', { levelId: destination.id });
       },
+      this.debugSettings,
     );
     const unbindHud = this.hud.bind(
       this.togglePause,
@@ -157,7 +162,8 @@ export class InterludeScene extends Phaser.Scene {
     if (
       event.code !== 'Escape' ||
       event.repeat ||
-      (event.target instanceof HTMLElement && event.target.closest('select'))
+      (event.target instanceof HTMLElement &&
+        event.target.closest('input, select'))
     )
       return;
     event.preventDefault();

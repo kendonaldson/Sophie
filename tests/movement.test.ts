@@ -142,6 +142,34 @@ describe('touch action timing', () => {
   });
 });
 describe('dash capacity and recovery', () => {
+  it.each([0, 1, 2])(
+    'infinite dash preserves %i stored charges and normal dash timing',
+    (charges) => {
+      const d = new DashController(config);
+      d.charges = charges;
+      for (let i = 0; i < 4; i++) {
+        expect(d.start(1, -1, 1, true)).toBe(true);
+        expect(d.charges).toBe(charges);
+        expect(d.remainingMs).toBe(config.dashDurationMs);
+        expect(d.start(-1, 0, 1, true)).toBe(false);
+        d.tick(config.dashDurationMs, false);
+      }
+      expect(d.start(1, 0, 1)).toBe(charges > 0);
+      expect(d.charges).toBe(Math.max(0, charges - 1));
+    },
+  );
+  it('infinite airborne dashes emit one movement event per actual start and stop when disabled', () => {
+    const p = new PlayerController(config);
+    p.dash.charges = 0;
+    for (let i = 0; i < 4; i++) {
+      const input = intent({ dashPressed: true, aimY: -1 });
+      expect(p.step(dt, input, air, true).dashed).toBe(true);
+      expect(p.step(dt, input, air, true).dashed).toBe(false);
+      p.step(config.dashDurationMs, intent(), air, true);
+    }
+    expect(p.dash.charges).toBe(0);
+    expect(p.step(dt, intent({ dashPressed: true }), air).dashed).toBe(false);
+  });
   it('starts at one, consumes one, and refuses zero', () => {
     const d = new DashController(config);
     expect(d.charges).toBe(1);

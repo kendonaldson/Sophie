@@ -68,10 +68,18 @@ test.describe('deployed debug selector on mobile', () => {
     const load = page.getByRole('button', { name: 'Load', exact: true });
     await expect(selector).toBeVisible();
     await expect(selector).toHaveValue('attic-escape');
+    const infinite = page.getByRole('checkbox', {
+      name: 'Infinite dash',
+      exact: true,
+    });
+    await expect(infinite).not.toBeChecked();
+    await infinite.tap();
+    await expect(infinite).toBeChecked();
     await expect(page.locator('.pad-direction')).toHaveCount(4);
     expect(await page.evaluate(() => window.__sophie)).toBeUndefined();
     await selector.selectOption('warehouse');
     await load.tap();
+    await expect(infinite).toBeChecked();
     await expect(page.locator('#world')).toHaveAttribute(
       'aria-label',
       'Sophie and Jimmy exploring a warehouse',
@@ -109,6 +117,11 @@ test.describe('deployed debug selector on mobile', () => {
       expect(box.x).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width).toBeLessThanOrEqual(size.width);
       const pause = (await page.locator('#pause').boundingBox())!;
+      const checkbox = (await infinite.boundingBox())!;
+      expect(checkbox.x).toBeGreaterThanOrEqual(box.x);
+      expect(checkbox.x + checkbox.width).toBeLessThanOrEqual(
+        box.x + box.width,
+      );
       expect(box.x + box.width).toBeLessThanOrEqual(pause.x);
       expect(pause.x + pause.width).toBeLessThanOrEqual(size.width);
     }
@@ -116,6 +129,7 @@ test.describe('deployed debug selector on mobile', () => {
       location.hash = '';
     });
     await expect(selector).toHaveCount(0);
+    await expect(infinite).toHaveCount(0);
     await expect(page.locator('.chapter')).toBeVisible();
     expect(await page.evaluate(() => window.__sophie)).toBeUndefined();
     expect(errors).toEqual([]);

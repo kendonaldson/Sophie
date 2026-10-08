@@ -23,12 +23,12 @@ export class DashController {
       this.charges = Math.max(this.charges, 1);
     return wasActive && !this.active;
   }
-  start(x: number, y: number, facing: number): boolean {
-    if (this.active || this.charges === 0) return false;
+  start(x: number, y: number, facing: number, infinite = false): boolean {
+    if (this.active || (!infinite && this.charges === 0)) return false;
     if (x === 0 && y === 0) x = facing;
     const length = Math.hypot(x, y);
     this.direction = { x: x / length, y: y / length };
-    this.charges--;
+    if (!infinite) this.charges--;
     this.remainingMs = this.config.dashDurationMs;
     // Spending a charge begins a fresh recovery interval on valid ground.
     this.groundedMs = 0;

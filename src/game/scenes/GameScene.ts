@@ -9,7 +9,10 @@ import {
 } from '../input/Input';
 import { CombinedInput } from '../input/CombinedInput';
 import { TouchControls } from '../../ui/mobile/TouchControls';
-import { DebugLevelSelector } from '../../ui/DebugLevelSelector';
+import {
+  DebugLevelSelector,
+  type DebugSettings,
+} from '../../ui/DebugLevelSelector';
 import { LevelMusic } from '../audio/LevelMusic';
 import type { SfxOutput } from '../audio/Sfx';
 import { Player } from '../player/Player';
@@ -72,6 +75,7 @@ export class GameScene extends Phaser.Scene {
   constructor(
     private readonly hud: Hud,
     private readonly sfx: SfxOutput,
+    private readonly debugSettings: DebugSettings,
     private level: LevelDefinition = atticEscape,
   ) {
     super('Game');
@@ -124,6 +128,7 @@ export class GameScene extends Phaser.Scene {
         level.id === 'interlude-1'
           ? this.startInterlude()
           : this.buildLevel(playableLevel(level.id)),
+      this.debugSettings,
     );
     const unbindHud = this.hud.bind(
       () => this.togglePause(),
@@ -264,7 +269,8 @@ export class GameScene extends Phaser.Scene {
   private onCommand = (event: KeyboardEvent) => {
     if (
       event.repeat ||
-      (event.target instanceof HTMLElement && event.target.closest('select'))
+      (event.target instanceof HTMLElement &&
+        event.target.closest('input, select'))
     )
       return;
     if (event.code === 'Escape') {
@@ -484,7 +490,11 @@ export class GameScene extends Phaser.Scene {
     )
       this.hud.showDialogue();
     const wasGrounded = this.player.grounded;
-    const movement = this.player.beforeStep(ms, intent);
+    const movement = this.player.beforeStep(
+      ms,
+      intent,
+      this.debugSelector?.infiniteDash,
+    );
     this.machinery?.transferJump(this.player, movement.jumped);
     if (movement.jumped)
       this.effects.dust(this.player.feet.x, this.player.feet.y);
@@ -626,7 +636,7 @@ export class GameScene extends Phaser.Scene {
         .find((s) => s.fromX <= this.player.feet.x) ?? this.level.sections[0]!;
     const dash = this.player.controller.dash;
     this.hud.update(
-      dash.charges,
+      this.debugSelector?.infiniteDash ? physics.maxDashCharges : dash.charges,
       dash.rechargeProgress,
       this.player.grounded,
       section.title,
