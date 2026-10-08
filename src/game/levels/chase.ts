@@ -55,7 +55,13 @@ export const chase: LevelDefinition = {
     { id: 'dozer-bone-one', x: 4510, y: 310 },
     { id: 'dozer-bone-two', x: 4575, y: 245 },
   ],
-  checkpoints: [],
+  checkpoints: [
+    {
+      id: 'before-bulldozer',
+      area: { x: 4030, y: 400, width: 510, height: 22 },
+      spawn: { x: 4200, y: 420 },
+    },
+  ],
   sections: [
     {
       fromX: 0,

@@ -14,11 +14,20 @@ export class ForcedScroll {
   constructor(readonly config: ForcedScrollConfig) {
     this.speed = config.initialSpeed;
   }
+  reset(playerX: number) {
+    this.x = Math.max(0, playerX - this.config.lookAhead);
+    this.speed = this.targetSpeed(playerX);
+    this.enabled = true;
+  }
+  private targetSpeed(playerX: number) {
+    return (
+      [...this.config.stages].reverse().find((s) => s.fromX <= playerX)
+        ?.speed ?? this.config.initialSpeed
+    );
+  }
   step(ms: number, playerX: number) {
     if (!this.enabled) return;
-    const target =
-      [...this.config.stages].reverse().find((s) => s.fromX <= playerX)
-        ?.speed ?? this.config.initialSpeed;
+    const target = this.targetSpeed(playerX);
     const dt = ms / 1000;
     const difference = target - this.speed;
     const ramp = Math.min(dt, Math.abs(difference) / this.config.acceleration);

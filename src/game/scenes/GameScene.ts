@@ -217,6 +217,7 @@ export class GameScene extends Phaser.Scene {
     this.children.removeAll(true);
     this.level = level;
     this.checkpoints = new Checkpoints(level);
+    this.chaseAttempts = 0;
     this.sling = undefined;
     this.finaleComplete = false;
     this.ending = false;
@@ -382,9 +383,14 @@ export class GameScene extends Phaser.Scene {
       this.clearInput();
       return;
     }
-    if (this.level.chase) {
+    if (this.chase) {
       this.chaseAttempts++;
-      this.buildLevel(this.level);
+      // Retry the earned safe anchor without discarding checkpoint progress.
+      this.clearInput();
+      this.chase.reset(this.checkpoints.spawn);
+      this.treats.forEach((t) => t.restore());
+      this.effects.clear();
+      this.accumulator = 0;
       return;
     }
     const spawn = this.checkpoints.spawn;

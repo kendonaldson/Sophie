@@ -55,13 +55,41 @@ describe('forced scrolling', () => {
     expect(camera.x).toBe(x);
     expect(camera.overtaken(-1000)).toBe(false);
   });
+  it('retries with safe camera space and the checkpoint section speed, even after later acceleration', () => {
+    const camera = new ForcedScroll(def.scroll);
+    camera.step(10000, 6200);
+    camera.stop();
+    const spawn = chase.checkpoints[0]!.spawn;
+    camera.reset(spawn.x);
+    expect(camera.x).toBe(spawn.x - def.scroll.lookAhead);
+    expect(camera.speed).toBe(156);
+    expect(camera.enabled).toBe(true);
+    expect(camera.overtaken(spawn.x)).toBe(false);
+    const x = camera.x;
+    camera.step(1000, spawn.x);
+    expect(camera.x).toBe(x + 156);
+    camera.reset(chase.playerSpawn.x);
+    expect(camera.x).toBe(0);
+    expect(camera.speed).toBe(134);
+  });
 });
 describe('chase geometry and recovery', () => {
-  it('validates and always retries from the beginning without progression checkpoints', () => {
+  it('earns the bulldozer anchor only on the safe runway and retains it after leaving', () => {
     expect(() => validateLevel(chase)).not.toThrow();
-    expect(chase.checkpoints).toEqual([]);
     const cp = new Checkpoints(chase);
+    expect(cp.spawn).toEqual(chase.playerSpawn);
+    expect(cp.update({ x: 3900, y: 315 }, true)).toBe(false);
+    const anchor = chase.checkpoints[0]!;
+    expect(cp.update(anchor.spawn, false)).toBe(false);
+    expect(cp.id).toBe('spawn');
+    expect(cp.update(anchor.spawn, true)).toBe(true);
     cp.update(def.deadEnd.sophie, true);
+    expect(cp.id).toBe('before-bulldozer');
+    expect(cp.spawn).toEqual(anchor.spawn);
+    const runway = chase.platforms.find((p) => p.id === 'dozer-runway')!;
+    expect(anchor.spawn.x).toBeGreaterThan(runway.x + 80);
+    expect(anchor.spawn.x).toBeLessThan(chase.treats[0]!.x - 200);
+    cp.reset();
     expect(cp.spawn).toEqual(chase.playerSpawn);
   });
   it.each(['speed', 'view', 'companion', 'stage'] as const)(
@@ -103,6 +131,13 @@ describe('chase geometry and recovery', () => {
     expect(recovery.target(599, now)).toBeUndefined();
     expect(recovery.target(580, now)).toEqual(now);
     expect(recovery.target(610, now)).toBeUndefined();
+  });
+  it('discards the previous attempt’s companion trail on retry', () => {
+    const recovery = new ChaseRecovery(chase.fallY);
+    recovery.record(300, { x: 4700, y: 190, vx: 180, vy: 0 });
+    recovery.reset();
+    const now = { x: 4200, y: 420, vx: 180, vy: 0 };
+    expect(recovery.target(3910, now)).toEqual(now);
   });
 });
 describe('the skyscraper punchline', () => {
