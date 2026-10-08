@@ -11,6 +11,7 @@ import { interlude1 as c } from '../story/interlude1';
 import { interludeFrame } from '../story/framing';
 import { sceneDestinations } from './destinations';
 import type { StoryTestApi } from './TestApi';
+import type { SfxOutput } from '../audio/Sfx';
 
 export class InterludeScene extends Phaser.Scene {
   private director = new InterludeDirector();
@@ -24,7 +25,10 @@ export class InterludeScene extends Phaser.Scene {
   private orientationBlocked = false;
   private manual = false;
   private ended = false;
-  constructor(private readonly hud: Hud) {
+  constructor(
+    private readonly hud: Hud,
+    private readonly sfx: SfxOutput,
+  ) {
     super('Interlude1');
   }
   create() {
@@ -71,10 +75,15 @@ export class InterludeScene extends Phaser.Scene {
       .fillRect(c.sophieX + 8, c.feetY - 84, 3, 8)
       .fillRect(c.sophieX + 8, c.feetY - 73, 3, 3);
     const shell = document.querySelector<HTMLElement>('.game-shell')!;
-    this.dialogue = new StoryDialogue(shell, this.advance, (blocked) => {
-      this.orientationBlocked = blocked;
-      this.inputSource?.clear();
-    });
+    this.dialogue = new StoryDialogue(
+      shell,
+      this.advance,
+      (blocked) => {
+        this.orientationBlocked = blocked;
+        this.inputSource?.clear();
+      },
+      this.sfx,
+    );
     this.inputSource = new DialogueInput(this.advance);
     const selector = new DebugLevelSelector(
       document.querySelector('#app')!,
@@ -167,6 +176,8 @@ export class InterludeScene extends Phaser.Scene {
         : 0;
     this.director.tick(ms);
     this.present(ms);
+    if (!this.paused && !this.orientationBlocked)
+      this.dialogue.revealText(Math.min(delta, 100));
   }
   private present(ms: number) {
     const actors = this.director.actors;

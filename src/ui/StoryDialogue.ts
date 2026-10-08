@@ -1,5 +1,7 @@
 import { readGameplayMode } from './mobile/capabilities';
 import type { StoryLine } from '../game/story/interlude1';
+import type { SfxOutput } from '../game/audio/Sfx';
+import { DialogueReveal } from './DialogueReveal';
 export class StoryDialogue {
   private readonly root = document.createElement('div');
   private readonly bubble = document.createElement('section');
@@ -9,17 +11,21 @@ export class StoryDialogue {
   private readonly media = matchMedia('(pointer: coarse)');
   private rotate?: HTMLElement;
   private line?: StoryLine;
+  private readonly reveal: DialogueReveal;
   constructor(
     private readonly host: HTMLElement,
     onAdvance: () => void,
     private readonly onOrientation: (blocked: boolean) => void,
+    sfx: SfxOutput,
   ) {
+    this.reveal = new DialogueReveal(sfx);
     this.root.className = 'story-ui';
     this.bubble.className = 'story-bubble';
     this.bubble.setAttribute('role', 'status');
     this.bubble.setAttribute('aria-live', 'polite');
     this.bubble.setAttribute('aria-atomic', 'true');
     this.bubble.append(this.label, this.text);
+    this.text.setAttribute('aria-hidden', 'true');
     this.next.className = 'story-next';
     this.next.type = 'button';
     this.next.textContent = 'Continue · X';
@@ -54,14 +60,20 @@ export class StoryDialogue {
     this.bubble.hidden = !line;
     this.next.hidden = !line || line.cue === 'escape';
     this.next.disabled = !canAdvance;
-    if (!line || line === this.line) return;
+    if (line === this.line) return;
     this.line = line;
+    this.reveal.set(line?.text, line?.speaker);
+    this.text.textContent = '';
+    if (!line) return;
+    this.bubble.setAttribute('aria-label', `${line.speaker}: ${line.text}`);
     this.bubble.dataset.speaker = line.speaker;
     this.label.textContent =
       line.speaker === 'offscreen'
         ? 'A VOICE FROM OFF-SCREEN'
         : line.speaker.toUpperCase();
-    this.text.textContent = line.text;
+  }
+  revealText(ms: number) {
+    if (this.line) this.text.textContent = this.reveal.tick(ms);
   }
   anchor(x: number, headY: number) {
     if (this.line?.speaker === 'offscreen') {
@@ -86,6 +98,7 @@ export class StoryDialogue {
     );
   }
   destroy() {
+    this.reveal.set();
     window.removeEventListener('resize', this.refresh);
     this.media.removeEventListener('change', this.refresh);
     this.root.remove();
