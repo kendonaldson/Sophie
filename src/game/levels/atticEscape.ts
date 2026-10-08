@@ -105,16 +105,32 @@ export const atticEscape: LevelDefinition = {
       fromX: 1540,
       title: 'Higher ground',
       hint: 'Jump, then ↑ + X to reach the high roof.',
+      tutorial: {
+        title: 'High jump',
+        steps: [
+          'Hold Z / Space to jump.',
+          'While rising, hold ↑ and press X.',
+          'Steer left or right to land on the higher roof.',
+        ],
+      },
     },
     {
       fromX: 1860,
       title: 'Carry your momentum',
-      hint: '→ + X, then quickly Z — carry your dash into a long jump.',
+      hint: '→ + X, then hold Z — carry your dash into a long jump.',
+      tutorial: {
+        title: 'Long jump',
+        steps: [
+          'On the roof, hold → and press X to dash.',
+          'Immediately press and hold Z / Space to jump.',
+          'Keep → held to carry your momentum across.',
+        ],
+      },
     },
     {
       fromX: 2470,
       title: 'One more leap',
-      hint: 'Jump, then ↗ + X. Catch the treat, then → + X. Keep steering.',
+      hint: 'Jump, then ↑ + → + X. Catch the treat, then → + X. Keep steering.',
     },
     {
       fromX: 3100,

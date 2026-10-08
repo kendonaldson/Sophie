@@ -15,10 +15,15 @@ export interface CheckpointDefinition {
   area: Rect;
   spawn: Point;
 }
+export interface TutorialDefinition {
+  title: string;
+  steps: string[];
+}
 export interface SectionDefinition {
   fromX: number;
   title: string;
   hint: string;
+  tutorial?: TutorialDefinition;
 }
 export interface LevelDefinition {
   id: string;

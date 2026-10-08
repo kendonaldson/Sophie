@@ -191,6 +191,56 @@ canvas {
 .available .bone-fill {
   filter: drop-shadow(0 1px #805c3b);
 }
+.tutorial-card {
+  position: absolute;
+  top: 72px;
+  left: 27px;
+  width: min(340px, calc(100% - 54px));
+  padding: 14px 17px;
+  color: #f1eadc;
+  background: #192d32ed;
+  border: 1px solid #e5bd7f55;
+  border-left: 3px solid #e5bd7f;
+  border-radius: 3px;
+  pointer-events: none;
+}
+.tutorial-card[hidden] {
+  display: none;
+}
+.tutorial-card h2 {
+  margin: 0 0 9px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #f4d493;
+  text-transform: uppercase;
+}
+.tutorial-card ol {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.tutorial-card li + li {
+  margin-top: 4px;
+}
+.mobile-landscape .tutorial-card {
+  top: 49px;
+  left: 15px;
+  width: 300px;
+  padding: 9px 12px;
+}
+.mobile-landscape .tutorial-card h2 {
+  font-size: 10px;
+  margin-bottom: 5px;
+}
+.mobile-landscape .tutorial-card ol {
+  font-size: 10px;
+  line-height: 1.4;
+}
+.mobile-landscape .tutorial-card li + li {
+  margin-top: 2px;
+}
 .vignette {
   position: absolute;
   inset: 0;
