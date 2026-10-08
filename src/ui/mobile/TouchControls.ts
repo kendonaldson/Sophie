@@ -19,8 +19,7 @@ export class TouchControls implements InputSource {
   private root: HTMLElement | null = null;
   private currentMode: GameplayMode = 'desktop';
   private directionPointer: number | null = null;
-  private jumps = new Set<number>();
-  private dashes = new Set<number>();
+  private actions = new Map<number, 'jump' | 'dash'>();
   private intent = noInput();
   private pad: HTMLElement | null = null;
   private readonly pointerMedia = matchMedia('(pointer: coarse)');
@@ -100,8 +99,7 @@ export class TouchControls implements InputSource {
       'lostpointercapture',
     ] as const)
       this.pad!.addEventListener(event, stop);
-    this.bindButton(this.root.querySelector('.touch-jump')!, 'jump');
-    this.bindButton(this.root.querySelector('.touch-dash')!, 'dash');
+    this.bindActions(this.root.querySelector('.touch-actions')!);
   }
   private aim(event: PointerEvent) {
     const box = this.pad!.getBoundingClientRect(),
@@ -129,29 +127,60 @@ export class TouchControls implements InputSource {
         );
       });
   }
-  private bindButton(button: HTMLButtonElement, kind: 'jump' | 'dash') {
-    const pointers = kind === 'jump' ? this.jumps : this.dashes;
-    button.addEventListener('pointerdown', (event) => {
+  private bindActions(surface: HTMLElement) {
+    const jump = surface.querySelector<HTMLButtonElement>('.touch-jump')!;
+    const dash = surface.querySelector<HTMLButtonElement>('.touch-dash')!;
+    const update = () => {
+      const held = [...this.actions.values()];
+      this.intent.jumpHeld = held.includes('jump');
+      jump.classList.toggle('pressed', this.intent.jumpHeld);
+      dash.classList.toggle('pressed', held.includes('dash'));
+    };
+    const activate = (id: number, kind: 'jump' | 'dash') => {
+      if (this.actions.get(id) === kind) return;
+      this.actions.set(id, kind);
+      if (kind === 'jump') this.intent.jumpPressed = true;
+      else this.intent.dashPressed = true;
+      update();
+    };
+    surface.addEventListener('pointerdown', (event) => {
+      const button = (event.target as HTMLElement).closest('button');
+      if (button !== jump && button !== dash) return;
       event.preventDefault();
-      button.setPointerCapture(event.pointerId);
-      pointers.add(event.pointerId);
-      button.classList.add('pressed');
-      if (kind === 'jump') {
-        this.intent.jumpPressed = true;
-        this.intent.jumpHeld = true;
-      } else this.intent.dashPressed = true;
+      surface.setPointerCapture(event.pointerId);
+      activate(event.pointerId, button === jump ? 'jump' : 'dash');
+    });
+    surface.addEventListener('pointermove', (event) => {
+      if (!this.actions.has(event.pointerId)) return;
+      event.preventDefault();
+      // Crossing into the other button activates it without lifting a thumb.
+      // Keep the current action through the gap and outside the controls.
+      for (const [button, kind] of [
+        [jump, 'jump'],
+        [dash, 'dash'],
+      ] as const) {
+        const box = button.getBoundingClientRect();
+        if (
+          event.clientX >= box.left &&
+          event.clientX <= box.right &&
+          event.clientY >= box.top &&
+          event.clientY <= box.bottom
+        ) {
+          activate(event.pointerId, kind);
+          break;
+        }
+      }
     });
     const stop = (event: PointerEvent) => {
-      pointers.delete(event.pointerId);
-      button.classList.toggle('pressed', pointers.size > 0);
-      if (kind === 'jump') this.intent.jumpHeld = pointers.size > 0;
+      this.actions.delete(event.pointerId);
+      update();
     };
     for (const event of [
       'pointerup',
       'pointercancel',
       'lostpointercapture',
     ] as const)
-      button.addEventListener(event, stop);
+      surface.addEventListener(event, stop);
   }
   sample(): PlayerIntent {
     const intent = { ...this.intent };
@@ -162,8 +191,7 @@ export class TouchControls implements InputSource {
   clear = () => {
     this.intent = noInput();
     this.directionPointer = null;
-    this.jumps.clear();
-    this.dashes.clear();
+    this.actions.clear();
     this.root
       ?.querySelectorAll('.pressed')
       .forEach((b) => b.classList.remove('pressed'));

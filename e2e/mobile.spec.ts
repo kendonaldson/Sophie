@@ -143,7 +143,7 @@ test.describe('phone controls', () => {
       x: dash.x + dash.width / 2,
       y: dash.y + dash.height / 2,
     };
-    for (const delayMs of [60, 100]) {
+    for (const action of ['lift-60', 'lift-100', 'slide-after-dash']) {
       // Set up on the last safe roof, then use real held touch controls and
       // release X before pressing Z, as with a single right thumb.
       await page.evaluate(() => {
@@ -161,14 +161,23 @@ test.describe('phone controls', () => {
       await page.waitForFunction(
         () => window.__sophie!.snapshot().state === 'Dashing',
       );
-      await page.waitForTimeout(delayMs);
+      if (action === 'slide-after-dash') {
+        // Use the extra combo window after the 170 ms dash has completed.
+        await page.waitForFunction(
+          () => window.__sophie!.snapshot().state === 'Airborne',
+          undefined,
+          { polling: 'raf' },
+        );
+      } else {
+        await page.waitForTimeout(action === 'lift-60' ? 60 : 100);
+        await session.send('Input.dispatchTouchEvent', {
+          type: 'touchEnd',
+          // CDP ends the listed contact; the D-pad finger remains held.
+          touchPoints: [dashFinger],
+        });
+      }
       await session.send('Input.dispatchTouchEvent', {
-        type: 'touchEnd',
-        // CDP ends the listed contact; the D-pad finger remains held.
-        touchPoints: [dashFinger],
-      });
-      await session.send('Input.dispatchTouchEvent', {
-        type: 'touchStart',
+        type: action === 'slide-after-dash' ? 'touchMove' : 'touchStart',
         touchPoints: [
           direction,
           { id: 2, x: jump.x + jump.width / 2, y: jump.y + jump.height / 2 },
@@ -184,10 +193,49 @@ test.describe('phone controls', () => {
         touchPoints: [],
       });
       if (!landed) throw new Error('Final touch jump did not finish');
-      expect(landed.respawning, `touch delay ${delayMs} ms`).toBe(false);
+      expect(landed.respawning, action).toBe(false);
       expect(landed.grounded).toBe(true);
       expect(landed.y).toBeCloseTo(factory.y, 0);
     }
+  });
+  test('a thumb can slide from held jump to dash without a lift or repeated action, then cancel cleanly', async ({
+    page,
+  }) => {
+    await page.goto('/?test');
+    await page.waitForFunction(() => Boolean(window.__sophie));
+    const jump = page.locator('.touch-jump'),
+      dash = page.locator('.touch-dash');
+    const z = (await jump.boundingBox())!,
+      x = (await dash.boundingBox())!;
+    const session = await page.context().newCDPSession(page);
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ id: 1, x: z.x + z.width / 2, y: z.y + z.height / 2 }],
+    });
+    await page.waitForFunction(() => window.__sophie!.snapshot().vy < -100);
+    const finger = { id: 1, x: x.x + x.width / 2, y: x.y + x.height / 2 };
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [finger],
+    });
+    await expect(dash).toHaveClass(/pressed/);
+    await expect(jump).not.toHaveClass(/pressed/);
+    await page.waitForFunction(
+      () => window.__sophie!.snapshot().state === 'Dashing',
+    );
+    await page.waitForTimeout(200);
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ ...finger, x: finger.x + 2 }],
+    });
+    const ended = await page.evaluate(() => window.__sophie!.snapshot());
+    expect(ended.state).not.toBe('Dashing');
+    expect(ended.charges).toBe(0);
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchCancel',
+      touchPoints: [],
+    });
+    await expect(page.locator('.touch-button.pressed')).toHaveCount(0);
   });
   test('multi-touch supports movement, jumping and dash; orientation pauses without changing physics', async ({
     page,

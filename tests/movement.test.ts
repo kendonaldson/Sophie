@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { physics as config } from '../src/game/config/physics';
+import { touchTiming } from '../src/game/config/touch';
 import { DashController } from '../src/game/player/DashController';
 import {
   PlayerController,
@@ -13,6 +14,133 @@ const intent = (values: Partial<PlayerIntent> = {}) => ({
 });
 const ground: Motion = { vx: 0, vy: 0, grounded: true };
 const air: Motion = { vx: 0, vy: 0, grounded: false };
+describe('touch action timing', () => {
+  it.each([undefined, 'touch'] as const)(
+    'buffers an early landing jump longer only for touch (%s)',
+    (jumpSource) => {
+      const p = new PlayerController(config);
+      p.step(
+        dt,
+        intent({ jumpPressed: true, jumpHeld: true, jumpSource }),
+        air,
+      );
+      p.step(150, intent({ jumpHeld: true }), air);
+      const landed = p.step(dt, intent({ jumpHeld: true }), ground);
+      expect(landed.jumped).toBe(jumpSource === 'touch');
+      expect(p.step(dt, intent({ jumpHeld: true }), air).jumped).toBe(false);
+      p.reset();
+      p.step(dt, intent({ jumpPressed: true, jumpSource }), air);
+      p.step(touchTiming.jumpBufferMs, intent(), air);
+      expect(p.step(dt, intent(), ground).jumped).toBe(false);
+    },
+  );
+  it.each([undefined, 'touch'] as const)(
+    'allows extra dash-to-jump thumb travel time only for touch (%s)',
+    (dashSource) => {
+      for (const delay of [210, 240, 270]) {
+        const p = new PlayerController(config);
+        let m = p.step(
+          10,
+          intent({ dashPressed: true, moveX: 1, dashSource }),
+          ground,
+        );
+        for (let t = 10; t < delay; t += 10)
+          m = p.step(10, intent({ moveX: 1 }), { ...m, grounded: false });
+        const jump = p.step(
+          10,
+          intent({ jumpPressed: true, jumpHeld: true, moveX: 1 }),
+          { ...m, grounded: false },
+        );
+        const accepted =
+          dashSource === 'touch' && delay < touchTiming.dashJumpWindowMs;
+        expect(jump.jumped, `delay ${delay}`).toBe(accepted);
+        if (accepted) expect(jump.vx).toBeGreaterThan(config.dashSpeed - 1);
+      }
+    },
+  );
+  it.each([undefined, 'touch'] as const)(
+    'remembers a dash tap before a refill only for touch (%s)',
+    (dashSource) => {
+      const p = new PlayerController(config);
+      p.dash.charges = 0;
+      expect(
+        p.step(
+          dt,
+          intent({ dashPressed: true, moveX: 1, aimY: -1, dashSource }),
+          air,
+        ).dashed,
+      ).toBe(false);
+      p.step(80, intent({ moveX: -1 }), air);
+      p.dash.collectTreat();
+      const result = p.step(dt, intent({ moveX: -1 }), air);
+      expect(result.dashed).toBe(dashSource === 'touch');
+      if (dashSource === 'touch') {
+        expect(p.dash.charges).toBe(0);
+        expect(result.vx).toBeGreaterThan(0);
+        expect(result.vy).toBeLessThan(0);
+      }
+    },
+  );
+  it('queues a touch tap near dash completion once, without holding to repeat', () => {
+    const p = new PlayerController(config);
+    p.dash.charges = 2;
+    let m = p.step(
+      10,
+      intent({ dashPressed: true, dashSource: 'touch', moveX: 1 }),
+      air,
+    );
+    m = p.step(
+      100,
+      intent({ dashPressed: true, dashSource: 'touch', aimY: -1 }),
+      m,
+    );
+    expect(m.dashed).toBe(false);
+    m = p.step(70, intent(), m);
+    expect(m.dashed).toBe(true);
+    expect(p.dash.direction).toEqual({ x: 0, y: -1 });
+    expect(p.dash.charges).toBe(0);
+    m = p.step(180, intent(), m);
+    p.dash.collectTreat();
+    expect(p.step(dt, intent(), m).dashed).toBe(false);
+    expect(p.dash.charges).toBe(1);
+  });
+  it.each(['expire', 'clear', 'reset'] as const)(
+    '%s removes buffered touch commands without a surprise dash',
+    (action) => {
+      const p = new PlayerController(config);
+      p.dash.charges = 0;
+      p.step(
+        dt,
+        intent({
+          dashPressed: true,
+          dashSource: 'touch',
+          jumpPressed: true,
+          jumpSource: 'touch',
+        }),
+        air,
+      );
+      if (action === 'expire') p.step(touchTiming.jumpBufferMs, intent(), air);
+      else if (action === 'clear') p.clearBufferedInput();
+      else p.reset();
+      p.dash.collectTreat();
+      const result = p.step(dt, intent(), ground);
+      expect(result.dashed).toBe(false);
+      expect(result.jumped).toBe(false);
+    },
+  );
+  it('uses the same jump and dash velocities for keyboard and touch', () => {
+    const keys = new PlayerController(config),
+      touch = new PlayerController(config);
+    const dash = intent({ dashPressed: true, moveX: 1 });
+    const a = keys.step(dt, dash, ground);
+    const b = touch.step(dt, { ...dash, dashSource: 'touch' }, ground);
+    expect(b).toEqual(a);
+    const jump = intent({ jumpPressed: true, jumpHeld: true, moveX: 1 });
+    expect(touch.step(dt, { ...jump, jumpSource: 'touch' }, b)).toEqual(
+      keys.step(dt, jump, a),
+    );
+  });
+});
 describe('dash capacity and recovery', () => {
   it('starts at one, consumes one, and refuses zero', () => {
     const d = new DashController(config);

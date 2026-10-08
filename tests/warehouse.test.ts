@@ -11,6 +11,7 @@ import { validateLevel } from '../src/game/levels/types';
 import { shouldStartSling, FinalSling } from '../src/game/events/FinalSling';
 import type { Player } from '../src/game/player/Player';
 import { physics } from '../src/game/config/physics';
+import { touchTiming } from '../src/game/config/touch';
 describe('Jimmy input history', () => {
   it.each([5, 10, 20, 25, 50])(
     'delays by 300 ms with %i ms simulation steps',
@@ -49,6 +50,20 @@ describe('Jimmy input history', () => {
     history.reset();
     expect(history.step(300, noInput())).toEqual(noInput());
     expect(history.step(1, noInput())).toEqual(noInput());
+  });
+  it('keeps touch timing attached to the delayed action, never to later keyboard actions', () => {
+    const history = new InputHistory(300);
+    history.step(100, { ...noInput(), dashPressed: true, dashSource: 'touch' });
+    history.step(100, { ...noInput(), jumpPressed: true, jumpSource: 'touch' });
+    history.step(100, { ...noInput(), dashPressed: true });
+    expect(history.step(100, noInput()).dashSource).toBe('touch');
+    const jump = history.step(100, noInput());
+    expect(jump.jumpSource).toBe('touch');
+    expect(jump.dashSource).toBeUndefined();
+    const keys = history.step(100, noInput());
+    expect(keys.dashPressed).toBe(true);
+    expect(keys.dashSource).toBeUndefined();
+    expect(keys.jumpSource).toBeUndefined();
   });
 });
 describe('reusable moving platform motion', () => {
@@ -155,7 +170,10 @@ describe('warehouse progression and finale', () => {
     const postDashTime =
       exitSpeed / g + Math.sqrt((2 * (jumpHeight + addedHeight)) / g);
     const longJumpBound =
-      p.dashSpeed * (p.dashJumpWindowMs / 1000 + lateDashTime + dashSeconds) +
+      p.dashSpeed *
+        (Math.max(p.dashJumpWindowMs, touchTiming.dashJumpWindowMs) / 1000 +
+          lateDashTime +
+          dashSeconds) +
       exitSpeed * postDashTime +
       15 +
       p.edgeForgivenessPixels;
