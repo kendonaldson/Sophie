@@ -55,7 +55,7 @@ for (const chapter of chapters)
     expect(await music.evaluate((a: HTMLAudioElement) => a.currentTime)).toBe(
       pausedAt,
     );
-    await page.getByRole('button', { name: 'Keep exploring' }).click();
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
     await expect
       .poll(() => music.evaluate((a: HTMLAudioElement) => a.currentTime))
       .toBeGreaterThan(pausedAt);

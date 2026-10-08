@@ -311,19 +311,57 @@ canvas {
   inset: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: safe center;
   flex-direction: column;
   background: #16272ded;
   z-index: 5;
+  padding: 12px;
+  overflow-y: auto;
 }
 .overlay[hidden] {
   display: none;
 }
 .overlay h1 {
   font-family: Georgia, serif;
-  font-size: clamp(28px, 5vw, 50px);
+  font-size: clamp(28px, 5vw, 42px);
   font-weight: normal;
-  margin: 20px 10px 32px;
+  margin: 12px 10px 16px;
+}
+.pause-menu {
+  display: grid;
+  gap: 8px;
+  width: min(240px, 100%);
+  flex-shrink: 0;
+}
+.pause-menu button {
+  min-height: 44px;
+}
+.menu-button {
+  border: 1px solid #a99568;
+  border-radius: 2px;
+  background: #233a42;
+  color: #f1eadc;
+  padding: 10px 20px;
+  font-size: 12px;
+}
+.menu-button:hover:not(:disabled) {
+  background: #314b51;
+}
+.menu-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+#fullscreen-status {
+  max-width: 320px;
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+  color: #c9ccbd;
+}
+#fullscreen-status:empty,
+.overlay.ending .pause-only {
+  display: none;
 }
 .overlay.ending {
   background: #000;
@@ -364,19 +402,6 @@ canvas {
   line-height: 1.5;
   margin-right: 15px;
 }
-.retry-button {
-  margin-left: auto;
-  flex-shrink: 0;
-  background: none;
-  color: #8d9f98;
-  font-size: 18px;
-  padding: 10px 0 10px 10px;
-}
-.retry-button span {
-  font-size: 11px;
-  margin-left: 6px;
-}
-.retry-button:hover,
 .quiet-button:hover {
   color: #f2d292;
 }
@@ -496,9 +521,6 @@ kbd {
   }
   .bones {
     gap: 6px;
-  }
-  .retry-button span {
-    display: none;
   }
   #hint {
     font-size: 11px;
@@ -685,8 +707,8 @@ kbd {
   font-size: 45px;
   color: #e5bd7f;
 }
-.mobile-landscape {
-  padding: 0 12px !important;
+#app.mobile-landscape {
+  padding: 0 12px;
 }
 .mobile-landscape .masthead {
   height: 52px;
@@ -732,7 +754,6 @@ kbd {
 .story-mode .world-ui,
 .story-mode .tutorial-card,
 .story-mode .dialogue,
-.story-mode #retry,
 .story-mode .key-guide {
   display: none;
 }
@@ -880,4 +901,60 @@ kbd {
 .climb-scripted .touch-controls {
   visibility: hidden;
   pointer-events: none;
+}
+
+/* Fullscreen contains the whole app so native HUD and touch controls stay visible. */
+#app.is-fullscreen {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  margin: 0;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+  overflow: hidden;
+  background: #15262a;
+}
+#app.is-fullscreen .masthead {
+  height: 48px;
+  flex-shrink: 0;
+  gap: 18px;
+  padding: 0 12px;
+}
+#app.is-fullscreen .wordmark {
+  font-size: 28px;
+}
+#app.is-fullscreen .chapter {
+  padding-left: 18px;
+}
+#app.is-fullscreen .chapter .eyebrow,
+#app.is-fullscreen footer,
+#app.is-fullscreen .keyboard-notice {
+  display: none;
+}
+#app.is-fullscreen main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+#app.is-fullscreen .game-shell {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+}
+#app.is-fullscreen .below-world {
+  min-height: 28px;
+  height: auto;
+  flex-shrink: 0;
+  padding: 0 12px;
+  border: 0;
+}
+#app.is-fullscreen #hint {
+  margin: 4px 0;
+  font-size: 11px;
 }

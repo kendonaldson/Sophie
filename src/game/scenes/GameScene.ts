@@ -155,7 +155,7 @@ export class GameScene extends Phaser.Scene {
     );
     const unbindHud = this.hud.bind(
       () => this.togglePause(),
-      () => this.beginRespawn(),
+      () => this.restart(),
       () => (this.ending ? this.buildLevel(atticEscape) : this.togglePause()),
     );
     window.addEventListener('keydown', this.onCommand);

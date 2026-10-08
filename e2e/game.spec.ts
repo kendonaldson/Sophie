@@ -187,7 +187,7 @@ test('loads Level 1 without console errors; real keyboard movement, jump, dash, 
   const paused = await snapshot(page);
   await page.waitForTimeout(100);
   expect((await snapshot(page)).x).toBe(paused.x);
-  await page.getByRole('button', { name: 'Keep exploring' }).click();
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect.poll(async () => (await snapshot(page)).paused).toBe(false);
   expect(errors).toEqual([]);
 });

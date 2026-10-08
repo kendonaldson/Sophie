@@ -219,7 +219,18 @@ test('built application loads assets, draws, accepts input, and survives resize 
     return changed / (a.width * a.height);
   });
   expect(changedFraction).toBeGreaterThan(0.0025);
-  await page.getByRole('button', { name: 'Keep exploring' }).click();
+  await page.getByRole('button', { name: 'Full Screen', exact: true }).click();
+  await expect
+    .poll(() => page.evaluate(() => document.fullscreenElement?.id))
+    .toBe('app');
+  await expect(music).toHaveJSProperty('paused', true);
+  await page
+    .getByRole('button', { name: 'Exit Full Screen', exact: true })
+    .click();
+  await expect
+    .poll(() => page.evaluate(() => document.fullscreenElement))
+    .toBeNull();
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await page.keyboard.down('KeyZ');
   await page.keyboard.down('ArrowRight');
   await page.keyboard.press('KeyX');
