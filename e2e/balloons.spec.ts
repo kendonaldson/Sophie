@@ -26,7 +26,11 @@ test('starts both dogs on the first crown, loads the original marquee and suppor
   expect(s).toMatchObject({ x: 185, y: 550, grounded: true, charges: 1 });
   expect(s.jimmy).toMatchObject({ x: 140, y: 550, enabled: true });
   await expect(page.locator('.touch-controls')).toHaveCount(0);
-  await expect(page.locator('audio')).not.toHaveAttribute('src');
+  await expect(page.locator('audio')).toHaveAttribute(
+    'src',
+    '/assets/audio/drifting-balloons.mp3',
+  );
+  await expect(page.locator('audio')).toHaveJSProperty('loop', true);
   expect(
     await page
       .locator('audio')
@@ -434,6 +438,7 @@ test('roof landing owns input, plays the scent/dialogue/walk sequence, then ends
     a.advance(1);
   });
   expect((await state(page)).balloons!.phase).toBe('landing');
+  await expect(page.locator('audio')).toHaveJSProperty('volume', 0.25);
   const phases = await page.evaluate(() => {
     const a = window.__sophie!,
       phases = [];
@@ -480,7 +485,13 @@ test('roof landing owns input, plays the scent/dialogue/walk sequence, then ends
   await expect(
     page.getByRole('heading', { name: 'TO BE CONTINUED' }),
   ).toBeVisible();
+  await expect(page.locator('audio')).toHaveJSProperty('paused', true);
   await page.getByRole('button', { name: 'Play again' }).click();
+  await expect(page.locator('audio')).toHaveJSProperty('volume', 0.5);
+  await expect(page.locator('audio')).toHaveAttribute(
+    'src',
+    '/assets/audio/rooftop-dash.mp3',
+  );
   await expect
     .poll(async () => (await state(page)).levelId)
     .toBe('attic-escape');

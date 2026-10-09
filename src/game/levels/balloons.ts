@@ -34,6 +34,7 @@ export const balloons: LevelDefinition = {
   id: 'balloons',
   name: 'The Balloons',
   theme: 'balloons',
+  music: 'assets/audio/drifting-balloons.mp3',
   width: 7100,
   height: 1100,
   fallY: 1000,

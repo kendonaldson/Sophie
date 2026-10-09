@@ -9,9 +9,8 @@ import { PizzaFinale } from '../src/game/balloons/PizzaFinale';
 import { balloonTuning as t } from '../src/game/balloons/config';
 const def = balloons.balloons!;
 describe('balloon level data', () => {
-  it('has safe stable checkpoints in progression order and leaves music unassigned', () => {
+  it('has safe stable checkpoints in progression order', () => {
     expect(() => validateLevel(balloons)).not.toThrow();
-    expect(balloons.music).toBeUndefined();
     const cp = new Checkpoints(balloons);
     for (const anchor of balloons.checkpoints) {
       expect(cp.update(anchor.spawn, false)).toBe(false);

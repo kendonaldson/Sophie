@@ -295,6 +295,7 @@ test('built URLs and original/generated images use the configured deployment pat
     'factory-pulse.mp3',
     'pixel-dash.mp3',
     'city-lights-above.mp3',
+    'drifting-balloons.mp3',
   ]) {
     const track = await request.get(
       new URL(`assets/audio/${file}`, baseURL!).href,
@@ -344,7 +345,20 @@ test('production rooftop hands off to playable balloons and loads the marquee un
   expect(await marquee.body()).toEqual(
     readFileSync('public/assets/shelly_pizza_marquee.png'),
   );
-  await expect(page.locator('audio')).not.toHaveAttribute('src');
+  await expect(page.locator('audio')).toHaveAttribute(
+    'src',
+    new URL('assets/audio/drifting-balloons.mp3', page.url()).pathname,
+  );
+  await expect(page.locator('audio')).toHaveJSProperty('loop', true);
+  // Each gameplay scene starts music on its first keyboard/touch gesture.
+  await page.keyboard.press('ArrowRight');
+  await expect
+    .poll(() =>
+      page
+        .locator('audio')
+        .evaluate((audio: HTMLAudioElement) => audio.currentTime),
+    )
+    .toBeGreaterThan(0);
   expect(
     await page.evaluate(() => [window.__sophie, window.__sophieStory]),
   ).toEqual([undefined, undefined]);
