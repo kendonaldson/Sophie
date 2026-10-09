@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { validateLevel, type LevelDefinition } from './types';
 import { DogTreat } from '../entities/DogTreat';
+import { configureSurfaceCollision } from '../machinery/SurfaceCollision';
 export function loadLevel(scene: Phaser.Scene, level: LevelDefinition) {
   validateLevel(level);
   const terrain = scene.physics.add.staticGroup();
@@ -13,6 +14,7 @@ export function loadLevel(scene: Phaser.Scene, level: LevelDefinition) {
     );
     scene.physics.add.existing(zone, true);
     terrain.add(zone);
+    configureSurfaceCollision(zone.body as Phaser.Physics.Arcade.StaticBody, p);
   }
   return { terrain, treats: level.treats.map((t) => new DogTreat(scene, t)) };
 }

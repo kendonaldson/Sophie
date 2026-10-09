@@ -24,7 +24,7 @@ async function next(page: Page) {
     await tick(page, rooftopLines[state.index + 1]!.pauseBeforeMs!);
   if (state.phase === 'edge-walk') await tick(page, c.edgeWalkMs);
 }
-test('rooftop dialogue, real sleep poses, daylight balloons, combined jump, ending and replay', async ({
+test('rooftop dialogue, real sleep poses, daylight balloons, combined jump and playable balloon handoff', async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -82,13 +82,26 @@ test('rooftop dialogue, real sleep poses, daylight balloons, combined jump, endi
     page.getByRole('heading', { name: 'TO BE CONTINUED' }),
   ).toHaveCount(0);
   await tick(page, c.emptyMs + c.endingFadeMs);
+  await page.waitForFunction(
+    () => window.__sophie?.snapshot().levelId === 'balloons',
+  );
   await expect(
     page.getByRole('heading', { name: 'TO BE CONTINUED' }),
-  ).toBeVisible();
-  await page.getByRole('button', { name: 'Play again' }).click();
-  await page.waitForFunction(
-    () => window.__sophie?.snapshot().levelId === 'attic-escape',
-  );
+  ).toHaveCount(0);
+  const arrival = await page.evaluate(() => window.__sophie!.snapshot());
+  expect(arrival.y).toBe(550);
+  expect(arrival.jimmy!.y).toBe(550);
+  expect(arrival.charges).toBe(1);
+  await expect(page.locator('#fade')).toHaveCSS('opacity', '0');
+  await page.keyboard.down('ArrowRight');
+  await page.keyboard.down('KeyZ');
+  await expect
+    .poll(
+      async () => (await page.evaluate(() => window.__sophie!.snapshot())).y,
+    )
+    .toBeLessThan(540);
+  await page.keyboard.up('ArrowRight');
+  await page.keyboard.up('KeyZ');
   await expect(page.locator('.story-ui')).toHaveCount(0);
   await expect(page.locator('audio')).toHaveCount(1);
   expect(errors).toEqual([]);

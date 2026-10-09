@@ -2,6 +2,8 @@ import type { Rect } from '../player/CollisionAssist';
 import type { ChaseDefinition } from '../chase/config';
 import type { SkyscraperDefinition } from '../skyscraper/config';
 import { validateSkyscraper } from '../skyscraper/validate';
+import type { BalloonDefinition } from '../balloons/config';
+import { validateBalloons } from '../balloons/validate';
 export interface Point {
   x: number;
   y: number;
@@ -21,7 +23,8 @@ export interface PlatformDefinition extends Rect {
     | 'bush'
     | 'barrier'
     | 'bulldozer'
-    | 'engine';
+    | 'engine'
+    | 'balloon';
 }
 export interface MovingPlatformDefinition {
   id: string;
@@ -32,6 +35,8 @@ export interface MovingPlatformDefinition {
   speed: number;
   pauseMs?: number;
   phaseMs?: number;
+  collision?: 'top-only';
+  easing?: 'sine';
 }
 export interface ConveyorDefinition {
   platformId: string;
@@ -81,9 +86,10 @@ export interface LevelDefinition {
   name: string;
   /** Asset path relative to public/, played on repeat during gameplay. */
   music?: string;
-  theme?: 'rooftops' | 'warehouse' | 'chase' | 'skyscraper';
+  theme?: 'rooftops' | 'warehouse' | 'chase' | 'skyscraper' | 'balloons';
   chase?: ChaseDefinition;
   skyscraper?: SkyscraperDefinition;
+  balloons?: BalloonDefinition;
   nextLevel?: string;
   companionSpawn?: Point;
   movingPlatforms?: MovingPlatformDefinition[];
@@ -139,6 +145,7 @@ export function validateLevel(level: LevelDefinition): void {
     ...(level.elevator ? [level.elevator] : []),
     ...(level.skyscraper?.lifts ?? []),
     ...(level.skyscraper?.birds ?? []),
+    ...(level.balloons?.birds ?? []),
   ].map((x) => x.id);
   if (new Set(ids).size !== ids.length || ids.some((id) => !id))
     fail('entity IDs must be unique');
@@ -192,6 +199,7 @@ export function validateLevel(level: LevelDefinition): void {
       fail('invalid chase configuration');
   }
   if (level.skyscraper) validateSkyscraper(level, safe, fail);
+  if (level.balloons) validateBalloons(level, safe, fail);
   for (const cp of level.checkpoints)
     if (
       !rectValid(cp.area) ||

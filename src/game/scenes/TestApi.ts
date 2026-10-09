@@ -1,3 +1,4 @@
+import type { BalloonRun } from '../balloons/BalloonRun';
 import type { RooftopDirector } from '../story/RooftopDirector';
 import type { rooftopGeometry, balloonPositions } from '../story/RooftopArt';
 import type { CombinedSuperJump } from '../superJump/CombinedSuperJump';
@@ -68,6 +69,7 @@ export interface GameSnapshot {
   };
   characters: string[];
   climb?: ReturnType<SkyscraperRun['snapshot']>;
+  balloons?: ReturnType<BalloonRun['snapshot']>;
   intro: boolean;
   finale?: string;
   finaleComplete: boolean;
@@ -78,7 +80,7 @@ export interface GameTestApi {
   advance(frames: number, intent?: Partial<PlayerIntent>): GameSnapshot;
   restart(): void;
   loadLevel(
-    id: 'attic-escape' | 'warehouse' | 'the-chase' | 'skyscraper',
+    id: 'attic-escape' | 'warehouse' | 'the-chase' | 'skyscraper' | 'balloons',
   ): void;
   chaseSection(x: number): void;
   checkpoint(id: string): void;

@@ -958,3 +958,14 @@ kbd {
   margin: 4px 0;
   font-size: 11px;
 }
+
+.balloon-finale .world-ui,
+.balloon-finale .touch-controls,
+.balloon-finale .tutorial-card {
+  display: none;
+}
+.balloon-ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}

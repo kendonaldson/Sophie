@@ -4,6 +4,7 @@ import type { LevelDefinition, Point } from '../levels/types';
 import type { Rect } from '../player/CollisionAssist';
 import { overlaps } from '../player/CollisionAssist';
 import type { Player } from '../player/Player';
+import { configureSurfaceCollision } from './SurfaceCollision';
 interface Surface extends Rect {
   id: string;
   zone: Phaser.GameObjects.Zone;
@@ -36,7 +37,13 @@ export class Machinery {
     this.solids = [...level.platforms];
     for (const p of level.movingPlatforms ?? [])
       this.surfaces.push(
-        this.makeSurface(p.id, platformPosition(p, 0), p.width, p.height),
+        this.makeSurface(
+          p.id,
+          platformPosition(p, 0),
+          p.width,
+          p.height,
+          p.collision,
+        ),
       );
     for (const lift of level.skyscraper?.lifts ?? [])
       this.surfaces.push(
@@ -79,6 +86,7 @@ export class Machinery {
     at: Point,
     width: number,
     height: number,
+    collision?: Rect['collision'],
   ): Surface {
     const s = {
       id,
@@ -88,7 +96,12 @@ export class Machinery {
       zone: this.makeZone(at.x, at.y, width, height),
       velocity: { x: 0, y: 0 },
       dip: 0,
+      collision,
     };
+    configureSurfaceCollision(
+      s.zone.body as Phaser.Physics.Arcade.StaticBody,
+      s,
+    );
     this.solids.push(s);
     return s;
   }

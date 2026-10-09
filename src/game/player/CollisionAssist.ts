@@ -3,6 +3,8 @@ export interface Rect {
   y: number;
   width: number;
   height: number;
+  /** One-way crowns support feet from above, without walls or ceilings. */
+  collision?: 'top-only';
 }
 export function overlaps(a: Rect, b: Rect) {
   return (
@@ -22,15 +24,24 @@ export function cornerCorrection(
 ): number {
   const next = { ...body, y: nextY };
   const ceilings = solids.filter(
-    (s) => body.y >= s.y + s.height - 0.1 && overlaps(next, s),
+    (s) =>
+      s.collision !== 'top-only' &&
+      body.y >= s.y + s.height - 0.1 &&
+      overlaps(next, s),
   );
   if (ceilings.length === 0) return 0;
   for (let distance = 1; distance <= pixels; distance++)
     for (const sign of [preferredDirection, -preferredDirection]) {
       const shifted = { ...next, x: body.x + distance * sign };
       if (
-        !solids.some((s) => overlaps(shifted, s)) &&
-        !solids.some((s) => overlaps({ ...body, x: shifted.x }, s))
+        !solids.some(
+          (s) => s.collision !== 'top-only' && overlaps(shifted, s),
+        ) &&
+        !solids.some(
+          (s) =>
+            s.collision !== 'top-only' &&
+            overlaps({ ...body, x: shifted.x }, s),
+        )
       )
         return distance * sign;
     }

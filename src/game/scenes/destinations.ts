@@ -1,3 +1,4 @@
+import { balloons } from '../levels/balloons';
 import { interlude2 } from '../story/interlude2';
 import { atticEscape } from '../levels/atticEscape';
 import { chase } from '../levels/chase';
@@ -11,4 +12,5 @@ export const sceneDestinations = [
   chase,
   skyscraper,
   interlude2,
+  balloons,
 ] as const;
