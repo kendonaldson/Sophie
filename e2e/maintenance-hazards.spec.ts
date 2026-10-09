@@ -367,7 +367,11 @@ test('debug chapter changes clean up an interrupted exit and reset hazards on re
   expect(returned.climb).toBeUndefined();
   await expect(page.locator('canvas')).toHaveCount(1);
   await expect(page.locator('audio')).toHaveCount(1);
-  await expect(page.locator('audio')).not.toHaveAttribute('src');
+  await expect(page.locator('audio')).toHaveAttribute(
+    'src',
+    '/assets/audio/maintenance-tunnel.mp3',
+  );
+  await expect(page.locator('audio')).toHaveJSProperty('loop', true);
 });
 
 test.describe('mobile maintenance tunnels', () => {
