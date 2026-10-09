@@ -1,3 +1,4 @@
+import { CombinedSuperJump } from '../superJump/CombinedSuperJump';
 import type { SfxOutput } from '../audio/Sfx';
 import type Phaser from 'phaser';
 import type { Player } from '../player/Player';
@@ -14,6 +15,7 @@ import { physics } from '../config/physics';
 export class ChaseRun {
   readonly scroll: ForcedScroll;
   finale?: ChaseFinale;
+  private combined?: CombinedSuperJump;
   private elapsed = 0;
   private callUntil = t.openingLineMs as number;
   private nextCall = 0;
@@ -63,6 +65,7 @@ export class ChaseRun {
       ? { speaker: 'sophie', text: "Run, Jimmy, or we'll be caught!" }
       : undefined;
     this.finale = undefined;
+    this.combined?.show();
     this.scroll.reset(spawn.x);
     this.recovery.reset();
     this.stuckMs = 0;
@@ -85,6 +88,7 @@ export class ChaseRun {
     });
     for (const actor of [this.sophie, this.jimmy.actor]) {
       actor.body.setVelocityX(physics.maxRunSpeed);
+      actor.sprite.setVisible(true);
       actor.sprite.anims.resume();
     }
     document.querySelector('#app')!.classList.remove('chase-finale');
@@ -170,12 +174,19 @@ export class ChaseRun {
     const finale = this.finale!;
     finale.tick(ms);
     const { phase, progress } = finale.state;
+    if (finale.combinedJump && !this.combined)
+      this.combined = new CombinedSuperJump(this.scene);
+    this.combined?.show(finale.combinedJump);
+    const visible =
+      !finale.combinedJump &&
+      !['launch', 'empty', 'punchline', 'fade', 'complete'].includes(phase);
     for (const [name, actor] of [
       ['sophie', this.sophie],
       ['jimmy', this.jimmy.actor],
     ] as const) {
       actor.place(finale.actors[name]);
       actor.sprite
+        .setVisible(visible)
         .setAlpha(1)
         .setScale(1)
         .setFlipX(
@@ -185,21 +196,13 @@ export class ChaseRun {
       if (phase === 'crouch' || phase === 'launch') {
         actor.sprite.anims.stop();
         actor.sprite.setFrame(name === 'jimmy' ? 26 : 27);
-        if (phase === 'crouch')
-          actor.sprite.setScale(1 + 0.22 * progress, 1 - 0.3 * progress);
       } else
         actor.sprite.play(
           `${name === 'jimmy' ? 'jimmy-' : ''}${phase === 'settle' && progress < 0.9 ? 'walk' : 'idle'}`,
           true,
         );
     }
-    if (phase === 'empty') this.jimmy.effects.clear();
-    else
-      this.jimmy.effects.update(
-        ms,
-        this.jimmy.actor.sprite,
-        phase === 'launch',
-      );
+    this.jimmy.effects.clear();
     this.hud.setFade(finale.fade);
     this.line = finale.line;
     return phase === 'complete';
@@ -240,9 +243,11 @@ export class ChaseRun {
       phase: this.finale?.state.phase ?? 'chase',
       line: this.line?.text,
       nextCall: this.nextCall,
+      combinedJump: this.combined?.snapshot(),
     };
   }
   destroy() {
+    this.combined?.destroy();
     this.bubble.destroy();
     this.root.remove();
     this.edge.destroy();
@@ -257,7 +262,7 @@ export class ChaseRun {
       .querySelector('#app')!
       .classList.remove('chase-mode', 'chase-finale');
     this.scene.cameras.main
-      .setViewport(0, 0, this.scene.scale.width, this.scene.scale.height)
+      ?.setViewport(0, 0, this.scene.scale.width, this.scene.scale.height)
       .setZoom(1);
   }
 }

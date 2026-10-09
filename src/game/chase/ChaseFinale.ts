@@ -3,7 +3,11 @@ import type { SpeechLine } from '../../ui/SpeechBubble';
 import { chaseTuning as t, type ChaseDefinition } from './config';
 import { sfxConfig } from '../audio/config';
 import type { JimmySuperJumpOutput } from '../audio/Sfx';
-import { physics } from '../config/physics';
+import {
+  superJumpAppearance as jump,
+  superJumpY,
+  type SuperJumpPose,
+} from '../superJump/appearance';
 const launchStart =
   t.settleMs + t.gotchaMs + t.quietMs + t.homeMs + t.lookMs + t.crouchMs;
 const phases = [
@@ -62,6 +66,24 @@ export class ChaseFinale {
         ? this.state.progress
         : 0;
   }
+  get combinedJump(): SuperJumpPose | undefined {
+    const { phase, progress } = this.state;
+    if (phase === 'crouch' && progress >= jump.handoffAt)
+      return {
+        phase: 'anticipation',
+        progress: (progress - jump.handoffAt) / (1 - jump.handoffAt),
+        x: this.def.sophie.x,
+        y: this.def.feetY,
+      };
+    if (phase === 'launch')
+      return {
+        phase,
+        progress,
+        x: this.def.sophie.x + progress * 8,
+        y: superJumpY(this.def.feetY, this.top, progress),
+      };
+    return undefined;
+  }
   get actors() {
     const { phase, progress: p } = this.state;
     const actors = {
@@ -77,25 +99,22 @@ export class ChaseFinale {
         };
       }
     } else if (phase === 'crouch' || phase === 'launch') {
-      // Jimmy ducks under Sophie, recalling the warehouse catch/compression.
-      actors.jimmy.x += 25 * (phase === 'crouch' ? p : 1);
-      actors.sophie.y -= 12 * (phase === 'crouch' ? p : 1);
+      const align = phase === 'launch' ? 1 : Math.min(1, p / jump.handoffAt);
+      actors.jimmy.x += (actors.sophie.x - actors.jimmy.x) * align;
+      actors.sophie.y -= jump.sophieFeetOffset * align;
       if (phase === 'launch') {
-        // Include the decorative pixels below the collision feet at the audio peak.
-        const lift =
-          (this.def.feetY - this.top + physics.collisionInsetBottom + 1) *
-          p *
-          p;
-        actors.sophie.y -= lift;
-        actors.jimmy.y -= lift;
+        const y = superJumpY(this.def.feetY, this.top, p);
+        actors.sophie.y = y - jump.sophieFeetOffset;
+        actors.jimmy.y = y;
         actors.sophie.x += p * 8;
         actors.jimmy.x += p * 8;
       }
     } else if (['empty', 'punchline', 'fade', 'complete'].includes(phase)) {
-      actors.sophie.y = this.top - physics.collisionInsetBottom - 1 - 12;
-      actors.jimmy.y = this.top - physics.collisionInsetBottom - 1;
+      actors.sophie.y =
+        superJumpY(this.def.feetY, this.top, 1) - jump.sophieFeetOffset;
+      actors.jimmy.y = superJumpY(this.def.feetY, this.top, 1);
       actors.sophie.x += 8;
-      actors.jimmy.x += 33;
+      actors.jimmy.x = actors.sophie.x;
     }
     return actors;
   }

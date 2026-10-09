@@ -323,7 +323,12 @@ test('only the dead end stops scrolling, launches both dogs upward, and enters L
     "Okay, let's get you two home.",
   );
   expect((await state(page)).chase!.x).toBe(stopped.chase!.x);
-  await tick(page, t.homeMs + t.lookMs + t.crouchMs + t.launchMs);
+  await tick(page, t.homeMs + t.lookMs + t.crouchMs);
+  const jump = (await state(page)).chase!.combinedJump!;
+  expect(jump.visible).toBe(true);
+  expect(jump.texture).toBe('sophie-jimmy-super-jump');
+  expect(jump.frame).toBeGreaterThanOrEqual(3);
+  await tick(page, t.launchMs);
   const empty = await state(page);
   expect(empty.chase!.phase).toBe('empty');
   expect(empty.y + 6).toBeLessThan(120);
