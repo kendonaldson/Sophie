@@ -298,6 +298,7 @@ test('built URLs and original/generated images use the configured deployment pat
     'pixel-dash.mp3',
     'city-lights-above.mp3',
     'drifting-balloons.mp3',
+    'maintenance-tunnel.mp3',
   ]) {
     const track = await request.get(
       new URL(`assets/audio/${file}`, baseURL!).href,
@@ -327,7 +328,16 @@ test('production Maintenance Tunnels loads the rat atlas and ordinary controls u
   await selector.selectOption('maintenance-tunnels');
   await page.getByRole('button', { name: 'Load', exact: true }).click();
   await expect(page.locator('#section')).toHaveText('Maintenance Tunnels');
-  await expect(page.locator('audio')).not.toHaveAttribute('src');
+  const music = page.locator('audio');
+  await expect(music).toHaveAttribute(
+    'src',
+    new URL('assets/audio/maintenance-tunnel.mp3', baseURL!).pathname,
+  );
+  await expect(music).toHaveJSProperty('loop', true);
+  await expect
+    .poll(() => music.evaluate((audio: HTMLAudioElement) => audio.currentTime))
+    .toBeGreaterThan(0);
+  await expect(music).toHaveJSProperty('error', null);
   expect(
     await page.evaluate(() => [window.__sophie, window.__sophieStory]),
   ).toEqual([undefined, undefined]);

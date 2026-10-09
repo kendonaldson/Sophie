@@ -2,6 +2,11 @@ import { expect, test, devices } from '@playwright/test';
 
 const chapters = [
   {
+    name: 'maintenance tunnels',
+    url: '/?test&level=maintenance-tunnels',
+    track: 'maintenance-tunnel.mp3',
+  },
+  {
     name: 'balloons',
     url: '/?test&level=balloons',
     track: 'drifting-balloons.mp3',

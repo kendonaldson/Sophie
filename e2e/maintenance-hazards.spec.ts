@@ -17,7 +17,7 @@ async function open(page: Page) {
   });
 }
 
-test('opens on safe floor with Jimmy, the supplied rat animation, and music awaiting its track', async ({
+test('opens on safe floor with Jimmy, the supplied rat animation, and its looping soundtrack', async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -36,7 +36,11 @@ test('opens on safe floor with Jimmy, the supplied rat animation, and music awai
   expect(initial.maintenance!.rats.every((r) => r.frame === 0)).toBe(true);
   await page.evaluate(() => window.__sophie!.advance(10));
   expect((await state(page)).maintenance!.rats[0]!.frame).toBe(1);
-  await expect(page.locator('audio')).not.toHaveAttribute('src');
+  await expect(page.locator('audio')).toHaveAttribute(
+    'src',
+    '/assets/audio/maintenance-tunnel.mp3',
+  );
+  await expect(page.locator('audio')).toHaveJSProperty('loop', true);
   await expect(page.locator('audio')).toHaveJSProperty('paused', true);
   await expect(page.locator('.touch-controls')).toHaveCount(0);
   await page.evaluate(() => window.__sophie!.manual(false));
@@ -273,6 +277,8 @@ test('service hatch owns input, walks both dogs inside, fades after an empty hol
   page,
 }) => {
   await open(page);
+  await page.keyboard.press('KeyA');
+  await expect(page.locator('audio')).toHaveJSProperty('paused', false);
   const result = await page.evaluate(() => {
     const a = window.__sophie!;
     a.place({ x: 9445, y: 500 });
@@ -320,6 +326,7 @@ test('service hatch owns input, walks both dogs inside, fades after an empty hol
   await expect(
     page.getByRole('heading', { name: 'TO BE CONTINUED' }),
   ).toBeVisible();
+  await expect(page.locator('audio')).toHaveJSProperty('paused', true);
   await page.getByRole('button', { name: 'Play again' }).click();
   await expect
     .poll(async () => (await state(page)).levelId)

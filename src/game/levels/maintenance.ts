@@ -50,6 +50,7 @@ export const maintenance: LevelDefinition = {
   id: 'maintenance-tunnels',
   name: 'Maintenance Tunnels',
   theme: 'maintenance',
+  music: 'assets/audio/maintenance-tunnel.mp3',
   width: 9800,
   height: 900,
   fallY: 820,

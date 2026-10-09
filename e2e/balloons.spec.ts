@@ -432,6 +432,8 @@ test('roof landing owns input, plays the scent/dialogue/walk sequence, then ente
   page,
 }) => {
   await open(page);
+  await page.keyboard.press('KeyA');
+  await expect(page.locator('audio')).toHaveJSProperty('paused', false);
   await page.evaluate(() => {
     const a = window.__sophie!;
     a.place({ x: 6310, y: 450 });
@@ -495,8 +497,18 @@ test('roof landing owns input, plays the scent/dialogue/walk sequence, then ente
   await expect(
     page.getByRole('heading', { name: 'TO BE CONTINUED' }),
   ).toHaveCount(0);
-  await expect(page.locator('audio')).not.toHaveAttribute('src');
-  await expect(page.locator('audio')).toHaveJSProperty('paused', true);
+  await expect(page.locator('audio')).toHaveAttribute(
+    'src',
+    '/assets/audio/maintenance-tunnel.mp3',
+  );
+  await expect(page.locator('audio')).toHaveJSProperty('loop', true);
+  await expect
+    .poll(() =>
+      page
+        .locator('audio')
+        .evaluate((audio: HTMLAudioElement) => audio.currentTime),
+    )
+    .toBeGreaterThan(0);
   await expect(page.locator('audio')).toHaveJSProperty('volume', 0.5);
   await expect(page.locator('.balloon-ui')).toHaveCount(0);
   await expect(page.locator('.balloon-finale')).toHaveCount(0);
