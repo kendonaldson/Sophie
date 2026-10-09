@@ -281,7 +281,7 @@ export class InterludeScene extends Phaser.Scene {
     if (this.director.phase === 'complete' && !this.ended) {
       this.ended = true;
       this.inputSource.clear();
-      if (rooftop) this.hud.showEnding();
+      if (rooftop) this.scene.start('Game', { levelId: 'balloons' });
       else this.scene.start('Game', { levelId: 'the-chase' });
     }
   }

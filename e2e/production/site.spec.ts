@@ -295,6 +295,7 @@ test('built URLs and original/generated images use the configured deployment pat
     'factory-pulse.mp3',
     'pixel-dash.mp3',
     'city-lights-above.mp3',
+    'drifting-balloons.mp3',
   ]) {
     const track = await request.get(
       new URL(`assets/audio/${file}`, baseURL!).href,
@@ -306,7 +307,7 @@ test('built URLs and original/generated images use the configured deployment pat
   }
 });
 
-test('production rooftop finishes after the overnight conversation and loads the combined atlas under the Pages path', async ({
+test('production rooftop hands off to playable balloons and loads the marquee under the Pages path', async ({
   page,
 }) => {
   test.setTimeout(60000);
@@ -331,13 +332,40 @@ test('production rooftop finishes after the overnight conversation and loads the
       .getByRole('button', { name: 'Continue · X', exact: true })
       .click();
   }
+  await expect(page.locator('#section')).toHaveText('One balloon…', {
+    timeout: 10000,
+  });
   await expect(
     page.getByRole('heading', { name: 'TO BE CONTINUED' }),
-  ).toBeVisible({ timeout: 10000 });
+  ).toHaveCount(0);
+  const marquee = await page.request.get(
+    new URL('assets/shelly_pizza_marquee.png', page.url()).href,
+  );
+  expect(marquee.ok()).toBe(true);
+  expect(await marquee.body()).toEqual(
+    readFileSync('public/assets/shelly_pizza_marquee.png'),
+  );
+  await expect(page.locator('audio')).toHaveAttribute(
+    'src',
+    new URL('assets/audio/drifting-balloons.mp3', page.url()).pathname,
+  );
+  await expect(page.locator('audio')).toHaveJSProperty('loop', true);
+  // Each gameplay scene starts music on its first keyboard/touch gesture.
+  await page.keyboard.press('ArrowRight');
+  await expect
+    .poll(() =>
+      page
+        .locator('audio')
+        .evaluate((audio: HTMLAudioElement) => audio.currentTime),
+    )
+    .toBeGreaterThan(0);
   expect(
     await page.evaluate(() => [window.__sophie, window.__sophieStory]),
   ).toEqual([undefined, undefined]);
-  await page.getByRole('button', { name: 'Play again' }).click();
+  await page
+    .getByRole('combobox', { name: 'Debug level', exact: true })
+    .selectOption('attic-escape');
+  await page.getByRole('button', { name: 'Load', exact: true }).click();
   await expect(page.locator('#section')).toHaveText('Open air');
   expect(errors).toEqual([]);
   expect(missing).toEqual([]);

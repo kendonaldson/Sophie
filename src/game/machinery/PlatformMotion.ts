@@ -19,7 +19,9 @@ export function platformPosition(
         : t < 2 * pause + travelMs
           ? 1
           : 1 - (t - 2 * pause - travelMs) / travelMs;
-  return { x: def.start.x + dx * amount, y: def.start.y + dy * amount };
+  const eased =
+    def.easing === 'sine' ? (1 - Math.cos(Math.PI * amount)) / 2 : amount;
+  return { x: def.start.x + dx * eased, y: def.start.y + dy * eased };
 }
 export function standingOn(
   body: { x: number; y: number; width: number; height: number },
