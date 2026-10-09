@@ -281,6 +281,8 @@ test('built URLs and original/generated images use the configured deployment pat
     'assets/jimmy.png',
     'assets/sparrow.png',
     'assets/sparrow-sprite.png',
+    'assets/rat.png',
+    'assets/rat-atlas.png',
   ]) {
     const response = await request.get(new URL(file, baseURL!).href);
     expect(response.ok()).toBe(true);
@@ -305,6 +307,56 @@ test('built URLs and original/generated images use the configured deployment pat
       readFileSync(`public/assets/audio/${file}`),
     );
   }
+});
+
+test('production Maintenance Tunnels loads the rat atlas and ordinary controls under the Pages path', async ({
+  page,
+  baseURL,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  const rat = page.waitForResponse((response) =>
+    response.url().endsWith('/assets/rat-atlas.png'),
+  );
+  await page.goto('./#debug');
+  expect((await rat).ok()).toBe(true);
+  const selector = page.getByRole('combobox', {
+    name: 'Debug level',
+    exact: true,
+  });
+  await selector.selectOption('maintenance-tunnels');
+  await page.getByRole('button', { name: 'Load', exact: true }).click();
+  await expect(page.locator('#section')).toHaveText('Maintenance Tunnels');
+  await expect(page.locator('audio')).not.toHaveAttribute('src');
+  expect(
+    await page.evaluate(() => [window.__sophie, window.__sophieStory]),
+  ).toEqual([undefined, undefined]);
+  const atlas = await page.request.get(
+    new URL('assets/rat-atlas.png', baseURL!).href,
+  );
+  expect(atlas.ok()).toBe(true);
+  expect(await atlas.body()).toEqual(
+    readFileSync('public/assets/rat-atlas.png'),
+  );
+  await page.keyboard.down('KeyZ');
+  await page.keyboard.down('ArrowRight');
+  await page.keyboard.press('KeyX');
+  await expect(page.locator('#dash-hud')).toHaveAttribute(
+    'aria-label',
+    '0 of 2 dash charges available',
+  );
+  await page.keyboard.up('KeyZ');
+  await page.keyboard.up('ArrowRight');
+  await page.keyboard.press('Escape');
+  await expect(
+    page.getByRole('heading', { name: 'A little breather.' }),
+  ).toBeVisible();
+  await selector.selectOption('attic-escape');
+  await page.getByRole('button', { name: 'Load', exact: true }).click();
+  await expect(page.locator('#section')).toHaveText('Open air');
+  await expect(page.locator('canvas')).toHaveCount(1);
+  await expect(page.locator('#app')).not.toHaveClass(/tunnel-exit/);
+  expect(errors).toEqual([]);
 });
 
 test('production rooftop hands off to playable balloons and loads the marquee under the Pages path', async ({

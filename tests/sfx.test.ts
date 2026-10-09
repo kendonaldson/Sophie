@@ -321,6 +321,75 @@ it('plays a short shared bird chirp, cleans up, and respects unavailable or disa
   expect(factory).toHaveBeenCalledOnce();
 });
 
+it('plays a short high rat chirp and soft filtered steam using the shared audio lifecycle', () => {
+  const { sfx, context, factory } = setup();
+  sfx.ratSqueak();
+  sfx.steamHiss();
+  sfx.steamBurst();
+  expect(factory).not.toHaveBeenCalled();
+  sfx.unlockFromGesture();
+  sfx.ratSqueak();
+  const rat = context.sources[0]!;
+  const c = sfxConfig.ratSqueak;
+  expect(c.durationMs).toBeGreaterThanOrEqual(60);
+  expect(c.durationMs).toBeLessThanOrEqual(120);
+  expect(rat.type).toBe('square');
+  expect(rat.frequency.setValueAtTime).toHaveBeenCalledWith(
+    c.startFrequency,
+    0,
+  );
+  expect(rat.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(
+    c.peakFrequency,
+    (c.durationMs * c.turnAt) / 1000,
+  );
+  expect(rat.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(
+    c.endFrequency,
+    c.durationMs / 1000,
+  );
+  expect(rat.stop).toHaveBeenCalledWith(c.durationMs / 1000);
+  sfx.steamHiss();
+  sfx.steamBurst();
+  sfx.dash();
+  expect(context.createBuffer).toHaveBeenCalledOnce();
+  expect(context.sources[1]!.buffer).toBe(context.sources[2]!.buffer);
+  for (const [index, config] of [
+    sfxConfig.steamHiss,
+    sfxConfig.steamBurst,
+  ].entries()) {
+    expect(context.filters[index]!.type).toBe('bandpass');
+    expect(
+      context.filters[index]!.frequency.setValueAtTime,
+    ).toHaveBeenCalledWith(config.filterStartFrequency, 0);
+    expect(
+      context.filters[index]!.frequency.exponentialRampToValueAtTime,
+    ).toHaveBeenCalledWith(config.filterEndFrequency, config.durationMs / 1000);
+    expect(context.sources[index + 1]!.stop).toHaveBeenCalledWith(
+      config.durationMs / 1000,
+    );
+  }
+  context.finish();
+  expect(
+    context.sources.every((node) => node.disconnect.mock.calls.length === 1),
+  ).toBe(true);
+  expect(
+    context.filters.every((node) => node.disconnect.mock.calls.length === 1),
+  ).toBe(true);
+  sfx.setMuted(true);
+  sfx.ratSqueak();
+  sfx.steamHiss();
+  sfx.steamBurst();
+  expect(context.sources).toHaveLength(5);
+  sfx.setMuted(false);
+  sfx.setEffectVolume('steamBurst', 0);
+  sfx.steamBurst();
+  expect(context.sources).toHaveLength(5);
+  sfx.setEnabled(false);
+  sfx.ratSqueak();
+  sfx.steamHiss();
+  expect(context.sources).toHaveLength(5);
+  expect(factory).toHaveBeenCalledOnce();
+});
+
 describe('dialogue reveal and character cadence', () => {
   it('skips spaces/punctuation, rate-limits across characters and speakers, and cancels only dialogue', () => {
     const { sfx, context } = setup();

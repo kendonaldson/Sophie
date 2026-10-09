@@ -4,6 +4,7 @@ import {
   isBoopCharacter,
   sfxConfig,
   type DialogueSpeaker,
+  type NoiseSfxConfig,
   type SfxConfig,
 } from './config';
 
@@ -11,13 +12,24 @@ export interface SfxOutput {
   jump(): void;
   dash(): void;
   birdSquawk(): void;
+  ratSqueak(): void;
+  steamHiss(): void;
+  steamBurst(): void;
   jimmySuperJumpAnticipation(): void;
   jimmySuperJump(): void;
   stopJimmySuperJump(): void;
   dialogueBoop(speaker: DialogueSpeaker, character: string): void;
   stopDialogue(): void;
 }
-type Effect = 'jump' | 'dash' | 'dialogue' | 'jimmySuperJump' | 'birdSquawk';
+type Effect =
+  | 'jump'
+  | 'dash'
+  | 'dialogue'
+  | 'jimmySuperJump'
+  | 'birdSquawk'
+  | 'ratSqueak'
+  | 'steamHiss'
+  | 'steamBurst';
 export type JimmySuperJumpOutput = Pick<
   SfxOutput,
   'jimmySuperJumpAnticipation' | 'jimmySuperJump'
@@ -67,6 +79,9 @@ export class Sfx implements SfxOutput {
       dialogue: clampVolume(config.dialogue.volume),
       jimmySuperJump: clampVolume(config.jimmySuperJump.volume),
       birdSquawk: clampVolume(config.birdSquawk.volume),
+      ratSqueak: clampVolume(config.ratSqueak.volume),
+      steamHiss: clampVolume(config.steamHiss.volume),
+      steamBurst: clampVolume(config.steamBurst.volume),
     };
   }
   bindGestures(target: Window = window) {
@@ -192,35 +207,43 @@ export class Sfx implements SfxOutput {
         at,
         end,
       );
-      if (!this.noise) {
-        this.noise = context.createBuffer(
-          1,
-          context.sampleRate / 2,
-          context.sampleRate,
-        );
-        const data = this.noise.getChannelData(0);
-        for (let i = 0; i < data.length; i++) data[i] = this.random() * 2 - 1;
-      }
-      const noise = context.createBufferSource();
-      voice.sources.push(noise);
-      const filter = context.createBiquadFilter();
-      const noiseGain = context.createGain();
-      voice.nodes.push(filter, noiseGain);
-      filter.type = 'bandpass';
-      filter.Q.value = bounded(c.filterQ, 0.1, 4);
-      this.sweep(
-        filter.frequency,
+      this.filteredNoise(context, voice, gain, at, end, c, amount);
+    });
+  }
+  ratSqueak() {
+    const c = this.config.ratSqueak;
+    this.play('ratSqueak', c.durationMs, (context, voice, gain, at, end) => {
+      const turn = at + (end - at) * bounded(c.turnAt, 0.1, 0.8);
+      const oscillator = this.tone(
         context,
-        c.filterStartFrequency,
-        c.filterEndFrequency,
+        voice,
+        gain,
+        c.waveform,
+        c.startFrequency,
+        c.peakFrequency,
         at,
+        turn,
+      );
+      this.sweep(
+        oscillator.frequency,
+        context,
+        c.peakFrequency,
+        c.endFrequency,
+        turn,
         end,
       );
-      noise.buffer = this.noise;
-      noiseGain.gain.value = amount;
-      noise.connect(filter);
-      filter.connect(noiseGain);
-      noiseGain.connect(gain);
+    });
+  }
+  steamHiss() {
+    this.steamNoise('steamHiss');
+  }
+  steamBurst() {
+    this.steamNoise('steamBurst');
+  }
+  private steamNoise(effect: 'steamHiss' | 'steamBurst') {
+    const c = this.config[effect];
+    this.play(effect, c.durationMs, (context, voice, gain, at, end) => {
+      this.filteredNoise(context, voice, gain, at, end, c);
     });
   }
   jimmySuperJumpAnticipation() {
@@ -414,6 +437,45 @@ export class Sfx implements SfxOutput {
     this.sweep(oscillator.frequency, context, start, end, at, until);
     oscillator.connect(output);
     return oscillator;
+  }
+  private filteredNoise(
+    context: AudioContext,
+    voice: Voice,
+    output: AudioNode,
+    at: number,
+    end: number,
+    config: NoiseSfxConfig,
+    amount = 1,
+  ) {
+    if (!this.noise) {
+      this.noise = context.createBuffer(
+        1,
+        context.sampleRate / 2,
+        context.sampleRate,
+      );
+      const data = this.noise.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = this.random() * 2 - 1;
+    }
+    const noise = context.createBufferSource();
+    voice.sources.push(noise);
+    const filter = context.createBiquadFilter();
+    const noiseGain = context.createGain();
+    voice.nodes.push(filter, noiseGain);
+    filter.type = 'bandpass';
+    filter.Q.value = bounded(config.filterQ, 0.1, 4);
+    this.sweep(
+      filter.frequency,
+      context,
+      config.filterStartFrequency,
+      config.filterEndFrequency,
+      at,
+      end,
+    );
+    noise.buffer = this.noise;
+    noiseGain.gain.value = clampVolume(amount);
+    noise.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(output);
   }
   private sweep(
     parameter: AudioParam,
