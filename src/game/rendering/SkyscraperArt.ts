@@ -64,16 +64,21 @@ export class SkyscraperArt {
           y! + 5,
         );
     }
-    // The crane silhouettes frame the summit without adding new traversal.
+    // Keep the summit crane over the landing, on the right of the final lift.
+    const summit = level.platforms.find((p) => p.id === 'summit-floor')!;
+    const craneX = summit.x + 60,
+      beamY = summit.y - 228,
+      beamLeft = summit.x - 30,
+      beamRight = summit.x + summit.width - 20;
     structure
       .fillStyle(0x526b70)
-      .fillRect(2160, 265, 9, 225)
-      .fillRect(2070, 262, 440, 8);
+      .fillRect(craneX, beamY + 3, 9, summit.y - beamY - 3)
+      .fillRect(beamLeft, beamY, beamRight - beamLeft, 8);
     structure
       .lineStyle(3, 0x526b70)
-      .lineBetween(2070, 262, 2164, 210)
-      .lineBetween(2164, 210, 2510, 262)
-      .lineBetween(2475, 270, 2475, 370);
+      .lineBetween(beamLeft, beamY, craneX + 4, beamY - 52)
+      .lineBetween(craneX + 4, beamY - 52, beamRight, beamY)
+      .lineBetween(beamRight - 35, beamY + 8, beamRight - 35, beamY + 108);
     this.moving = scene.add.graphics().setDepth(2);
   }
   private platform(g: Phaser.GameObjects.Graphics, p: PlatformDefinition) {

@@ -47,7 +47,7 @@ export const skyscraper: LevelDefinition = {
   name: 'The Skyscraper',
   music: 'assets/audio/city-lights-above.mp3',
   theme: 'skyscraper',
-  width: 2640,
+  width: 2840,
   height: 4500,
   fallY: 4470,
   playerSpawn: { x: 170, y: 4300 },
@@ -74,7 +74,8 @@ export const skyscraper: LevelDefinition = {
     scaffold('last-chain-start', 1660, 2070, 200),
     scaffold('last-chain-end', 2040, 1834, 160),
     scaffold('summit-lift-approach', 2210, 1834, 125),
-    scaffold('summit-floor', 2100, 490, 235),
+    // The lift opens onto the roof to its right, continuing into Interlude 2.
+    scaffold('summit-floor', 2525, 490, 235),
   ],
   movingPlatforms: [
     {
