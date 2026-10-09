@@ -80,6 +80,7 @@ export interface GameTestApi {
   snapshot(): GameSnapshot;
   manual(enabled: boolean): void;
   advance(frames: number, intent?: Partial<PlayerIntent>): GameSnapshot;
+  advanceInput(frames: number): GameSnapshot;
   restart(): void;
   loadLevel(
     id:

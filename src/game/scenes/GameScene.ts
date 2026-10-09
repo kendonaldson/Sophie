@@ -965,6 +965,11 @@ export class GameScene extends Phaser.Scene {
           });
         return api.snapshot();
       },
+      advanceInput: (frames) => {
+        for (let i = 0; i < frames; i++)
+          this.step(simulation.stepMs, this.inputSource.sample());
+        return api.snapshot();
+      },
       restart: () => this.restart(),
       loadLevel: (id) => this.buildLevel(playableLevel(id)),
       chaseSection: (x) => {
