@@ -1,0 +1,52 @@
+{
+  "source": "jimmy_sophie_super_jump.png",
+  "sourceWidth": 2172,
+  "sourceHeight": 724,
+  "asset": "assets/super-jump.png",
+  "key": "sophie-jimmy-super-jump",
+  "frameWidth": 160,
+  "frameHeight": 160,
+  "anchorX": 56,
+  "anchorY": 132,
+  "scale": 0.34,
+  "frames": [
+    {
+      "regions": [[32, 390, 206, 213]],
+      "anchor": [134, 596]
+    },
+    {
+      "regions": [[298, 412, 207, 191]],
+      "anchor": [402, 596]
+    },
+    {
+      "regions": [[552, 412, 229, 191]],
+      "anchor": [681, 596]
+    },
+    {
+      "regions": [[838, 324, 206, 281]],
+      "anchor": [943, 564]
+    },
+    {
+      "regions": [[1098, 285, 218, 322]],
+      "anchor": [1220, 530]
+    },
+    {
+      "regions": [[1333, 234, 251, 375]],
+      "anchor": [1430, 562]
+    },
+    {
+      "regions": [
+        [1575, 380, 177, 218],
+        [1710, 233, 167, 148]
+      ],
+      "anchor": [1670, 549]
+    },
+    {
+      "regions": [
+        [1840, 350, 167, 239],
+        [1977, 197, 168, 147]
+      ],
+      "anchor": [1930, 527]
+    }
+  ]
+}

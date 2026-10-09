@@ -14,12 +14,15 @@ const rows = [
   { name: 'walk', top: 477, bottom: 550 },
   { name: 'run', top: 559, bottom: 631 },
   { name: 'jump', top: 729, bottom: 816 },
+  // Actual curled, closed-eye side poses; omit waking poses and the printed Zs.
+  { name: 'sleep', top: 923, bottom: 1001, poses: [3, 3, 5, 5, 6, 6, 5, 5] },
 ];
-const atlas = new PNG({ width: 512, height: 256 });
+const atlas = new PNG({ width: 512, height: rows.length * 64 });
 for (const [rowIndex, row] of rows.entries()) {
   for (let frame = 0; frame < 8; frame++) {
-    const x0 = columns[frame],
-      w = columns[frame + 1] - x0 - 4,
+    const pose = row.poses?.[frame] ?? frame;
+    const x0 = columns[pose],
+      w = columns[pose + 1] - x0 - 4,
       h = row.bottom - row.top;
     const removed = new Uint8Array(w * h),
       queue = [];
@@ -86,6 +89,4 @@ for (const [rowIndex, row] of rows.entries()) {
   }
 }
 writeFileSync('public/assets/sophie.png', PNG.sync.write(atlas));
-console.log(
-  'Prepared 32 side-view poses in a transparent 8 × 4 atlas (64 × 64 frames).',
-);
+console.log('Prepared 40 side-view poses including sleep (64 × 64 frames).');

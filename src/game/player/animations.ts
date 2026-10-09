@@ -27,6 +27,17 @@ export function createAnimations(scene: Phaser.Scene, texture = 'sophie') {
       frameRate: 3,
       repeat: -1,
     });
+  const sleep = texture === 'sophie' ? 'sleep' : 'jimmy-sleep';
+  if (!scene.anims.exists(sleep))
+    scene.anims.create({
+      key: sleep,
+      frames: scene.anims.generateFrameNumbers(texture, {
+        start: texture === 'sophie' ? 32 : 40,
+        end: texture === 'sophie' ? 39 : 47,
+      }),
+      frameRate: 2,
+      repeat: -1,
+    });
 }
 export function animatePlayer(
   sprite: Phaser.GameObjects.Sprite,

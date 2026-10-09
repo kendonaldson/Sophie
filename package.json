@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "assets": "node scripts/prepare-sprites.mjs && node scripts/prepare-jimmy.mjs && node scripts/prepare-sparrow.mjs",
+    "assets": "node scripts/prepare-sprites.mjs && node scripts/prepare-jimmy.mjs && node scripts/prepare-sparrow.mjs && node scripts/prepare-super-jump.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "typecheck": "tsc --noEmit",

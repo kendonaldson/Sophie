@@ -1,7 +1,7 @@
 import type { SfxOutput } from '../game/audio/Sfx';
 import { SpeechBubble } from './SpeechBubble';
 import { readGameplayMode } from './mobile/capabilities';
-import type { StoryLine } from '../game/story/interlude1';
+import type { SpeechLine } from './SpeechBubble';
 export class StoryDialogue {
   private readonly root = document.createElement('div');
   private readonly bubble: SpeechBubble;
@@ -46,7 +46,7 @@ export class StoryDialogue {
     }
     this.onOrientation(mode === 'mobile-portrait');
   };
-  show(line: StoryLine | undefined, canAdvance: boolean) {
+  show(line: (SpeechLine & { cue?: string }) | undefined, canAdvance: boolean) {
     this.bubble.show(line);
     this.next.hidden = !line || line.cue === 'escape';
     this.next.disabled = !canAdvance;

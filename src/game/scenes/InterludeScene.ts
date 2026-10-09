@@ -1,3 +1,11 @@
+import { RooftopDirector } from '../story/RooftopDirector';
+import {
+  RooftopArt,
+  rooftopGeometry,
+  balloonPositions,
+} from '../story/RooftopArt';
+import { interlude2 } from '../story/interlude2';
+import { CombinedSuperJump } from '../superJump/CombinedSuperJump';
 import Phaser from 'phaser';
 import type { Hud } from '../../ui/Hud';
 import { StoryDialogue } from '../../ui/StoryDialogue';
@@ -17,7 +25,10 @@ import type { StoryTestApi } from './TestApi';
 import type { SfxOutput } from '../audio/Sfx';
 
 export class InterludeScene extends Phaser.Scene {
-  private director = new InterludeDirector();
+  private director: InterludeDirector | RooftopDirector =
+    new InterludeDirector();
+  private rooftop?: RooftopArt;
+  private combined?: CombinedSuperJump;
   private sophie!: Phaser.GameObjects.Sprite;
   private jimmy!: Phaser.GameObjects.Sprite;
   private effects!: Effects[];
@@ -32,32 +43,46 @@ export class InterludeScene extends Phaser.Scene {
     private readonly hud: Hud,
     private readonly sfx: SfxOutput,
     private readonly debugSettings: DebugSettings,
+    private readonly storyId: 'interlude-1' | 'interlude-2' = 'interlude-1',
   ) {
-    super('Interlude1');
+    super(storyId === 'interlude-2' ? 'Interlude2' : 'Interlude1');
   }
   create() {
     // The fixed shot leaves side margins on wide phones; clear them to night too.
     const previousBackground = this.game.config.backgroundColor.clone();
     this.game.config.backgroundColor.setTo(24, 46, 56);
-    this.director = new InterludeDirector();
+    const rooftop = this.storyId === 'interlude-2';
+    this.director = rooftop
+      ? new RooftopDirector(this.sfx)
+      : new InterludeDirector();
+    this.rooftop = undefined;
+    this.combined = undefined;
     this.paused = false;
     this.manual = false;
     this.ended = false;
     this.hud.showPause(false);
     this.hud.showDialogue();
     this.hud.setFade(1);
-    document.querySelector('.chapter > span:last-child')!.textContent =
-      'Interlude 1 · Outside the warehouse';
-    document.querySelector('.chapter-number')!.textContent = 'INTERLUDE 1';
+    document.querySelector('.chapter > span:last-child')!.textContent = rooftop
+      ? 'Interlude 2 · One balloon'
+      : 'Interlude 1 · Outside the warehouse';
+    document.querySelector('.chapter-number')!.textContent = rooftop
+      ? 'INTERLUDE 2'
+      : 'INTERLUDE 1';
     document
       .querySelector('#world')!
       .setAttribute(
         'aria-label',
-        'Sophie and Jimmy talking beside the warehouse on a quiet nighttime road',
+        rooftop
+          ? 'Sophie and Jimmy on the rooftop above the city'
+          : 'Sophie and Jimmy talking beside the warehouse on a quiet nighttime road',
       );
     document.querySelector('#hint')!.textContent =
       'X · Continue the conversation';
-    drawInterludeExterior(this);
+    if (rooftop) {
+      this.rooftop = new RooftopArt(this);
+      this.combined = new CombinedSuperJump(this, interlude2.spriteScale);
+    } else drawInterludeExterior(this);
     for (const texture of ['sophie', 'jimmy']) {
       this.textures.get(texture).setFilter(Phaser.Textures.FilterMode.NEAREST);
       createAnimations(this, texture);
@@ -84,6 +109,7 @@ export class InterludeScene extends Phaser.Scene {
       this.advance,
       (blocked) => {
         this.orientationBlocked = blocked;
+        if (blocked) this.sfx.stopJimmySuperJump();
         this.inputSource?.clear();
       },
       this.sfx,
@@ -92,9 +118,16 @@ export class InterludeScene extends Phaser.Scene {
     const selector = new DebugLevelSelector(
       document.querySelector('#app')!,
       sceneDestinations,
-      c,
+      rooftop ? interlude2 : c,
       (destination) => {
-        if (destination.id === c.id) this.scene.restart();
+        if (destination.id === this.storyId) this.scene.restart();
+        else if (
+          destination.id === 'interlude-1' ||
+          destination.id === 'interlude-2'
+        )
+          this.scene.start(
+            destination.id === 'interlude-2' ? 'Interlude2' : 'Interlude1',
+          );
         else this.scene.start('Game', { levelId: destination.id });
       },
       this.debugSettings,
@@ -119,6 +152,8 @@ export class InterludeScene extends Phaser.Scene {
       this.events.off('shutdown', cleanup);
       this.events.off('destroy', cleanup);
       unbindHud();
+      this.sfx.stopJimmySuperJump();
+      this.combined?.destroy();
       selector.destroy();
       this.dialogue.destroy();
       this.inputSource.destroy();
@@ -155,6 +190,7 @@ export class InterludeScene extends Phaser.Scene {
   private togglePause = () => {
     if (this.ended) return;
     this.paused = !this.paused;
+    if (this.paused) this.sfx.stopJimmySuperJump();
     this.inputSource.clear();
     this.hud.showPause(this.paused);
   };
@@ -187,17 +223,41 @@ export class InterludeScene extends Phaser.Scene {
   }
   private present(ms: number) {
     const actors = this.director.actors;
+    const rooftop =
+      this.director instanceof RooftopDirector ? this.director : undefined;
+    if (rooftop) {
+      this.rooftop!.update(rooftop.environment, rooftop.liftY, rooftop.dayMs);
+      this.combined!.show(rooftop.combinedJump);
+      const day = rooftop.environment === 'day';
+      this.cameras.main.setBackgroundColor(day ? 0x9bc9d3 : 0x182e38);
+      this.game.config.backgroundColor.setTo(
+        day ? 155 : 24,
+        day ? 201 : 46,
+        day ? 211 : 56,
+      );
+    }
     this.alertAccent.setVisible(
       this.director.phase === 'dialogue' && this.director.line?.cue === 'alert',
     );
     for (const [index, name] of (['sophie', 'jimmy'] as const).entries()) {
       const sprite = this[name],
         actor = actors[name];
-      sprite.setPosition(Math.round(actor.x), actor.y).setFlipX(actor.flipX);
-      sprite.play(`${name === 'sophie' ? '' : 'jimmy-'}${actor.pose}`, true);
+      sprite
+        .setPosition(Math.round(actor.x), Math.round(actor.y))
+        .setFlipX(actor.flipX)
+        .setVisible(!('visible' in actor) || actor.visible);
+      if (actor.pose === 'jump') {
+        sprite.anims.stop();
+        sprite.setFrame(name === 'jimmy' ? 26 : 27);
+      } else
+        sprite.play(`${name === 'sophie' ? '' : 'jimmy-'}${actor.pose}`, true);
       if (this.paused || this.orientationBlocked) sprite.anims.pause();
       else sprite.anims.resume();
-      this.effects[index]!.update(ms, sprite, this.director.running);
+      this.effects[index]!.update(
+        ms,
+        sprite,
+        this.director instanceof InterludeDirector && this.director.running,
+      );
     }
     this.hud.setFade(this.director.fade);
     const visible =
@@ -221,12 +281,25 @@ export class InterludeScene extends Phaser.Scene {
     if (this.director.phase === 'complete' && !this.ended) {
       this.ended = true;
       this.inputSource.clear();
-      this.scene.start('Game', { levelId: 'the-chase' });
+      if (rooftop) this.hud.showEnding();
+      else this.scene.start('Game', { levelId: 'the-chase' });
     }
   }
   private installTestApi() {
     const api: StoryTestApi = {
       snapshot: () => ({
+        storyId: this.storyId,
+        environment:
+          this.director instanceof RooftopDirector
+            ? this.director.environment
+            : undefined,
+        geometry: this.rooftop ? rooftopGeometry : undefined,
+        balloons:
+          this.director instanceof RooftopDirector &&
+          this.director.environment === 'day'
+            ? balloonPositions(this.director.dayMs)
+            : [],
+        combinedJump: this.combined?.snapshot(),
         phase: this.director.phase,
         index: this.director.index,
         line: this.director.line,
@@ -239,7 +312,7 @@ export class InterludeScene extends Phaser.Scene {
           jimmy: this.jimmy.anims.currentAnim?.key,
         },
         characters: this.children.list
-          .filter((child) => child instanceof Phaser.GameObjects.Sprite)
+          .filter((child) => child === this.sophie || child === this.jimmy)
           .map((child) => child.name),
       }),
       manual: (enabled) => {

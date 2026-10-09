@@ -269,7 +269,7 @@ export class SkyscraperRun {
       b.alpha,
     );
     this.scene.cameras.main
-      .setViewport(0, 0, this.scene.scale.width, this.scene.scale.height)
+      ?.setViewport(0, 0, this.scene.scale.width, this.scene.scale.height)
       .setZoom(1);
   }
 }

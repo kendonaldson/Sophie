@@ -1,16 +1,24 @@
+import type { RooftopDirector } from '../story/RooftopDirector';
+import type { rooftopGeometry, balloonPositions } from '../story/RooftopArt';
+import type { CombinedSuperJump } from '../superJump/CombinedSuperJump';
 import type { PlayerIntent } from '../input/Input';
 import type { PlayerPhysicsConfig } from '../config/physics';
 import type { InterludeDirector } from '../story/InterludeDirector';
 import type { SkyscraperRun } from '../skyscraper/SkyscraperRun';
 export interface StoryTestApi {
   snapshot(): {
-    phase: InterludeDirector['phase'];
+    storyId: string;
+    environment?: 'night' | 'day';
+    geometry?: typeof rooftopGeometry;
+    balloons: ReturnType<typeof balloonPositions>;
+    combinedJump?: ReturnType<CombinedSuperJump['snapshot']>;
+    phase: InterludeDirector['phase'] | RooftopDirector['phase'];
     index: number;
-    line: InterludeDirector['line'];
+    line: InterludeDirector['line'] | RooftopDirector['line'];
     canAdvance: boolean;
     fade: number;
     paused: boolean;
-    actors: InterludeDirector['actors'];
+    actors: InterludeDirector['actors'] | RooftopDirector['actors'];
     animations: { sophie?: string; jimmy?: string };
     characters: string[];
   };
@@ -56,6 +64,7 @@ export interface GameSnapshot {
     line?: string;
     nextCall: number;
     attempts: number;
+    combinedJump?: ReturnType<CombinedSuperJump['snapshot']>;
   };
   characters: string[];
   climb?: ReturnType<SkyscraperRun['snapshot']>;

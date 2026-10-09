@@ -260,7 +260,7 @@ test('bird flight poses follow their travel direction and replay on retry', asyn
     expect(b.direction === 1 ? [0, 1, 2, 3] : [4, 5, 6, 7]).toContain(b.frame);
   expect(r.replayed).toEqual(r.later);
 });
-test('final lift holds the city view with looping music, fades to the only ending, and replay cleans up', async ({
+test('final lift holds the city view, fades into Interlude 2, and cleans up gameplay', async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -299,15 +299,16 @@ test('final lift holds the city view with looping music, fades to the only endin
   await expect(music).toHaveJSProperty('volume', volume);
   await page.keyboard.press('Escape');
   await page.evaluate(() => window.__sophie!.advance(150));
+  await page.waitForFunction(
+    () => window.__sophieStory?.snapshot().storyId === 'interlude-2',
+  );
+  expect(await page.evaluate(() => window.__sophie)).toBeUndefined();
   await expect(
     page.getByRole('heading', { name: 'TO BE CONTINUED' }),
-  ).toBeVisible();
-  await expect(page.locator('#fade')).toHaveCSS('opacity', '1');
-  await expect(music).toHaveJSProperty('paused', true);
-  await page.getByRole('button', { name: 'Play again' }).click();
-  expect((await state(page)).levelId).toBe('attic-escape');
+  ).toHaveCount(0);
+  await expect(page.locator('audio')).toHaveCount(0);
+  await expect(page.locator('.story-ui')).toHaveCount(1);
   await expect(page.locator('#app')).not.toHaveClass(/climb-scripted/);
-  await expect(music).toHaveJSProperty('volume', 0.5);
   expect(errors).toEqual([]);
 });
 test.describe('mobile skyscraper', () => {

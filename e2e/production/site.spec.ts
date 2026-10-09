@@ -1,3 +1,4 @@
+import { rooftopLines } from '../../src/game/story/interlude2';
 import { devices, expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { interludeLines } from '../../src/game/story/interlude1';
@@ -303,4 +304,41 @@ test('built URLs and original/generated images use the configured deployment pat
       readFileSync(`public/assets/audio/${file}`),
     );
   }
+});
+
+test('production rooftop finishes after the overnight conversation and loads the combined atlas under the Pages path', async ({
+  page,
+}) => {
+  test.setTimeout(60000);
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  const missing: string[] = [];
+  page.on('response', (response) => {
+    if (response.status() >= 400) missing.push(response.url());
+  });
+  await page.goto('./#debug');
+  await page
+    .getByRole('combobox', { name: 'Debug level', exact: true })
+    .selectOption('interlude-2');
+  await page.getByRole('button', { name: 'Load', exact: true }).click();
+  for (const line of rooftopLines) {
+    await expect(page.locator('.story-bubble')).toHaveAttribute(
+      'aria-label',
+      `${line.speaker}: ${line.text}`,
+      { timeout: 15000 },
+    );
+    await page
+      .getByRole('button', { name: 'Continue · X', exact: true })
+      .click();
+  }
+  await expect(
+    page.getByRole('heading', { name: 'TO BE CONTINUED' }),
+  ).toBeVisible({ timeout: 10000 });
+  expect(
+    await page.evaluate(() => [window.__sophie, window.__sophieStory]),
+  ).toEqual([undefined, undefined]);
+  await page.getByRole('button', { name: 'Play again' }).click();
+  await expect(page.locator('#section')).toHaveText('Open air');
+  expect(errors).toEqual([]);
+  expect(missing).toEqual([]);
 });

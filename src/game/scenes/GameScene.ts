@@ -1,3 +1,4 @@
+import { superJumpAppearance } from '../superJump/appearance';
 import Phaser from 'phaser';
 import { physics, simulation } from '../config/physics';
 import { FollowCamera } from '../rendering/FollowCamera';
@@ -100,6 +101,14 @@ export class GameScene extends Phaser.Scene {
   }
   preload() {
     this.load.spritesheet(
+      superJumpAppearance.key,
+      import.meta.env.BASE_URL + superJumpAppearance.asset,
+      {
+        frameWidth: superJumpAppearance.frameWidth,
+        frameHeight: superJumpAppearance.frameHeight,
+      },
+    );
+    this.load.spritesheet(
       birdAppearance.key,
       import.meta.env.BASE_URL + birdAppearance.asset,
       {
@@ -148,8 +157,10 @@ export class GameScene extends Phaser.Scene {
       sceneDestinations,
       this.level,
       (level) =>
-        level.id === 'interlude-1'
-          ? this.startInterlude()
+        level.id === 'interlude-1' || level.id === 'interlude-2'
+          ? this.startInterlude(
+              level.id === 'interlude-2' ? 'Interlude2' : 'Interlude1',
+            )
           : this.buildLevel(playableLevel(level.id)),
       this.debugSettings,
     );
@@ -452,12 +463,7 @@ export class GameScene extends Phaser.Scene {
         return;
       }
       if (this.chase.finale.state.phase === 'empty') this.effects.clear();
-      else
-        this.effects.update(
-          ms,
-          this.player.sprite,
-          this.chase.finale.state.phase === 'launch',
-        );
+      else this.effects.update(ms, this.player.sprite, false);
       return;
     }
     const climbPhase = this.climb?.ride?.phase;
@@ -466,10 +472,7 @@ export class GameScene extends Phaser.Scene {
         this.music?.fadeOut(climbTuning.endingFadeMs);
       this.clearInput();
       if (this.climb.complete) {
-        this.ending = true;
-        this.music?.setVolume(0);
-        this.syncMusic();
-        this.hud.showEnding();
+        this.startInterlude('Interlude2');
       }
       return;
     }
@@ -676,11 +679,11 @@ export class GameScene extends Phaser.Scene {
     this.clearInput();
     this.syncMusic();
   }
-  private startInterlude() {
+  private startInterlude(scene = 'Interlude1') {
     if (this.leavingScene) return;
     this.leavingScene = true;
     this.clearInput();
-    this.scene.start('Interlude1');
+    this.scene.start(scene);
   }
   update(_time: number, delta: number) {
     if (this.leavingScene) return;
@@ -784,7 +787,11 @@ export class GameScene extends Phaser.Scene {
           : undefined,
         climb: this.climb?.snapshot(),
         characters: this.children.list
-          .filter((c) => c instanceof Phaser.GameObjects.Sprite)
+          .filter(
+            (c) =>
+              c instanceof Phaser.GameObjects.Sprite &&
+              c.texture.key !== superJumpAppearance.key,
+          )
           .map((c) => c.name || (c as Phaser.GameObjects.Sprite).texture.key),
         intro: this.introMs > 0 || Boolean(this.climb?.arrivalMs),
         finale: this.sling?.phase,

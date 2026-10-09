@@ -14,12 +14,14 @@ const rows = [
   { name: 'run', top: 497, bottom: 565 },
   { name: 'jump', top: 730, bottom: 800 },
   { name: 'sit', top: 274, bottom: 343 },
+  { name: 'sleep', top: 882, bottom: 944, poses: [2, 2, 3, 3, 4, 4, 5, 5] },
 ];
 const atlas = new PNG({ width: 512, height: rows.length * 64 });
 for (const [rowIndex, row] of rows.entries()) {
   for (let frame = 0; frame < 8; frame++) {
-    const x0 = columns[frame],
-      w = columns[frame + 1] - x0 - 4,
+    const pose = row.poses?.[frame] ?? frame;
+    const x0 = columns[pose],
+      w = columns[pose + 1] - x0 - 4,
       h = row.bottom - row.top;
     const removed = new Uint8Array(w * h),
       queue = [];
@@ -86,6 +88,4 @@ for (const [rowIndex, row] of rows.entries()) {
   }
 }
 writeFileSync('public/assets/jimmy.png', PNG.sync.write(atlas));
-console.log(
-  'Prepared 40 side-view poses in a transparent 8 × 5 atlas (64 × 64 frames).',
-);
+console.log('Prepared 48 side-view poses including sleep (64 × 64 frames).');

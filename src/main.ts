@@ -33,6 +33,7 @@ const game = new Phaser.Game({
   scene: [
     new GameScene(hud, sfx, debugSettings),
     new InterludeScene(hud, sfx, debugSettings),
+    new InterludeScene(hud, sfx, debugSettings, 'interlude-2'),
   ],
   // Music streams through LevelMusic; SFX own the only Web Audio context.
   audio: { noAudio: true },
