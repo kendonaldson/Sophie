@@ -441,7 +441,7 @@ test('production kitchen loads the supplied character atlases and plays to its e
   page,
   baseURL,
 }) => {
-  test.setTimeout(60000);
+  test.setTimeout(75000);
   const errors: string[] = [],
     assets: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -467,7 +467,7 @@ test('production kitchen loads the supplied character atlases and plays to its e
   await expect(page.locator('audio')).toHaveCount(0);
   await expect(
     page.getByRole('heading', { name: 'TO BE CONTINUED' }),
-  ).toBeVisible({ timeout: 45000 });
+  ).toBeVisible({ timeout: 60000 });
   await expect(page.locator('#fade')).toHaveCSS('opacity', '1');
   await expect(page.locator('.story-bubble')).toBeHidden();
   expect(errors).toEqual([]);

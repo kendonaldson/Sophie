@@ -41,7 +41,7 @@ export const interlude3 = {
   shellyHoldMs: 1000,
   fadeOutMs: 800,
   minimumLineMs: 260,
-  exitLineMs: 1400,
+  exitLineMs: 2800,
 } as const;
 
 export const kitchenLines = [
@@ -65,7 +65,7 @@ const line = (index: number) => ({
   line: kitchenLines[index]!,
   lineIndex: index,
   // Automatic, readable holds; Continue is optional, never needed to finish.
-  durationMs: Math.max(1400, kitchenLines[index]!.text.length * 48 + 650),
+  durationMs: Math.max(2800, kitchenLines[index]!.text.length * 96 + 1300),
 });
 export const kitchenBeats = [
   { id: 'arrival', phase: 'arrival', durationMs: c.arrivalMs },
