@@ -1,4 +1,7 @@
 import { maintenance } from '../levels/maintenance';
+import { shellyAppearance } from '../shelly/appearance';
+import { pizzaAppearance } from '../pizza/appearance';
+import { storySceneKey } from './destinations';
 import { TunnelRun } from '../maintenance/TunnelRun';
 import { TunnelArt } from '../maintenance/TunnelArt';
 import { tunnelTuning } from '../maintenance/config';
@@ -116,6 +119,15 @@ export class GameScene extends Phaser.Scene {
     this.debugFinaleEnabled = true;
   }
   preload() {
+    for (const appearance of [shellyAppearance, pizzaAppearance])
+      this.load.spritesheet(
+        appearance.key,
+        import.meta.env.BASE_URL + appearance.asset,
+        {
+          frameWidth: appearance.frameWidth,
+          frameHeight: appearance.frameHeight,
+        },
+      );
     this.load.spritesheet(
       ratAppearance.key,
       import.meta.env.BASE_URL + ratAppearance.asset,
@@ -190,12 +202,11 @@ export class GameScene extends Phaser.Scene {
       document.querySelector<HTMLElement>('#app')!,
       sceneDestinations,
       this.level,
-      (level) =>
-        level.id === 'interlude-1' || level.id === 'interlude-2'
-          ? this.startInterlude(
-              level.id === 'interlude-2' ? 'Interlude2' : 'Interlude1',
-            )
-          : this.buildLevel(playableLevel(level.id)),
+      (level) => {
+        const story = storySceneKey(level.id);
+        if (story) this.startInterlude(story);
+        else this.buildLevel(playableLevel(level.id));
+      },
       this.debugSettings,
     );
     const unbindHud = this.hud.bind(
@@ -553,11 +564,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (this.tunnel?.exit) {
-      if (this.tunnel.stepExit(ms)) {
-        this.ending = true;
-        this.syncMusic();
-        this.hud.showEnding();
-      }
+      if (this.tunnel.stepExit(ms)) this.startInterlude('Interlude3');
       return;
     }
     if (this.sky?.finale) {

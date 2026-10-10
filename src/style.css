@@ -813,6 +813,16 @@ kbd {
 .story-bubble[data-speaker='jimmy'] strong {
   color: #466b60;
 }
+.story-bubble[data-speaker='shelly'] {
+  background: #fff0de;
+  border-color: #cc8061;
+}
+.story-bubble[data-speaker='shelly']::after {
+  border-color: #cc8061;
+}
+.story-bubble[data-speaker='shelly'] strong {
+  color: #944d35;
+}
 .story-bubble[data-speaker='offscreen'] {
   color: #f8e9cd;
   background: #293f49f2;

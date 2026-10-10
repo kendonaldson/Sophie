@@ -1,4 +1,7 @@
 import type { TunnelRun } from '../maintenance/TunnelRun';
+import type { KitchenDirector } from '../story/KitchenDirector';
+import type { KitchenStage } from '../story/KitchenStage';
+import type { kitchenGeometry } from '../story/KitchenArt';
 import type { BalloonRun } from '../balloons/BalloonRun';
 import type { RooftopDirector } from '../story/RooftopDirector';
 import type { rooftopGeometry, balloonPositions } from '../story/RooftopArt';
@@ -14,13 +17,25 @@ export interface StoryTestApi {
     geometry?: typeof rooftopGeometry;
     balloons: ReturnType<typeof balloonPositions>;
     combinedJump?: ReturnType<CombinedSuperJump['snapshot']>;
-    phase: InterludeDirector['phase'] | RooftopDirector['phase'];
+    kitchen?: ReturnType<KitchenStage['snapshot']> & {
+      geometry: typeof kitchenGeometry;
+    };
+    phase:
+      | InterludeDirector['phase']
+      | RooftopDirector['phase']
+      | KitchenDirector['phase'];
     index: number;
-    line: InterludeDirector['line'] | RooftopDirector['line'];
+    line:
+      | InterludeDirector['line']
+      | RooftopDirector['line']
+      | KitchenDirector['line'];
     canAdvance: boolean;
     fade: number;
     paused: boolean;
-    actors: InterludeDirector['actors'] | RooftopDirector['actors'];
+    actors:
+      | InterludeDirector['actors']
+      | RooftopDirector['actors']
+      | KitchenDirector['actors'];
     animations: { sophie?: string; jimmy?: string };
     characters: string[];
   };
