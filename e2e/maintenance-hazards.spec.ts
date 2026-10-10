@@ -333,9 +333,9 @@ test('service hatch owns input, walks both dogs inside, and fades into Interlude
     .getByRole('combobox', { name: 'Debug level' })
     .selectOption('attic-escape');
   await page.getByRole('button', { name: 'Load', exact: true }).click();
-  await expect
-    .poll(async () => (await state(page)).levelId)
-    .toBe('attic-escape');
+  await page.waitForFunction(
+    () => window.__sophie?.snapshot().levelId === 'attic-escape',
+  );
   expect((await state(page)).maintenance).toBeUndefined();
   await expect(page.locator('#app')).not.toHaveClass(/tunnel-exit/);
   await expect(page.locator('audio')).toHaveAttribute(
