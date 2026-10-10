@@ -1,0 +1,20 @@
+{
+  "key": "super-pizza-sophie",
+  "source": "super_pizza_sprite.png",
+  "asset": "assets/super-pizza-atlas.png",
+  "sourceWidth": 1672,
+  "sourceHeight": 941,
+  "frameWidth": 96,
+  "frameHeight": 64,
+  "anchorX": 61,
+  "anchorY": 58,
+  "scale": 0.22,
+  "alphaThreshold": 145,
+  "frames": [
+    { "box": [18, 19, 368, 218], "anchor": [272, 210] },
+    { "box": [417, 19, 379, 218], "anchor": [674, 210] },
+    { "box": [1270, 19, 385, 218], "anchor": [1532, 210] },
+    { "box": [13, 499, 373, 208], "anchor": [272, 686] },
+    { "box": [412, 499, 382, 208], "anchor": [674, 686] }
+  ]
+}

@@ -1,4 +1,8 @@
 import { RooftopDirector } from '../story/RooftopDirector';
+import { KitchenDirector } from '../story/KitchenDirector';
+import { KitchenStage } from '../story/KitchenStage';
+import { kitchenGeometry } from '../story/KitchenArt';
+import { interlude3 } from '../story/interlude3';
 import {
   RooftopArt,
   rooftopGeometry,
@@ -20,14 +24,20 @@ import { drawInterludeExterior } from '../story/InterludeArt';
 import { InterludeDirector } from '../story/InterludeDirector';
 import { interlude1 as c } from '../story/interlude1';
 import { interludeFrame } from '../story/framing';
-import { sceneDestinations } from './destinations';
+import {
+  sceneDestinations,
+  storyScenes,
+  storySceneKey,
+  type StoryId,
+} from './destinations';
 import type { StoryTestApi } from './TestApi';
 import type { SfxOutput } from '../audio/Sfx';
 
 export class InterludeScene extends Phaser.Scene {
-  private director: InterludeDirector | RooftopDirector =
+  private director: InterludeDirector | RooftopDirector | KitchenDirector =
     new InterludeDirector();
   private rooftop?: RooftopArt;
+  private kitchen?: KitchenStage;
   private combined?: CombinedSuperJump;
   private sophie!: Phaser.GameObjects.Sprite;
   private jimmy!: Phaser.GameObjects.Sprite;
@@ -43,19 +53,24 @@ export class InterludeScene extends Phaser.Scene {
     private readonly hud: Hud,
     private readonly sfx: SfxOutput,
     private readonly debugSettings: DebugSettings,
-    private readonly storyId: 'interlude-1' | 'interlude-2' = 'interlude-1',
+    private readonly storyId: StoryId = 'interlude-1',
   ) {
-    super(storyId === 'interlude-2' ? 'Interlude2' : 'Interlude1');
+    super(storyScenes[storyId]);
   }
   create() {
     // The fixed shot leaves side margins on wide phones; clear them to night too.
     const previousBackground = this.game.config.backgroundColor.clone();
     this.game.config.backgroundColor.setTo(24, 46, 56);
     const rooftop = this.storyId === 'interlude-2';
-    this.director = rooftop
-      ? new RooftopDirector(this.sfx)
-      : new InterludeDirector();
+    const kitchen = this.storyId === 'interlude-3';
+    if (kitchen) this.game.config.backgroundColor.setTo(244, 227, 189);
+    this.director = kitchen
+      ? new KitchenDirector(this.sfx)
+      : rooftop
+        ? new RooftopDirector(this.sfx)
+        : new InterludeDirector();
     this.rooftop = undefined;
+    this.kitchen = undefined;
     this.combined = undefined;
     this.paused = false;
     this.manual = false;
@@ -63,23 +78,31 @@ export class InterludeScene extends Phaser.Scene {
     this.hud.showPause(false);
     this.hud.showDialogue();
     this.hud.setFade(1);
-    document.querySelector('.chapter > span:last-child')!.textContent = rooftop
-      ? 'Interlude 2 · One balloon'
-      : 'Interlude 1 · Outside the warehouse';
-    document.querySelector('.chapter-number')!.textContent = rooftop
-      ? 'INTERLUDE 2'
-      : 'INTERLUDE 1';
+    document.querySelector('.chapter > span:last-child')!.textContent = kitchen
+      ? 'Interlude 3 · Mission accomplished'
+      : rooftop
+        ? 'Interlude 2 · One balloon'
+        : 'Interlude 1 · Outside the warehouse';
+    document.querySelector('.chapter-number')!.textContent = kitchen
+      ? 'INTERLUDE 3'
+      : rooftop
+        ? 'INTERLUDE 2'
+        : 'INTERLUDE 1';
     document
       .querySelector('#world')!
       .setAttribute(
         'aria-label',
-        rooftop
-          ? 'Sophie and Jimmy on the rooftop above the city'
-          : 'Sophie and Jimmy talking beside the warehouse on a quiet nighttime road',
+        kitchen
+          ? "Sophie and Jimmy meet Shelly in the bright kitchen of Shelly's Pizza"
+          : rooftop
+            ? 'Sophie and Jimmy on the rooftop above the city'
+            : 'Sophie and Jimmy talking beside the warehouse on a quiet nighttime road',
       );
-    document.querySelector('#hint')!.textContent =
-      'X · Continue the conversation';
-    if (rooftop) {
+    document.querySelector('#hint')!.textContent = kitchen
+      ? 'The scene plays automatically · X to continue a line'
+      : 'X · Continue the conversation';
+    if (kitchen) this.kitchen = new KitchenStage(this);
+    else if (rooftop) {
       this.rooftop = new RooftopArt(this);
       this.combined = new CombinedSuperJump(this, interlude2.spriteScale);
     } else drawInterludeExterior(this);
@@ -109,7 +132,10 @@ export class InterludeScene extends Phaser.Scene {
       this.advance,
       (blocked) => {
         this.orientationBlocked = blocked;
-        if (blocked) this.sfx.stopJimmySuperJump();
+        if (blocked) {
+          this.sfx.stopJimmySuperJump();
+          this.sfx.stopPizza();
+        }
         this.inputSource?.clear();
       },
       this.sfx,
@@ -118,16 +144,11 @@ export class InterludeScene extends Phaser.Scene {
     const selector = new DebugLevelSelector(
       document.querySelector('#app')!,
       sceneDestinations,
-      rooftop ? interlude2 : c,
+      kitchen ? interlude3 : rooftop ? interlude2 : c,
       (destination) => {
         if (destination.id === this.storyId) this.scene.restart();
-        else if (
-          destination.id === 'interlude-1' ||
-          destination.id === 'interlude-2'
-        )
-          this.scene.start(
-            destination.id === 'interlude-2' ? 'Interlude2' : 'Interlude1',
-          );
+        else if (storySceneKey(destination.id))
+          this.scene.start(storySceneKey(destination.id));
         else this.scene.start('Game', { levelId: destination.id });
       },
       this.debugSettings,
@@ -153,6 +174,7 @@ export class InterludeScene extends Phaser.Scene {
       this.events.off('destroy', cleanup);
       unbindHud();
       this.sfx.stopJimmySuperJump();
+      this.sfx.stopPizza();
       this.combined?.destroy();
       selector.destroy();
       this.dialogue.destroy();
@@ -180,7 +202,7 @@ export class InterludeScene extends Phaser.Scene {
       .setViewport(f.x, f.y, f.width, f.height)
       .setZoom(f.zoom)
       .centerOn(c.width / 2, c.height / 2)
-      .setBackgroundColor(0x182e38);
+      .setBackgroundColor(this.storyId === 'interlude-3' ? 0xf4e3bd : 0x182e38);
   };
   private advance = () => {
     if (this.paused || this.orientationBlocked) return;
@@ -190,7 +212,10 @@ export class InterludeScene extends Phaser.Scene {
   private togglePause = () => {
     if (this.ended) return;
     this.paused = !this.paused;
-    if (this.paused) this.sfx.stopJimmySuperJump();
+    if (this.paused) {
+      this.sfx.stopJimmySuperJump();
+      this.sfx.stopPizza();
+    }
     this.inputSource.clear();
     this.hud.showPause(this.paused);
   };
@@ -225,6 +250,15 @@ export class InterludeScene extends Phaser.Scene {
     const actors = this.director.actors;
     const rooftop =
       this.director instanceof RooftopDirector ? this.director : undefined;
+    const kitchen =
+      this.director instanceof KitchenDirector ? this.director : undefined;
+    if (kitchen)
+      this.kitchen!.update(
+        kitchen,
+        this.sophie,
+        ms,
+        this.paused || this.orientationBlocked,
+      );
     if (rooftop) {
       this.rooftop!.update(rooftop.environment, rooftop.liftY, rooftop.dayMs);
       this.combined!.show(rooftop.combinedJump);
@@ -237,7 +271,12 @@ export class InterludeScene extends Phaser.Scene {
       );
     }
     this.alertAccent.setVisible(
-      this.director.phase === 'dialogue' && this.director.line?.cue === 'alert',
+      this.director.phase === 'dialogue' &&
+        Boolean(
+          this.director.line &&
+          'cue' in this.director.line &&
+          this.director.line.cue === 'alert',
+        ),
     );
     for (const [index, name] of (['sophie', 'jimmy'] as const).entries()) {
       const sprite = this[name],
@@ -246,7 +285,9 @@ export class InterludeScene extends Phaser.Scene {
         .setPosition(Math.round(actor.x), Math.round(actor.y))
         .setFlipX(actor.flipX)
         .setVisible(!('visible' in actor) || actor.visible);
-      if (actor.pose === 'jump') {
+      if (name === 'sophie' && kitchen?.power.active) {
+        // KitchenStage already selected the temporary power texture/animation.
+      } else if (actor.pose === 'jump') {
         sprite.anims.stop();
         sprite.setFrame(name === 'jimmy' ? 26 : 27);
       } else
@@ -256,7 +297,9 @@ export class InterludeScene extends Phaser.Scene {
       this.effects[index]!.update(
         ms,
         sprite,
-        this.director instanceof InterludeDirector && this.director.running,
+        (this.director instanceof InterludeDirector && this.director.running) ||
+          (name === 'sophie' &&
+            Boolean(kitchen && (kitchen.dash.active || kitchen.superMoving))),
       );
     }
     this.hud.setFade(this.director.fade);
@@ -265,9 +308,14 @@ export class InterludeScene extends Phaser.Scene {
     this.dialogue.show(
       visible ? this.director.line : undefined,
       this.director.canAdvance && !this.paused && !this.orientationBlocked,
+      this.director.phase !== 'escape',
     );
     const speaker =
-      this.director.line?.speaker === 'jimmy' ? actors.jimmy : actors.sophie;
+      kitchen?.line?.speaker === 'shelly'
+        ? kitchen.actors.shelly
+        : this.director.line?.speaker === 'jimmy'
+          ? actors.jimmy
+          : actors.sophie;
     const canvas = this.game.canvas.getBoundingClientRect();
     const shell = document
       .querySelector('.game-shell')!
@@ -276,12 +324,20 @@ export class InterludeScene extends Phaser.Scene {
     const scale = canvas.width / this.scale.width;
     this.dialogue.anchor(
       canvas.left - shell.left + (f.x + speaker.x * f.zoom) * scale,
-      canvas.top - shell.top + (f.y + (speaker.y - 74) * f.zoom) * scale,
+      canvas.top -
+        shell.top +
+        (f.y +
+          (speaker.y - (kitchen?.line?.speaker === 'shelly' ? 102 : 74)) *
+            f.zoom) *
+          scale,
     );
     if (this.director.phase === 'complete' && !this.ended) {
       this.ended = true;
       this.inputSource.clear();
-      if (rooftop) this.scene.start('Game', { levelId: 'balloons' });
+      if (kitchen) {
+        this.sfx.stopPizza();
+        this.hud.showEnding();
+      } else if (rooftop) this.scene.start('Game', { levelId: 'balloons' });
       else this.scene.start('Game', { levelId: 'the-chase' });
     }
   }
@@ -300,6 +356,13 @@ export class InterludeScene extends Phaser.Scene {
             ? balloonPositions(this.director.dayMs)
             : [],
         combinedJump: this.combined?.snapshot(),
+        kitchen:
+          this.director instanceof KitchenDirector
+            ? {
+                ...this.kitchen!.snapshot(this.director, this.sophie),
+                geometry: kitchenGeometry,
+              }
+            : undefined,
         phase: this.director.phase,
         index: this.director.index,
         line: this.director.line,
@@ -312,15 +375,21 @@ export class InterludeScene extends Phaser.Scene {
           jimmy: this.jimmy.anims.currentAnim?.key,
         },
         characters: this.children.list
-          .filter((child) => child === this.sophie || child === this.jimmy)
+          .filter(
+            (child) =>
+              child === this.sophie ||
+              child === this.jimmy ||
+              child === this.kitchen?.shelly,
+          )
           .map((child) => child.name),
       }),
       manual: (enabled) => {
         this.manual = enabled;
       },
       tick: (ms) => {
-        if (!this.paused && !this.orientationBlocked) this.director.tick(ms);
-        this.present(0);
+        const elapsed = !this.paused && !this.orientationBlocked ? ms : 0;
+        this.director.tick(elapsed);
+        this.present(elapsed);
         return api.snapshot();
       },
     };

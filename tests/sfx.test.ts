@@ -518,3 +518,34 @@ describe('movement requests only real SFX events', () => {
     expect(factory).not.toHaveBeenCalled();
   });
 });
+
+it('plays a short rising pizza arpeggio and subtle speed texture, stopping both without touching dialogue', () => {
+  const { sfx, context } = setup();
+  sfx.pizzaPower();
+  expect(context.sources).toHaveLength(0);
+  sfx.unlockFromGesture();
+  sfx.pizzaPower();
+  const power = context.sources[0]!;
+  expect(power.type).toBe('square');
+  expect(
+    power.frequency.setValueAtTime.mock.calls.map(([pitch]) => pitch),
+  ).toEqual(sfxConfig.pizzaPower.pitches);
+  expect(power.frequency.setValueCurveAtTime).not.toHaveBeenCalled();
+  expect(power.stop).toHaveBeenCalledWith(0.3);
+  sfx.pizzaSpeed();
+  const speed = context.sources[1]!;
+  expect(speed.stop).toHaveBeenCalledWith(0.105);
+  sfx.dialogueBoop('shelly', 'P');
+  const voice = context.sources[2]!;
+  expect(voice.frequency.setValueAtTime).toHaveBeenCalledWith(
+    sfxConfig.dialogue.profiles.shelly.basePitch,
+    0,
+  );
+  sfx.stopPizza();
+  expect(power.disconnect).toHaveBeenCalledOnce();
+  expect(speed.disconnect).toHaveBeenCalledOnce();
+  expect(voice.disconnect).not.toHaveBeenCalled();
+  sfx.setMuted(true);
+  sfx.pizzaPower();
+  expect(context.sources).toHaveLength(3);
+});

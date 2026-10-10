@@ -273,7 +273,7 @@ test('every checkpoint permits an immediate safe start, and waiting there remain
   }
 });
 
-test('service hatch owns input, walks both dogs inside, fades after an empty hold, and replays cleanly', async ({
+test('service hatch owns input, walks both dogs inside, and fades into Interlude 3', async ({
   page,
 }) => {
   await open(page);
@@ -298,7 +298,7 @@ test('service hatch owns input, walks both dogs inside, fades after an empty hol
         walked.sophie ||= tunnel.animations.sophie === 'walk';
         walked.jimmy ||= tunnel.animations.jimmy === 'jimmy-walk';
       }
-      if (s.ending) break;
+      if (tunnel.phase === 'complete') break;
     }
     return { phases, walked, final: a.snapshot() };
   });
@@ -319,15 +319,20 @@ test('service hatch owns input, walks both dogs inside, fades after an empty hol
     );
   expect(result.final).toMatchObject({
     levelId: 'maintenance-tunnels',
-    ending: true,
+    ending: false,
     charges: 1,
   });
-  await expect(page.locator('.story-bubble')).toHaveCount(0);
+  await page.waitForFunction(
+    () => window.__sophieStory?.snapshot().storyId === 'interlude-3',
+  );
   await expect(
     page.getByRole('heading', { name: 'TO BE CONTINUED' }),
-  ).toBeVisible();
-  await expect(page.locator('audio')).toHaveJSProperty('paused', true);
-  await page.getByRole('button', { name: 'Play again' }).click();
+  ).toHaveCount(0);
+  await expect(page.locator('audio')).toHaveCount(0);
+  await page
+    .getByRole('combobox', { name: 'Debug level' })
+    .selectOption('attic-escape');
+  await page.getByRole('button', { name: 'Load', exact: true }).click();
   await expect
     .poll(async () => (await state(page)).levelId)
     .toBe('attic-escape');

@@ -283,6 +283,10 @@ test('built URLs and original/generated images use the configured deployment pat
     'assets/sparrow-sprite.png',
     'assets/rat.png',
     'assets/rat-atlas.png',
+    'assets/shelly_sprite.png',
+    'assets/shelly-atlas.png',
+    'assets/super_pizza_sprite.png',
+    'assets/super-pizza-atlas.png',
   ]) {
     const response = await request.get(new URL(file, baseURL!).href);
     expect(response.ok()).toBe(true);
@@ -431,4 +435,40 @@ test('production rooftop hands off to playable balloons and loads the marquee un
   await expect(page.locator('#section')).toHaveText('Open air');
   expect(errors).toEqual([]);
   expect(missing).toEqual([]);
+});
+
+test('production kitchen loads the supplied character atlases and plays to its ending without input', async ({
+  page,
+  baseURL,
+}) => {
+  test.setTimeout(60000);
+  const errors: string[] = [],
+    assets: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('response', (r) => {
+    if (r.status() >= 400) errors.push(`${r.status()} ${r.url()}`);
+    if (r.url().endsWith('-atlas.png')) assets.push(r.url());
+  });
+  await page.goto('./#debug');
+  await page
+    .getByRole('combobox', { name: 'Debug level' })
+    .selectOption('interlude-3');
+  await page.getByRole('button', { name: 'Load', exact: true }).click();
+  await expect(page.locator('.story-bubble p')).toHaveText('We did it!');
+  expect(assets).toEqual(
+    expect.arrayContaining([
+      new URL('assets/shelly-atlas.png', baseURL!).href,
+      new URL('assets/super-pizza-atlas.png', baseURL!).href,
+    ]),
+  );
+  expect(
+    await page.evaluate(() => [window.__sophie, window.__sophieStory]),
+  ).toEqual([undefined, undefined]);
+  await expect(page.locator('audio')).toHaveCount(0);
+  await expect(
+    page.getByRole('heading', { name: 'TO BE CONTINUED' }),
+  ).toBeVisible({ timeout: 45000 });
+  await expect(page.locator('#fade')).toHaveCSS('opacity', '1');
+  await expect(page.locator('.story-bubble')).toBeHidden();
+  expect(errors).toEqual([]);
 });

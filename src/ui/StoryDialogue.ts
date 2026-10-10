@@ -46,9 +46,13 @@ export class StoryDialogue {
     }
     this.onOrientation(mode === 'mobile-portrait');
   };
-  show(line: (SpeechLine & { cue?: string }) | undefined, canAdvance: boolean) {
+  show(
+    line: (SpeechLine & { cue?: string }) | undefined,
+    canAdvance: boolean,
+    showAdvance = true,
+  ) {
     this.bubble.show(line);
-    this.next.hidden = !line || line.cue === 'escape';
+    this.next.hidden = !line || line.cue === 'escape' || !showAdvance;
     this.next.disabled = !canAdvance;
   }
   revealText(ms: number) {

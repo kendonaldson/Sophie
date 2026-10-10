@@ -1,4 +1,4 @@
-export type DialogueSpeaker = 'sophie' | 'jimmy' | 'offscreen';
+export type DialogueSpeaker = 'sophie' | 'jimmy' | 'shelly' | 'offscreen';
 export interface DialogueProfile {
   basePitch: number;
   variation: number;
@@ -36,6 +36,13 @@ export interface SfxConfig {
   };
   steamHiss: NoiseSfxConfig;
   steamBurst: NoiseSfxConfig;
+  pizzaPower: {
+    volume: number;
+    durationMs: number;
+    pitches: readonly number[];
+    waveform: OscillatorType;
+  };
+  pizzaSpeed: NoiseSfxConfig;
   attackMs: number;
   jump: {
     volume: number;
@@ -79,6 +86,19 @@ export interface SfxConfig {
 export const sfxConfig: SfxConfig = {
   masterVolume: 0.42,
   maxVoices: 8,
+  pizzaPower: {
+    volume: 0.25,
+    durationMs: 300,
+    pitches: [523.25, 659.25, 783.99, 1046.5, 1567.98],
+    waveform: 'square',
+  },
+  pizzaSpeed: {
+    volume: 0.12,
+    durationMs: 105,
+    filterStartFrequency: 3400,
+    filterEndFrequency: 1100,
+    filterQ: 0.55,
+  },
   birdSquawk: {
     volume: 0.2,
     durationMs: 120,
@@ -140,6 +160,7 @@ export const sfxConfig: SfxConfig = {
     profiles: {
       sophie: { basePitch: 660, variation: 45, cadenceMs: 65 },
       jimmy: { basePitch: 440, variation: 35, cadenceMs: 75 },
+      shelly: { basePitch: 540, variation: 30, cadenceMs: 72 },
       offscreen: { basePitch: 330, variation: 25, cadenceMs: 85 },
     },
   },

@@ -15,6 +15,9 @@ export interface SfxOutput {
   ratSqueak(): void;
   steamHiss(): void;
   steamBurst(): void;
+  pizzaPower(): void;
+  pizzaSpeed(): void;
+  stopPizza(): void;
   jimmySuperJumpAnticipation(): void;
   jimmySuperJump(): void;
   stopJimmySuperJump(): void;
@@ -29,7 +32,9 @@ type Effect =
   | 'birdSquawk'
   | 'ratSqueak'
   | 'steamHiss'
-  | 'steamBurst';
+  | 'steamBurst'
+  | 'pizzaPower'
+  | 'pizzaSpeed';
 export type JimmySuperJumpOutput = Pick<
   SfxOutput,
   'jimmySuperJumpAnticipation' | 'jimmySuperJump'
@@ -82,6 +87,8 @@ export class Sfx implements SfxOutput {
       ratSqueak: clampVolume(config.ratSqueak.volume),
       steamHiss: clampVolume(config.steamHiss.volume),
       steamBurst: clampVolume(config.steamBurst.volume),
+      pizzaPower: clampVolume(config.pizzaPower.volume),
+      pizzaSpeed: clampVolume(config.pizzaSpeed.volume),
     };
   }
   bindGestures(target: Window = window) {
@@ -236,6 +243,34 @@ export class Sfx implements SfxOutput {
   }
   steamHiss() {
     this.steamNoise('steamHiss');
+  }
+  /** A stepped major arpeggio, distinct from Jimmy's continuous spring sweep. */
+  pizzaPower() {
+    const c = this.config.pizzaPower;
+    this.play('pizzaPower', c.durationMs, (context, voice, gain, at, end) => {
+      const oscillator = context.createOscillator();
+      voice.sources.push(oscillator);
+      oscillator.type = c.waveform;
+      const max = Math.min(12000, context.sampleRate / 2 - 1);
+      c.pitches.forEach((pitch, i) =>
+        oscillator.frequency.setValueAtTime(
+          bounded(pitch, 20, max),
+          at + ((end - at) * i) / c.pitches.length,
+        ),
+      );
+      oscillator.connect(gain);
+    });
+  }
+  pizzaSpeed() {
+    const c = this.config.pizzaSpeed;
+    this.play('pizzaSpeed', c.durationMs, (context, voice, gain, at, end) => {
+      this.filteredNoise(context, voice, gain, at, end, c);
+    });
+  }
+  stopPizza() {
+    for (const voice of this.voices)
+      if (voice.effect === 'pizzaPower' || voice.effect === 'pizzaSpeed')
+        this.release(voice);
   }
   steamBurst() {
     this.steamNoise('steamBurst');
