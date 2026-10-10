@@ -54,41 +54,49 @@ export class Hud {
     root.querySelector('.game-shell')!.append(this.dialogue);
   }
   setLevel(level: LevelDefinition) {
+    const maintenance = level.theme === 'maintenance';
     const balloons = level.theme === 'balloons';
     const warehouse = level.theme === 'warehouse';
     const chase = level.theme === 'chase';
     const skyscraper = level.theme === 'skyscraper';
-    document.querySelector('.chapter > span:last-child')!.innerHTML = balloons
-      ? 'Chapter 05 <i></i> The Balloons'
-      : skyscraper
-        ? 'Chapter 04 <i></i> The Skyscraper'
-        : chase
-          ? 'Chapter 03 <i></i> The Chase'
-          : warehouse
-            ? 'Chapter 02 <i></i> The Warehouse'
-            : 'Chapter 01 <i></i> Attic Escape';
-    document.querySelector('.chapter-number')!.textContent = balloons
-      ? '05 — 05'
-      : skyscraper
-        ? '04 — 05'
-        : chase
-          ? '03 — 05'
-          : warehouse
-            ? '02 — 05'
-            : '01 — 05';
+    document.querySelector('.chapter > span:last-child')!.innerHTML =
+      maintenance
+        ? 'Chapter 06 <i></i> Maintenance Tunnels'
+        : balloons
+          ? 'Chapter 05 <i></i> The Balloons'
+          : skyscraper
+            ? 'Chapter 04 <i></i> The Skyscraper'
+            : chase
+              ? 'Chapter 03 <i></i> The Chase'
+              : warehouse
+                ? 'Chapter 02 <i></i> The Warehouse'
+                : 'Chapter 01 <i></i> Attic Escape';
+    document.querySelector('.chapter-number')!.textContent = maintenance
+      ? '06 — 06'
+      : balloons
+        ? '05 — 06'
+        : skyscraper
+          ? '04 — 06'
+          : chase
+            ? '03 — 06'
+            : warehouse
+              ? '02 — 06'
+              : '01 — 06';
     document
       .querySelector('#world')!
       .setAttribute(
         'aria-label',
-        balloons
-          ? 'Sophie and Jimmy crossing colorful balloon crowns toward Shelly’s Pizza'
-          : skyscraper
-            ? 'Sophie and Jimmy climbing the skyscraper above the nighttime city'
-            : chase
-              ? 'Sophie and Jimmy escaping through a neighborhood and construction yard'
-              : warehouse
-                ? 'Sophie and Jimmy exploring a warehouse'
-                : 'Sophie, a dachshund, exploring neighborhood rooftops',
+        maintenance
+          ? 'Sophie and Jimmy exploring warm industrial maintenance tunnels'
+          : balloons
+            ? 'Sophie and Jimmy crossing colorful balloon crowns toward Shelly’s Pizza'
+            : skyscraper
+              ? 'Sophie and Jimmy climbing the skyscraper above the nighttime city'
+              : chase
+                ? 'Sophie and Jimmy escaping through a neighborhood and construction yard'
+                : warehouse
+                  ? 'Sophie and Jimmy exploring a warehouse'
+                  : 'Sophie, a dachshund, exploring neighborhood rooftops',
       );
     this.lastSection = '';
     this.showDialogue();

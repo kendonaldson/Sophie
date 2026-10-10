@@ -1,3 +1,5 @@
+import type { MaintenanceDefinition } from '../maintenance/config';
+import { validateMaintenance } from '../maintenance/validate';
 import type { Rect } from '../player/CollisionAssist';
 import type { ChaseDefinition } from '../chase/config';
 import type { SkyscraperDefinition } from '../skyscraper/config';
@@ -24,7 +26,9 @@ export interface PlatformDefinition extends Rect {
     | 'barrier'
     | 'bulldozer'
     | 'engine'
-    | 'balloon';
+    | 'balloon'
+    | 'maintenance'
+    | 'pipe';
 }
 export interface MovingPlatformDefinition {
   id: string;
@@ -86,7 +90,14 @@ export interface LevelDefinition {
   name: string;
   /** Asset path relative to public/, played on repeat during gameplay. */
   music?: string;
-  theme?: 'rooftops' | 'warehouse' | 'chase' | 'skyscraper' | 'balloons';
+  theme?:
+    | 'rooftops'
+    | 'warehouse'
+    | 'chase'
+    | 'skyscraper'
+    | 'balloons'
+    | 'maintenance';
+  maintenance?: MaintenanceDefinition;
   chase?: ChaseDefinition;
   skyscraper?: SkyscraperDefinition;
   balloons?: BalloonDefinition;
@@ -146,6 +157,8 @@ export function validateLevel(level: LevelDefinition): void {
     ...(level.skyscraper?.lifts ?? []),
     ...(level.skyscraper?.birds ?? []),
     ...(level.balloons?.birds ?? []),
+    ...(level.maintenance?.rats ?? []),
+    ...(level.maintenance?.steam ?? []),
   ].map((x) => x.id);
   if (new Set(ids).size !== ids.length || ids.some((id) => !id))
     fail('entity IDs must be unique');
@@ -200,6 +213,7 @@ export function validateLevel(level: LevelDefinition): void {
   }
   if (level.skyscraper) validateSkyscraper(level, safe, fail);
   if (level.balloons) validateBalloons(level, safe, fail);
+  if (level.maintenance) validateMaintenance(level);
   for (const cp of level.checkpoints)
     if (
       !rectValid(cp.area) ||

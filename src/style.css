@@ -959,6 +959,9 @@ kbd {
   font-size: 11px;
 }
 
+.tunnel-exit .world-ui,
+.tunnel-exit .touch-controls,
+.tunnel-exit .tutorial-card,
 .balloon-finale .world-ui,
 .balloon-finale .touch-controls,
 .balloon-finale .tutorial-card {

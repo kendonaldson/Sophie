@@ -428,10 +428,12 @@ test('final checkpoint frames both bones, birds, roof and marquee; three dashes 
     { n: 3, failed: false, phase: 'landing' },
   ]);
 });
-test('roof landing owns input, plays the scent/dialogue/walk sequence, then ends and replays cleanly', async ({
+test('roof landing owns input, plays the scent/dialogue/walk sequence, then enters Maintenance Tunnels', async ({
   page,
 }) => {
   await open(page);
+  await page.keyboard.press('KeyA');
+  await expect(page.locator('audio')).toHaveJSProperty('paused', false);
   await page.evaluate(() => {
     const a = window.__sophie!;
     a.place({ x: 6310, y: 450 });
@@ -449,9 +451,9 @@ test('roof landing owns input, plays the scent/dialogue/walk sequence, then ends
         jumpHeld: true,
         dashPressed: true,
       });
+      if (s.levelId === 'maintenance-tunnels') break;
       const sky = s.balloons!;
       if (phases.at(-1)?.phase !== sky.phase) phases.push(sky);
-      if (s.ending) break;
     }
     return phases;
   });
@@ -465,7 +467,6 @@ test('roof landing owns input, plays the scent/dialogue/walk sequence, then ends
     'walk',
     'empty',
     'fade',
-    'complete',
   ]);
   expect(phases.filter((p) => p.line).map((p) => p.line)).toEqual([
     'Do you smell that!',
@@ -482,19 +483,33 @@ test('roof landing owns input, plays the scent/dialogue/walk sequence, then ends
   expect(phases.find((p) => p.phase === 'empty')!.actors!.jimmy.visible).toBe(
     false,
   );
+  const transferred = await state(page);
+  expect(transferred).toMatchObject({
+    levelId: 'maintenance-tunnels',
+    x: 185,
+    y: 500,
+    charges: 1,
+    ending: false,
+  });
+  expect(transferred.jimmy).toMatchObject({ x: 140, y: 500, enabled: true });
+  expect(transferred.balloons).toBeUndefined();
+  expect(transferred.maintenance!.phase).toBe('tunnels');
   await expect(
     page.getByRole('heading', { name: 'TO BE CONTINUED' }),
-  ).toBeVisible();
-  await expect(page.locator('audio')).toHaveJSProperty('paused', true);
-  await page.getByRole('button', { name: 'Play again' }).click();
-  await expect(page.locator('audio')).toHaveJSProperty('volume', 0.5);
+  ).toHaveCount(0);
   await expect(page.locator('audio')).toHaveAttribute(
     'src',
-    '/assets/audio/rooftop-dash.mp3',
+    '/assets/audio/maintenance-tunnel.mp3',
   );
+  await expect(page.locator('audio')).toHaveJSProperty('loop', true);
   await expect
-    .poll(async () => (await state(page)).levelId)
-    .toBe('attic-escape');
+    .poll(() =>
+      page
+        .locator('audio')
+        .evaluate((audio: HTMLAudioElement) => audio.currentTime),
+    )
+    .toBeGreaterThan(0);
+  await expect(page.locator('audio')).toHaveJSProperty('volume', 0.5);
   await expect(page.locator('.balloon-ui')).toHaveCount(0);
   await expect(page.locator('.balloon-finale')).toHaveCount(0);
 });

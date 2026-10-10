@@ -4,6 +4,13 @@ export interface DialogueProfile {
   variation: number;
   cadenceMs: number;
 }
+export interface NoiseSfxConfig {
+  volume: number;
+  durationMs: number;
+  filterStartFrequency: number;
+  filterEndFrequency: number;
+  filterQ: number;
+}
 export interface SfxConfig {
   masterVolume: number;
   maxVoices: number;
@@ -18,6 +25,17 @@ export interface SfxConfig {
     secondAt: number;
     waveform: OscillatorType;
   };
+  ratSqueak: {
+    volume: number;
+    durationMs: number;
+    startFrequency: number;
+    peakFrequency: number;
+    endFrequency: number;
+    turnAt: number;
+    waveform: OscillatorType;
+  };
+  steamHiss: NoiseSfxConfig;
+  steamBurst: NoiseSfxConfig;
   attackMs: number;
   jump: {
     volume: number;
@@ -71,6 +89,29 @@ export const sfxConfig: SfxConfig = {
     turnAt: 0.35,
     secondAt: 0.55,
     waveform: 'square',
+  },
+  ratSqueak: {
+    volume: 0.17,
+    durationMs: 90,
+    startFrequency: 1450,
+    peakFrequency: 2100,
+    endFrequency: 1050,
+    turnAt: 0.38,
+    waveform: 'square',
+  },
+  steamHiss: {
+    volume: 0.13,
+    durationMs: 160,
+    filterStartFrequency: 2800,
+    filterEndFrequency: 3800,
+    filterQ: 0.5,
+  },
+  steamBurst: {
+    volume: 0.19,
+    durationMs: 230,
+    filterStartFrequency: 1500,
+    filterEndFrequency: 700,
+    filterQ: 0.55,
   },
   attackMs: 3,
   jump: {

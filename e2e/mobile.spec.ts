@@ -1,5 +1,6 @@
 import { test, expect, devices } from '@playwright/test';
-import { physics } from '../src/game/config/physics';
+import { physics, simulation } from '../src/game/config/physics';
+import { touchTiming } from '../src/game/config/touch';
 import { atticEscape } from '../src/game/levels/atticEscape';
 test.describe('phone controls', () => {
   test.use({
@@ -133,6 +134,7 @@ test.describe('phone controls', () => {
   }) => {
     await page.goto('/?test');
     await page.waitForFunction(() => Boolean(window.__sophie));
+    await page.evaluate(() => window.__sophie!.manual(true));
     const pad = (await page.locator('.touch-pad').boundingBox())!;
     const dash = (await page
       .getByRole('button', { name: 'Dash', exact: true })
@@ -153,39 +155,49 @@ test.describe('phone controls', () => {
       y: dash.y + dash.height / 2,
     };
     for (const action of ['lift-60', 'lift-100', 'slide-after-dash']) {
-      // Set up on the last safe roof, then use real held touch controls and
-      // release X before pressing Z, as with a single right thumb.
+      // Real touch events feed the usual input source. A fixed simulation clock
+      // keeps browser/CDP scheduling delays out of the short combo window.
       await page.evaluate(() => {
         const a = window.__sophie!;
-        a.manual(true);
         a.checkpoint('combo');
         a.place({ x: 2680, y: 388 });
         a.advance(1);
-        a.manual(false);
       });
       await session.send('Input.dispatchTouchEvent', {
         type: 'touchStart',
         touchPoints: [direction, dashFinger],
       });
-      await page.waitForFunction(
-        () => window.__sophie!.snapshot().state === 'Dashing',
+      const dashed = await page.evaluate(() =>
+        window.__sophie!.advanceInput(1),
+      );
+      expect(dashed.state).toBe('Dashing');
+      expect(dashed.charges).toBe(0);
+      expect(dashed.vx).toBe(physics.dashSpeed);
+      const delayMs =
+        action === 'slide-after-dash'
+          ? physics.dashDurationMs + simulation.stepMs * 2
+          : action === 'lift-60'
+            ? 60
+            : 100;
+      const frames = Math.ceil(delayMs / simulation.stepMs);
+      const beforeJump = await page.evaluate(
+        (remaining) => window.__sophie!.advanceInput(remaining),
+        frames - 1,
+      );
+      expect(frames * simulation.stepMs).toBeLessThan(
+        touchTiming.dashJumpWindowMs,
       );
       if (action === 'slide-after-dash') {
         // Use the extra combo window after the 170 ms dash has completed.
-        await page.waitForFunction(
-          () => window.__sophie!.snapshot().state === 'Airborne',
-          undefined,
-          { polling: 'raf' },
+        expect((frames - 1) * simulation.stepMs).toBeGreaterThan(
+          physics.dashDurationMs,
         );
+        expect(beforeJump.state).toBe('Airborne');
+        expect(beforeJump.vx).toBeLessThan(physics.dashSpeed / 2);
       } else {
-        // Measure from the actual dash, not from when the automation process
-        // notices it. Web Audio and CDP latency must not extend a 100 ms input
-        // sequence beyond the 250 ms touch combo window.
-        const delayMs = action === 'lift-60' ? 60 : 100;
-        await page.waitForFunction(
-          (targetX) => window.__sophie!.snapshot().x >= targetX,
-          2680 + (physics.dashSpeed * delayMs) / 1000,
-          { polling: 'raf' },
+        expect(beforeJump.state).toBe('Dashing');
+        expect(beforeJump.x - 2680).toBeCloseTo(
+          (physics.dashSpeed * frames * simulation.stepMs) / 1000,
         );
         await session.send('Input.dispatchTouchEvent', {
           type: 'touchEnd',
@@ -200,16 +212,28 @@ test.describe('phone controls', () => {
           { id: 2, x: jump.x + jump.width / 2, y: jump.y + jump.height / 2 },
         ],
       });
-      const result = await page.waitForFunction((x) => {
-        const s = window.__sophie!.snapshot();
-        return s.respawning || (s.grounded && s.x >= x - 15) ? s : false;
+      const jumped = await page.evaluate(() =>
+        window.__sophie!.advanceInput(1),
+      );
+      expect(jumped.state).toBe('Airborne');
+      expect(jumped.vy).toBeLessThan(0);
+      expect(jumped.vx).toBeCloseTo(
+        physics.dashSpeed - (physics.overspeedDrag * simulation.stepMs) / 1000,
+      );
+      expect(jumped.charges).toBe(0);
+      const landed = await page.evaluate((x) => {
+        const a = window.__sophie!;
+        let s = a.snapshot();
+        for (let i = 0; i < 240; i++) {
+          s = a.advanceInput(1);
+          if (s.respawning || (s.grounded && s.x >= x - 15)) break;
+        }
+        return s;
       }, factory.x);
-      const landed = await result.jsonValue();
       await session.send('Input.dispatchTouchEvent', {
         type: 'touchEnd',
         touchPoints: [],
       });
-      if (!landed) throw new Error('Final touch jump did not finish');
       expect(landed.respawning, action).toBe(false);
       expect(landed.grounded).toBe(true);
       expect(landed.y).toBeCloseTo(factory.y, 0);

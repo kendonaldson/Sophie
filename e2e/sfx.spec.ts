@@ -149,6 +149,91 @@ const audioState = (page: Page) =>
     active: window.__sfxProbe.activeSources,
   }));
 
+test('maintenance hazard audio follows visible steam phases, with silent resets and Jimmy immunity', async ({
+  page,
+}) => {
+  await probeAudio(page);
+  const errors = collectErrors(page);
+  await page.goto('/?test&level=maintenance-tunnels');
+  await page.waitForFunction(
+    () => window.__sophie?.snapshot().levelId === 'maintenance-tunnels',
+  );
+  await page.evaluate(() => {
+    const a = window.__sophie!;
+    a.manual(true);
+    a.checkpoint('tunnel-entry');
+  });
+  await page.keyboard.press('KeyA');
+  await expect.poll(async () => (await audioState(page)).state).toBe('running');
+  await page.evaluate(() => {
+    const a = window.__sophie!;
+    const steam = a.snapshot().maintenance!.steam[0]!;
+    const cycleMs =
+      steam.clearMs +
+      steam.warningMs +
+      steam.hissMs +
+      steam.activeMs +
+      steam.dissipateMs;
+    a.advance(Math.ceil(cycleMs / (1000 / 120)) + 1);
+    a.checkpoint('first-furnace');
+  });
+  // The entry camera cannot see a furnace. Loading the nearby checkpoint is
+  // also silent: only the subsequent hiss and eruption transitions sound.
+  expect((await audioState(page)).noise).toBe(0);
+  const toPhase = async (phase: 'clear' | 'hiss' | 'active') => {
+    const snapshot = await page.evaluate((target) => {
+      const a = window.__sophie!;
+      let snapshot = a.snapshot();
+      for (
+        let i = 0;
+        i < 2000 && snapshot.maintenance!.steam[0]!.phase !== target;
+        i++
+      )
+        snapshot = a.advance(1);
+      return snapshot;
+    }, phase);
+    expect(snapshot.maintenance!.steam[0]!.phase).toBe(phase);
+    expect(snapshot.respawning).toBe(false);
+    return snapshot;
+  };
+  for (let cycle = 0; cycle < 2; cycle++) {
+    await toPhase('hiss');
+    expect((await audioState(page)).noise).toBe(cycle * 2 + 1);
+    await toPhase('active');
+    expect((await audioState(page)).noise).toBe(cycle * 2 + 2);
+    if (cycle === 0) await toPhase('clear');
+  }
+  const jimmyContact = await page.evaluate(() => {
+    const a = window.__sophie!,
+      steam = a.snapshot().maintenance!.steam[0]!;
+    a.place({ x: steam.x + steam.width / 2, y: steam.floorY - 40 }, true);
+    return a.advance(1);
+  });
+  expect(jimmyContact.respawning).toBe(false);
+  expect(jimmyContact.checkpoint).toBe('first-furnace');
+  expect((await audioState(page)).noise).toBe(4);
+  const sophieContact = await page.evaluate(() => {
+    const a = window.__sophie!,
+      steam = a.snapshot().maintenance!.steam[0]!;
+    a.place({ x: steam.x + steam.width / 2, y: steam.floorY - 40 });
+    return a.advance(1);
+  });
+  expect(sophieContact.respawning).toBe(true);
+  const reset = await page.evaluate(() => window.__sophie!.advance(30));
+  expect(reset.respawning).toBe(false);
+  expect(reset.checkpoint).toBe('first-furnace');
+  expect(reset.x).toBeLessThan(reset.maintenance!.steam[0]!.x);
+  expect(
+    reset.maintenance!.steam.every((steam) => steam.phase === 'clear'),
+  ).toBe(true);
+  const audio = await audioState(page);
+  expect(audio.contexts).toBe(1);
+  expect(audio.noise).toBe(4);
+  expect(audio.tones).toHaveLength(0);
+  await expect.poll(async () => (await audioState(page)).active).toBe(0);
+  expect(errors).toEqual([]);
+});
+
 test('keyboard gesture unlocks one context; successful jumps/dashes sound once and failed dashes are silent', async ({
   page,
 }) => {
