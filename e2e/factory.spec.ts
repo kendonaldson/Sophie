@@ -324,6 +324,7 @@ test('midpoint blocks normal Sophie; a paid dash through pizza changes sprite an
     pizza: { active: true },
   });
   expect(hit.charges).toBe(0);
+  await page.evaluate(() => window.__sophie!.advance(1));
   await expect
     .poll(async () => (await state(page)).factory!.pizza.aura.visible)
     .toBe(true);
