@@ -25,8 +25,8 @@ export const factoryDialogue = {
   ],
   outro: [
     { speaker: 'shelly', text: 'Would you two PLEASE stop?!' },
-    { speaker: 'sophie', text: 'Sorry!' },
-    { speaker: 'jimmy', text: "She's not." },
+    { speaker: 'sophie', text: 'Sorry! I really like pizza.' },
+    { speaker: 'jimmy', text: "That's not an apology." },
   ],
 } as const satisfies Record<string, readonly SpeechLine[]>;
 export type FactoryPhase =
