@@ -51,7 +51,7 @@ export const kitchenLines = [
   { speaker: 'sophie', text: 'Shelly?!' },
   { speaker: 'sophie', text: "You're real?!" },
   { speaker: 'shelly', text: "Of course I'm real." },
-  { speaker: 'jimmy', text: 'I thought she was a logo.' },
+  { speaker: 'jimmy', text: 'I thought he was a logo.' },
   { speaker: 'shelly', text: 'I get that a lot.' },
   { speaker: 'sophie', text: 'Sorry!' },
   { speaker: 'shelly', text: "I'm not going to let you steal my pizza!" },
