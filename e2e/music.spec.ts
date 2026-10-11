@@ -1,6 +1,17 @@
 import { expect, test, devices } from '@playwright/test';
 
-const chapters = [
+const chapters: {
+  name: string;
+  url: string;
+  track: string;
+  checkpoint?: string;
+}[] = [
+  {
+    name: 'pizza factory',
+    url: '/?test&level=pizza-factory',
+    track: 'pizza-dash.mp3',
+    checkpoint: 'factory-midpoint',
+  },
   {
     name: 'maintenance tunnels',
     url: '/?test&level=maintenance-tunnels',
@@ -33,6 +44,11 @@ for (const chapter of chapters)
     page.on('pageerror', (error) => errors.push(error.message));
     await page.goto(chapter.url);
     await page.waitForFunction(() => Boolean(window.__sophie));
+    if (chapter.checkpoint)
+      await page.evaluate(
+        (id) => window.__sophie!.checkpoint(id),
+        chapter.checkpoint,
+      );
     const music = page.locator('audio');
     await expect(music).toHaveCount(1);
     await expect(music).toHaveAttribute(
@@ -111,6 +127,12 @@ test.describe('mobile music', () => {
       page,
     }) => {
       await page.goto(chapter.url);
+      await page.waitForFunction(() => Boolean(window.__sophie));
+      if (chapter.checkpoint)
+        await page.evaluate(
+          (id) => window.__sophie!.checkpoint(id),
+          chapter.checkpoint,
+        );
       const music = page.locator('audio');
       await expect(music).toHaveJSProperty('paused', true);
       await page.getByRole('button', { name: 'Jump', exact: true }).tap();

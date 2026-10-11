@@ -1,5 +1,4 @@
 import { test, expect, devices, type Page } from '@playwright/test';
-import { pizzaFactory as level } from '../src/game/levels/pizzaFactory';
 import { factoryTuning as tuning } from '../src/game/factory/config';
 
 const state = (page: Page) => page.evaluate(() => window.__sophie!.snapshot());
@@ -38,7 +37,7 @@ async function pickup(page: Page) {
     return s;
   });
 }
-test('opens safely with supplied art, gives the quick exchange, then releases keyboard control without music', async ({
+test('opens safely with supplied art, gives the quick exchange, then releases keyboard control', async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -77,7 +76,11 @@ test('opens safely with supplied art, gives the quick exchange, then releases ke
   expect(assets.some((a) => a.endsWith('/rotating-pizza-atlas.png'))).toBe(
     true,
   );
-  await expect(page.locator('audio')).not.toHaveAttribute('src', /.+/);
+  await expect(page.locator('audio')).toHaveAttribute(
+    'src',
+    '/assets/audio/pizza-dash.mp3',
+  );
+  await expect(page.locator('audio')).toHaveJSProperty('loop', true);
   await expect(page.locator('audio')).toHaveJSProperty('paused', true);
   await expect(page.locator('.touch-controls')).toHaveCount(0);
   await expect(page.locator('#pizza-rush')).toBeHidden();
@@ -509,6 +512,5 @@ test.describe('mobile pizza factory', () => {
     await page.getByRole('button', { name: 'Load', exact: true }).click();
     await expect(page.locator('#app')).not.toHaveClass(/factory-mode/);
     expect((await state(page)).factory).toBeUndefined();
-    expect(level.music).toBeUndefined();
   });
 });

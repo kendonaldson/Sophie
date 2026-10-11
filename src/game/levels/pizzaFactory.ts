@@ -29,6 +29,7 @@ export const pizzaFactory: LevelDefinition = {
   id: 'pizza-factory',
   name: "Shelly's Pizza Factory",
   theme: 'factory',
+  music: 'assets/audio/pizza-dash.mp3',
   width: 12600,
   height: 1400,
   fallY: 1340,

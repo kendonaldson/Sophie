@@ -475,9 +475,26 @@ test('production kitchen loads the supplied character atlases and hands off to L
   ).toHaveCount(0);
   await expect(page.locator('#fade')).toHaveCSS('opacity', '0');
   await expect(page.locator('.story-ui')).toHaveCount(0);
-  await expect(page.locator('audio')).not.toHaveAttribute('src', /.+/);
+  const music = page.locator('audio');
+  await expect(music).toHaveAttribute(
+    'src',
+    new URL('assets/audio/pizza-dash.mp3', baseURL!).pathname,
+  );
+  await expect(music).toHaveJSProperty('loop', true);
   await expect(page.locator('.dialogue')).toContainText(
     'You owe me for that pizza!',
   );
+  const track = await page.request.get(
+    new URL('assets/audio/pizza-dash.mp3', baseURL!).href,
+  );
+  expect(track.ok()).toBe(true);
+  expect(await track.body()).toEqual(
+    readFileSync('public/assets/audio/pizza-dash.mp3'),
+  );
+  await page.keyboard.press('ArrowRight');
+  await expect
+    .poll(() => music.evaluate((audio: HTMLAudioElement) => audio.currentTime))
+    .toBeGreaterThan(0);
+  await expect(music).toHaveJSProperty('error', null);
   expect(errors).toEqual([]);
 });

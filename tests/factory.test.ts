@@ -131,9 +131,8 @@ describe('confrontations and story', () => {
   });
 });
 describe('factory route and its only checkpoint', () => {
-  it('validates the suspended route, mixed belts, moving trays, and two dash-only pizzas without a soundtrack', () => {
+  it('validates the suspended route, mixed belts, moving trays, and two dash-only pizzas', () => {
     expect(() => validateLevel(pizzaFactory)).not.toThrow();
-    expect(pizzaFactory.music).toBeUndefined();
     expect(pizzaFactory.conveyors!.some((c) => c.speed > 0)).toBe(true);
     expect(pizzaFactory.conveyors!.some((c) => c.speed < 0)).toBe(true);
     expect(pizzaFactory.movingPlatforms).toHaveLength(4);

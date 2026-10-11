@@ -187,7 +187,10 @@ test('kitchen stages Shelly, normal dash, pizza transformation, and the handoff 
     ),
   ).toBe(false);
   await expect(page.locator('.story-ui')).toHaveCount(0);
-  await expect(page.locator('audio')).not.toHaveAttribute('src', /.+/);
+  await expect(page.locator('audio')).toHaveAttribute(
+    'src',
+    '/assets/audio/pizza-dash.mp3',
+  );
   expect(await page.evaluate(() => window.__sophieStory)).toBeUndefined();
   expect(errors).toEqual([]);
 });
