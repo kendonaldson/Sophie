@@ -236,4 +236,13 @@ test('pizza dashing still burns on oven contact', async ({ page }) => {
   expect(result.powered.factory!.pizza.active).toBe(true);
   expect(result.hit.factory!.pizza.superDash).toBe(true);
   expect(result.hit.respawning).toBe(true);
+  const reset = await page.evaluate(() => window.__sophie!.advance(60));
+  expect(reset.factory!.pizza.active).toBe(false);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => window.__sophie!.snapshot().factory!.pizza.aura.visible,
+      ),
+    )
+    .toBe(false);
 });

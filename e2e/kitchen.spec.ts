@@ -163,7 +163,17 @@ test('kitchen stages Shelly, normal dash, pizza transformation, and the handoff 
   expect(running.actors.sophie.x - start.actors.sophie.x).toBeCloseTo(
     c.powerSpeed * 0.1,
   );
-  const contrast = await tick(page, 450);
+  const contrast = await page.evaluate(() => {
+    const a = window.__sophieStory!;
+    // Observe the exit order instead of assuming the old powered speed's
+    // exact exit time. Jimmy must still be running when Sophie clears frame.
+    for (let n = 0; n < 100; n++) {
+      const sophie = a.snapshot().actors.sophie;
+      if ('visible' in sophie && !sophie.visible) break;
+      a.tick(10);
+    }
+    return a.snapshot();
+  });
   expect(contrast.actors.sophie).toMatchObject({ visible: false });
   expect(contrast.actors.jimmy).toMatchObject({ visible: true, pose: 'run' });
   const held = await reach(page, 'shelly-hold');
