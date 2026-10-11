@@ -3,6 +3,8 @@ import { touchTiming } from '../config/touch';
 import type { PlayerIntent } from '../input/Input';
 import { DashController } from './DashController';
 import type { SfxOutput } from '../audio/Sfx';
+import type { PizzaPower } from '../pizza/PizzaPower';
+import { pizzaMovementConfig, pizzaRushConfig } from '../pizza/config';
 export type PlayerState = 'Grounded' | 'Airborne' | 'Dashing';
 export interface Motion {
   vx: number;
@@ -27,11 +29,28 @@ export class PlayerController {
   private dashJumpVelocity = 0;
   private canCutJump = false;
   private pendingDash?: { ms: number; x: number; y: number; facing: -1 | 1 };
+  private readonly poweredConfig: Readonly<PlayerPhysicsConfig>;
   constructor(
     readonly config: Readonly<PlayerPhysicsConfig>,
-    private readonly sfx?: Pick<SfxOutput, 'jump' | 'dash'>,
+    private readonly sfx?: Pick<SfxOutput, 'jump' | 'dash'> &
+      Partial<Pick<SfxOutput, 'pizzaPowerUp' | 'superPizzaDash'>>,
+    readonly pizzaRush?: PizzaPower,
   ) {
     this.dash = new DashController(config);
+    this.poweredConfig = pizzaMovementConfig(config);
+  }
+  get movementConfig() {
+    return this.pizzaRush?.active ? this.poweredConfig : this.config;
+  }
+  collectPizza() {
+    if (!this.pizzaRush) return false;
+    this.pizzaRush.activate();
+    this.sfx?.pizzaPowerUp?.();
+    if (this.dash.extendActive(pizzaRushConfig.pickupDashBurstMs)) {
+      this.dashJumpMs = 0;
+      this.sfx?.superPizzaDash?.();
+    }
+    return true;
   }
   step(
     ms: number,
@@ -39,9 +58,17 @@ export class PlayerController {
     motion: Motion,
     infiniteDash = false,
   ): MovementResult {
+    const expired = this.pizzaRush?.tick(ms);
     const dt = ms / 1000,
-      c = this.config;
+      c = this.movementConfig;
     let { vx, vy, grounded } = motion;
+    if (expired) {
+      vx =
+        Math.sign(vx) *
+        Math.min(Math.abs(vx), this.dash.active ? c.dashSpeed : c.maxRunSpeed);
+      this.dash.remainingMs = Math.min(this.dash.remainingMs, c.dashDurationMs);
+      this.dashJumpMs = 0;
+    }
     let jumped = false,
       dashed = false;
     this.coyoteMs = grounded ? c.coyoteTimeMs : Math.max(0, this.coyoteMs - ms);
@@ -81,11 +108,18 @@ export class PlayerController {
     const touchDash = this.pendingDash !== undefined;
     if (
       request &&
-      this.dash.start(request.x, request.y, request.facing, infiniteDash)
+      this.dash.start(
+        request.x,
+        request.y,
+        request.facing,
+        infiniteDash,
+        c.dashDurationMs,
+      )
     ) {
       this.pendingDash = undefined;
       dashed = true;
-      this.sfx?.dash();
+      if (this.pizzaRush?.active) this.sfx?.superPizzaDash?.();
+      else this.sfx?.dash();
       this.canCutJump = false;
       this.dashJumpMs = 0;
       if (grounded && this.dash.direction.y === 0) {
@@ -159,6 +193,7 @@ export class PlayerController {
     this.dashJumpVelocity = 0;
   }
   reset() {
+    this.pizzaRush?.reset();
     this.dash.reset();
     this.coyoteMs = 0;
     this.clearBufferedInput();

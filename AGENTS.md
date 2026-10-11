@@ -228,6 +228,25 @@ Do not change these rules unless explicitly requested.
 
 ---
 
+## Pizza Rush
+
+Rotating pizza activates Sophie's reusable Pizza Rush state. Initial tuning in
+`src/game/pizza/config.ts` is **5000 ms** and **3× run speed**; duration, run/air
+acceleration and dash speed/duration remain configurable. Do not blindly scale
+gravity or ordinary jump strength. Pizza is separate from dog treats: it grants
+no dash charges and never powers Jimmy. Individual pickups may require an active
+dash, as in the factory confrontations.
+
+Dashing during Pizza Rush uses the supplied directional Super Pizza artwork and
+`sfx.superPizzaDash()`. Picking up pizza during a dash refreshes that same dash
+with a configurable powered burst, preserving its direction and spending no
+extra charge. Show the remaining duration separately from the dog-bone HUD.
+Expiration restores ordinary movement and visuals without changing dash charges.
+Death/checkpoint restoration clears Pizza Rush unless a later level explicitly
+designs otherwise. Keep power state, presentation and encounter rules separate.
+
+---
+
 ## Gameplay Configuration
 
 Game-feel values belong in centralized, strongly typed configuration.

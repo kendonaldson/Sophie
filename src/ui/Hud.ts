@@ -2,6 +2,7 @@ import type { LevelDefinition, TutorialDefinition } from '../game/levels/types';
 import type { SfxOutput } from '../game/audio/Sfx';
 import { DialogueReveal } from './DialogueReveal';
 import { FullscreenControl } from './FullscreenControl';
+import { PizzaRushHud } from './PizzaRushHud';
 export const boneSvg = `<svg viewBox="0 0 28 16" aria-hidden="true" shape-rendering="crispEdges"><path d="M2 1h5v2h2v3h10V3h2V1h5v2h2v4h-2v2h2v4h-2v2h-5v-2h-2v-3H9v3H7v2H2v-2H0V9h2V7H0V3h2z" fill="currentColor"/></svg>`;
 export class Hud {
   private readonly bones: HTMLElement[];
@@ -13,6 +14,7 @@ export class Hud {
   private readonly continueButton: HTMLButtonElement;
   private readonly restartButton: HTMLButtonElement;
   private readonly fullscreen: FullscreenControl;
+  private readonly pizzaRush: PizzaRushHud;
   private readonly fade: HTMLElement;
   private readonly tutorial: HTMLElement;
   private readonly dialogue: HTMLElement;
@@ -32,6 +34,7 @@ export class Hud {
       <footer><span>A little dog. A big way home.</span><div class="key-guide"><span><kbd>←</kbd><kbd>→</kbd> Move</span><span><kbd>Z</kbd> / <kbd>Space</kbd> Jump</span><span><kbd>X</kbd> Dash</span><span><kbd>Esc</kbd> Pause</span></div><span class="chapter-number">01 — 01</span></footer>
       <p class="keyboard-notice">Best played with a keyboard. Arrow keys · Z · X</p>`;
     this.bones = Array.from(root.querySelectorAll<HTMLElement>('.bone'));
+    this.pizzaRush = new PizzaRushHud(root.querySelector('.world-ui')!);
     this.hint = root.querySelector('#hint')!;
     this.section = root.querySelector('#section')!;
     this.overlay = root.querySelector('#overlay')!;
@@ -54,13 +57,15 @@ export class Hud {
     root.querySelector('.game-shell')!.append(this.dialogue);
   }
   setLevel(level: LevelDefinition) {
+    const factory = level.theme === 'factory';
     const maintenance = level.theme === 'maintenance';
     const balloons = level.theme === 'balloons';
     const warehouse = level.theme === 'warehouse';
     const chase = level.theme === 'chase';
     const skyscraper = level.theme === 'skyscraper';
-    document.querySelector('.chapter > span:last-child')!.innerHTML =
-      maintenance
+    document.querySelector('.chapter > span:last-child')!.innerHTML = factory
+      ? "Chapter 07 <i></i> Shelly's Pizza Factory"
+      : maintenance
         ? 'Chapter 06 <i></i> Maintenance Tunnels'
         : balloons
           ? 'Chapter 05 <i></i> The Balloons'
@@ -71,34 +76,39 @@ export class Hud {
               : warehouse
                 ? 'Chapter 02 <i></i> The Warehouse'
                 : 'Chapter 01 <i></i> Attic Escape';
-    document.querySelector('.chapter-number')!.textContent = maintenance
-      ? '06 — 06'
-      : balloons
-        ? '05 — 06'
-        : skyscraper
-          ? '04 — 06'
-          : chase
-            ? '03 — 06'
-            : warehouse
-              ? '02 — 06'
-              : '01 — 06';
+    document.querySelector('.chapter-number')!.textContent = factory
+      ? '07 — 07'
+      : maintenance
+        ? '06 — 07'
+        : balloons
+          ? '05 — 07'
+          : skyscraper
+            ? '04 — 07'
+            : chase
+              ? '03 — 07'
+              : warehouse
+                ? '02 — 07'
+                : '01 — 07';
     document
       .querySelector('#world')!
       .setAttribute(
         'aria-label',
-        maintenance
-          ? 'Sophie and Jimmy exploring warm industrial maintenance tunnels'
-          : balloons
-            ? 'Sophie and Jimmy crossing colorful balloon crowns toward Shelly’s Pizza'
-            : skyscraper
-              ? 'Sophie and Jimmy climbing the skyscraper above the nighttime city'
-              : chase
-                ? 'Sophie and Jimmy escaping through a neighborhood and construction yard'
-                : warehouse
-                  ? 'Sophie and Jimmy exploring a warehouse'
-                  : 'Sophie, a dachshund, exploring neighborhood rooftops',
+        factory
+          ? "Sophie and Jimmy escaping Shelly's suspended pizza factory"
+          : maintenance
+            ? 'Sophie and Jimmy exploring warm industrial maintenance tunnels'
+            : balloons
+              ? 'Sophie and Jimmy crossing colorful balloon crowns toward Shelly’s Pizza'
+              : skyscraper
+                ? 'Sophie and Jimmy climbing the skyscraper above the nighttime city'
+                : chase
+                  ? 'Sophie and Jimmy escaping through a neighborhood and construction yard'
+                  : warehouse
+                    ? 'Sophie and Jimmy exploring a warehouse'
+                    : 'Sophie, a dachshund, exploring neighborhood rooftops',
       );
     this.lastSection = '';
+    this.pizzaRush.update();
     this.showDialogue();
   }
   showDialogue(text?: string, speaker = 'JIMMY') {
@@ -120,7 +130,12 @@ export class Hud {
       this.dialogue.setAttribute('aria-label', `${speaker}: ${text}`);
       // Elevator signage has no character voice and remains instantaneous.
       const voice = speaker.toLowerCase();
-      if (voice === 'sophie' || voice === 'jimmy' || voice === 'offscreen') {
+      if (
+        voice === 'sophie' ||
+        voice === 'jimmy' ||
+        voice === 'offscreen' ||
+        voice === 'shelly'
+      ) {
         this.reveal.set(text, voice);
       } else {
         this.reveal.set();
@@ -134,7 +149,7 @@ export class Hud {
     const speaker = this.dialogue.dataset.speaker?.toLowerCase();
     if (
       this.dialogueText &&
-      ['sophie', 'jimmy', 'offscreen'].includes(speaker ?? '')
+      ['sophie', 'jimmy', 'offscreen', 'shelly'].includes(speaker ?? '')
     )
       this.dialogueText.textContent = this.reveal.tick(ms);
   }
@@ -219,6 +234,9 @@ export class Hud {
   }
   setFade(opacity: number) {
     this.fade.style.opacity = String(opacity);
+  }
+  updatePizzaRush(fraction: number) {
+    this.pizzaRush.update(fraction);
   }
   showPause(paused: boolean) {
     this.overlay.hidden = !paused;

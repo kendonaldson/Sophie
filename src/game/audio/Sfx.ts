@@ -17,6 +17,12 @@ export interface SfxOutput {
   steamBurst(): void;
   pizzaPower(): void;
   pizzaSpeed(): void;
+  pizzaPowerUp(): void;
+  superPizzaDash(): void;
+  shellyRollCharge(): void;
+  shellyRoll(): void;
+  shellySpin(): void;
+  stopFactory(): void;
   stopPizza(): void;
   jimmySuperJumpAnticipation(): void;
   jimmySuperJump(): void;
@@ -34,7 +40,11 @@ type Effect =
   | 'steamHiss'
   | 'steamBurst'
   | 'pizzaPower'
-  | 'pizzaSpeed';
+  | 'pizzaSpeed'
+  | 'superPizzaDash'
+  | 'shellyRollCharge'
+  | 'shellyRoll'
+  | 'shellySpin';
 export type JimmySuperJumpOutput = Pick<
   SfxOutput,
   'jimmySuperJumpAnticipation' | 'jimmySuperJump'
@@ -89,6 +99,10 @@ export class Sfx implements SfxOutput {
       steamBurst: clampVolume(config.steamBurst.volume),
       pizzaPower: clampVolume(config.pizzaPower.volume),
       pizzaSpeed: clampVolume(config.pizzaSpeed.volume),
+      superPizzaDash: clampVolume(config.superPizzaDash.volume),
+      shellyRollCharge: clampVolume(config.shellyRollCharge.volume),
+      shellyRoll: clampVolume(config.shellyRoll.volume),
+      shellySpin: clampVolume(config.shellySpin.volume),
     };
   }
   bindGestures(target: Window = window) {
@@ -266,6 +280,70 @@ export class Sfx implements SfxOutput {
     this.play('pizzaSpeed', c.durationMs, (context, voice, gain, at, end) => {
       this.filteredNoise(context, voice, gain, at, end, c);
     });
+  }
+  /** Canonical gameplay name; share the kitchen's positive pickup arpeggio. */
+  pizzaPowerUp() {
+    this.pizzaPower();
+  }
+  superPizzaDash() {
+    const c = this.config.superPizzaDash;
+    this.play(
+      'superPizzaDash',
+      c.durationMs,
+      (context, voice, gain, at, end) => {
+        this.tone(
+          context,
+          voice,
+          gain,
+          'triangle',
+          c.startFrequency,
+          c.endFrequency,
+          at,
+          end,
+        );
+        this.filteredNoise(context, voice, gain, at, end, c, 0.6);
+      },
+    );
+  }
+  shellyRollCharge() {
+    this.shellPhrase('shellyRollCharge');
+  }
+  shellyRoll() {
+    this.shellPhrase('shellyRoll');
+  }
+  shellySpin() {
+    this.shellPhrase('shellySpin');
+  }
+  private shellPhrase(
+    effect: 'shellyRollCharge' | 'shellyRoll' | 'shellySpin',
+  ) {
+    const c = this.config[effect];
+    this.play(effect, c.durationMs, (context, voice, gain, at, end) => {
+      const oscillator = context.createOscillator();
+      voice.sources.push(oscillator);
+      oscillator.type = c.waveform;
+      const max = Math.min(12000, context.sampleRate / 2 - 1);
+      c.pitches.forEach((pitch, i) =>
+        oscillator.frequency.setValueAtTime(
+          bounded(pitch, 20, max),
+          at + ((end - at) * i) / c.pitches.length,
+        ),
+      );
+      oscillator.connect(gain);
+    });
+  }
+  stopFactory() {
+    this.stopPizza();
+    for (const voice of this.voices)
+      if (
+        [
+          'superPizzaDash',
+          'shellyRollCharge',
+          'shellyRoll',
+          'shellySpin',
+        ].includes(voice.effect)
+      )
+        this.release(voice);
   }
   stopPizza() {
     for (const voice of this.voices)

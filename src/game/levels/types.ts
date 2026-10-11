@@ -6,6 +6,8 @@ import type { SkyscraperDefinition } from '../skyscraper/config';
 import { validateSkyscraper } from '../skyscraper/validate';
 import type { BalloonDefinition } from '../balloons/config';
 import { validateBalloons } from '../balloons/validate';
+import type { FactoryDefinition } from '../factory/config';
+import { validateFactory } from '../factory/validate';
 export interface Point {
   x: number;
   y: number;
@@ -28,7 +30,10 @@ export interface PlatformDefinition extends Rect {
     | 'engine'
     | 'balloon'
     | 'maintenance'
-    | 'pipe';
+    | 'pipe'
+    | 'prep'
+    | 'conveyor'
+    | 'factory-hood';
 }
 export interface MovingPlatformDefinition {
   id: string;
@@ -96,7 +101,9 @@ export interface LevelDefinition {
     | 'chase'
     | 'skyscraper'
     | 'balloons'
-    | 'maintenance';
+    | 'maintenance'
+    | 'factory';
+  factory?: FactoryDefinition;
   maintenance?: MaintenanceDefinition;
   chase?: ChaseDefinition;
   skyscraper?: SkyscraperDefinition;
@@ -159,6 +166,10 @@ export function validateLevel(level: LevelDefinition): void {
     ...(level.balloons?.birds ?? []),
     ...(level.maintenance?.rats ?? []),
     ...(level.maintenance?.steam ?? []),
+    ...(level.factory?.ovens ?? []),
+    ...(level.factory
+      ? [level.factory.midpoint.pizza, level.factory.final.pizza]
+      : []),
   ].map((x) => x.id);
   if (new Set(ids).size !== ids.length || ids.some((id) => !id))
     fail('entity IDs must be unique');
@@ -214,6 +225,7 @@ export function validateLevel(level: LevelDefinition): void {
   if (level.skyscraper) validateSkyscraper(level, safe, fail);
   if (level.balloons) validateBalloons(level, safe, fail);
   if (level.maintenance) validateMaintenance(level);
+  if (level.factory) validateFactory(level);
   for (const cp of level.checkpoints)
     if (
       !rectValid(cp.area) ||

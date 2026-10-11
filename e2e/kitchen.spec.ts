@@ -79,7 +79,7 @@ async function observeAudio(page: Page) {
   });
 }
 
-test('kitchen stages Shelly, normal dash, pizza transformation, faster escape, and the sole ending', async ({
+test('kitchen stages Shelly, normal dash, pizza transformation, and the handoff into the factory', async ({
   page,
 }) => {
   await observeAudio(page);
@@ -175,16 +175,19 @@ test('kitchen stages Shelly, normal dash, pizza transformation, faster escape, a
   await reach(page, 'fade');
   expect((await tick(page, 380)).fade).toBeGreaterThan(0.4);
   await tick(page, 1000);
+  await page.waitForFunction(
+    () => window.__sophie?.snapshot().levelId === 'pizza-factory',
+  );
   await expect(
     page.getByRole('heading', { name: 'TO BE CONTINUED' }),
-  ).toBeVisible();
-  expect((await snapshot(page)).kitchen!.powerActive).toBe(false);
-  await page.getByRole('button', { name: 'Play again' }).click();
-  await page.waitForFunction(
-    () => window.__sophie?.snapshot().levelId === 'attic-escape',
-  );
+  ).toHaveCount(0);
+  expect(
+    await page.evaluate(
+      () => window.__sophie!.snapshot().factory!.pizza.active,
+    ),
+  ).toBe(false);
   await expect(page.locator('.story-ui')).toHaveCount(0);
-  await expect(page.locator('audio')).toHaveCount(1);
+  await expect(page.locator('audio')).not.toHaveAttribute('src', /.+/);
   expect(await page.evaluate(() => window.__sophieStory)).toBeUndefined();
   expect(errors).toEqual([]);
 });
@@ -198,10 +201,15 @@ test('automatic kitchen choreography completes with unavailable audio and no adv
   });
   await open(page);
   await tick(page, 50000);
+  await page.waitForFunction(
+    () => window.__sophie?.snapshot().levelId === 'pizza-factory',
+  );
   await expect(
     page.getByRole('heading', { name: 'TO BE CONTINUED' }),
-  ).toBeVisible();
-  expect((await snapshot(page)).phase).toBe('complete');
+  ).toHaveCount(0);
+  expect(
+    await page.evaluate(() => window.__sophie!.snapshot().factory!.phase),
+  ).toBe('opening');
 });
 
 test.describe('mobile kitchen', () => {

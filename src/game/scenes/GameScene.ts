@@ -1,4 +1,14 @@
 import { maintenance } from '../levels/maintenance';
+import { pizzaFactory } from '../levels/pizzaFactory';
+import { FactoryRun } from '../factory/FactoryRun';
+import { FactoryArt } from '../factory/FactoryArt';
+import { factoryTuning } from '../factory/config';
+import { PizzaPower } from '../pizza/PizzaPower';
+import { pizzaRushConfig } from '../pizza/config';
+import {
+  pizzaDashAppearance,
+  pizzaPickupAppearance,
+} from '../pizza/dashAppearance';
 import { shellyAppearance } from '../shelly/appearance';
 import { pizzaAppearance } from '../pizza/appearance';
 import { storySceneKey } from './destinations';
@@ -57,17 +67,19 @@ import type { LevelDefinition } from '../levels/types';
 import type { GameTestApi } from './TestApi';
 import { sceneDestinations } from './destinations';
 const playableLevel = (id: string) =>
-  id === maintenance.id
-    ? maintenance
-    : id === balloons.id
-      ? balloons
-      : id === skyscraper.id
-        ? skyscraper
-        : id === chase.id
-          ? chase
-          : id === warehouse.id
-            ? warehouse
-            : atticEscape;
+  id === pizzaFactory.id
+    ? pizzaFactory
+    : id === maintenance.id
+      ? maintenance
+      : id === balloons.id
+        ? balloons
+        : id === skyscraper.id
+          ? skyscraper
+          : id === chase.id
+            ? chase
+            : id === warehouse.id
+              ? warehouse
+              : atticEscape;
 export class GameScene extends Phaser.Scene {
   private player!: Player;
   private inputSource!: InputSource;
@@ -77,7 +89,14 @@ export class GameScene extends Phaser.Scene {
   private checkpoints!: Checkpoints;
   private treats: DogTreat[] = [];
   private art!:
-    WorldArt | WarehouseArt | ChaseArt | SkyscraperArt | BalloonArt | TunnelArt;
+    | WorldArt
+    | WarehouseArt
+    | ChaseArt
+    | SkyscraperArt
+    | BalloonArt
+    | TunnelArt
+    | FactoryArt;
+  private factory?: FactoryRun;
   private tunnel?: TunnelRun;
   private sky?: BalloonRun;
   private climb?: SkyscraperRun;
@@ -119,7 +138,12 @@ export class GameScene extends Phaser.Scene {
     this.debugFinaleEnabled = true;
   }
   preload() {
-    for (const appearance of [shellyAppearance, pizzaAppearance])
+    for (const appearance of [
+      shellyAppearance,
+      pizzaAppearance,
+      pizzaDashAppearance,
+      pizzaPickupAppearance,
+    ])
       this.load.spritesheet(
         appearance.key,
         import.meta.env.BASE_URL + appearance.asset,
@@ -168,6 +192,15 @@ export class GameScene extends Phaser.Scene {
     );
   }
   create() {
+    for (const appearance of [
+      shellyAppearance,
+      pizzaAppearance,
+      pizzaDashAppearance,
+      pizzaPickupAppearance,
+    ])
+      this.textures
+        .get(appearance.key)
+        .setFilter(Phaser.Textures.FilterMode.NEAREST);
     this.textures
       .get(ratAppearance.key)
       .setFilter(Phaser.Textures.FilterMode.NEAREST);
@@ -188,7 +221,10 @@ export class GameScene extends Phaser.Scene {
       new KeyboardInput(),
       new TouchControls(shell, (mode) => {
         this.orientationBlocked = mode === 'mobile-portrait';
-        if (this.orientationBlocked) this.sfx.stopJimmySuperJump();
+        if (this.orientationBlocked) {
+          this.sfx.stopJimmySuperJump();
+          this.sfx.stopFactory();
+        }
         this.syncMusic();
         this.accumulator = 0;
         this.clearInput();
@@ -196,7 +232,9 @@ export class GameScene extends Phaser.Scene {
     );
     this.buildLevel(
       this.level,
-      Boolean(this.level.balloons || this.level.maintenance),
+      Boolean(
+        this.level.balloons || this.level.maintenance || this.level.factory,
+      ),
     );
     this.debugSelector = new DebugLevelSelector(
       document.querySelector<HTMLElement>('#app')!,
@@ -230,6 +268,8 @@ export class GameScene extends Phaser.Scene {
       window.removeEventListener('blur', this.onBlur);
       document.removeEventListener('visibilitychange', this.onVisibility);
       this.effects?.clear();
+      this.factory?.destroy();
+      this.factory = undefined;
       this.chase?.destroy();
       this.chase = undefined;
       this.tunnel?.destroy();
@@ -264,6 +304,8 @@ export class GameScene extends Phaser.Scene {
   }
   private buildLevel(level: LevelDefinition, fade = false) {
     this.sfx.stopJimmySuperJump();
+    this.factory?.destroy();
+    this.factory = undefined;
     this.chase?.destroy();
     this.chase = undefined;
     this.tunnel?.destroy();
@@ -293,13 +335,15 @@ export class GameScene extends Phaser.Scene {
     this.exitWalkMs = 0;
     this.introMs = level.theme === 'warehouse' ? 3400 : 0;
     this.fadeInMs = fade
-      ? level.maintenance
-        ? tunnelTuning.entryFadeMs
-        : level.balloons
-          ? balloonTuning.entryFadeMs
-          : level.skyscraper
-            ? climbTuning.entryFadeMs
-            : simulation.endingFadeMs
+      ? level.factory
+        ? factoryTuning.entryFadeMs
+        : level.maintenance
+          ? tunnelTuning.entryFadeMs
+          : level.balloons
+            ? balloonTuning.entryFadeMs
+            : level.skyscraper
+              ? climbTuning.entryFadeMs
+              : simulation.endingFadeMs
       : 0;
     this.physics.world.setBounds(
       0,
@@ -315,7 +359,10 @@ export class GameScene extends Phaser.Scene {
     this.terrain = loaded.terrain;
     this.treats = loaded.treats;
     this.machinery =
-      level.theme === 'warehouse' || level.skyscraper || level.balloons
+      level.theme === 'warehouse' ||
+      level.skyscraper ||
+      level.balloons ||
+      level.factory
         ? new Machinery(this, level)
         : undefined;
     const solids = this.machinery?.solids ?? level.platforms;
@@ -326,6 +373,9 @@ export class GameScene extends Phaser.Scene {
       physics,
       'sophie',
       this.sfx,
+      level.factory
+        ? new PizzaPower(pizzaRushConfig.pizzaRushDurationMs)
+        : undefined,
     );
     this.jimmy = level.companionSpawn
       ? new Jimmy(this, level, solids)
@@ -339,21 +389,35 @@ export class GameScene extends Phaser.Scene {
           this.physics.add.collider(actor.sprite, this.machinery.group),
         );
     }
-    this.art = level.maintenance
-      ? new TunnelArt(this, level)
-      : level.balloons
-        ? new BalloonArt(this, level, this.machinery!)
-        : level.skyscraper
-          ? new SkyscraperArt(this, level, this.machinery!)
-          : level.chase
-            ? new ChaseArt(this, level)
-            : this.machinery
-              ? new WarehouseArt(this, level, this.machinery)
-              : new WorldArt(this, level);
+    this.art = level.factory
+      ? new FactoryArt(this, level, this.machinery!)
+      : level.maintenance
+        ? new TunnelArt(this, level)
+        : level.balloons
+          ? new BalloonArt(this, level, this.machinery!)
+          : level.skyscraper
+            ? new SkyscraperArt(this, level, this.machinery!)
+            : level.chase
+              ? new ChaseArt(this, level)
+              : this.machinery
+                ? new WarehouseArt(this, level, this.machinery)
+                : new WorldArt(this, level);
     this.effects = new Effects(this);
     this.followCamera = new FollowCamera(this.cameras.main, level);
     this.followCamera.snap(this.player);
     this.clearInput();
+    if (level.factory)
+      this.factory = new FactoryRun(
+        this,
+        level,
+        this.player,
+        this.jimmy!,
+        this.machinery!,
+        this.checkpoints,
+        this.treats,
+        this.hud,
+        this.sfx,
+      );
     if (level.chase)
       this.chase = new ChaseRun(
         this,
@@ -442,7 +506,10 @@ export class GameScene extends Phaser.Scene {
   private togglePause() {
     if (this.ending) return;
     this.paused = !this.paused;
-    if (this.paused) this.sfx.stopJimmySuperJump();
+    if (this.paused) {
+      this.sfx.stopJimmySuperJump();
+      this.sfx.stopFactory();
+    }
     this.syncMusic();
     this.clearInput();
     this.accumulator = 0;
@@ -463,7 +530,8 @@ export class GameScene extends Phaser.Scene {
       this.chase?.finale ||
       this.climb?.scripted ||
       this.sky?.finale ||
-      this.tunnel?.exit
+      this.tunnel?.exit ||
+      this.factory?.scripted
     )
       return;
     this.paused = false;
@@ -473,6 +541,13 @@ export class GameScene extends Phaser.Scene {
     this.clearInput();
   }
   private resetPlayer() {
+    if (this.factory) {
+      this.factory.reset();
+      this.effects.clear();
+      this.accumulator = 0;
+      this.clearInput();
+      return;
+    }
     if (this.tunnel) {
       this.tunnel.reset();
       this.effects.clear();
@@ -530,18 +605,27 @@ export class GameScene extends Phaser.Scene {
       this.fadeInMs = Math.max(0, this.fadeInMs - ms);
       this.hud.setFade(
         this.fadeInMs /
-          (this.tunnel
-            ? tunnelTuning.entryFadeMs
-            : this.sky
-              ? balloonTuning.entryFadeMs
-              : this.climb
-                ? climbTuning.entryFadeMs
-                : simulation.endingFadeMs),
+          (this.factory
+            ? factoryTuning.entryFadeMs
+            : this.tunnel
+              ? tunnelTuning.entryFadeMs
+              : this.sky
+                ? balloonTuning.entryFadeMs
+                : this.climb
+                  ? climbTuning.entryFadeMs
+                  : simulation.endingFadeMs),
       );
       return;
     }
     if (this.ending) {
-      if (this.level.chase || this.climb || this.sky || this.tunnel) return;
+      if (
+        this.level.chase ||
+        this.climb ||
+        this.sky ||
+        this.tunnel ||
+        this.factory
+      )
+        return;
       this.endingMs += ms;
       this.hud.setFade(Math.min(1, this.endingMs / simulation.endingFadeMs));
       if (this.endingMs >= simulation.endingFadeMs) {
@@ -560,6 +644,16 @@ export class GameScene extends Phaser.Scene {
       if (!this.respawnRemaining) {
         this.resetPlayer();
         this.hud.setFade(0);
+      }
+      return;
+    }
+    if (this.factory?.stepScript(ms)) {
+      this.clearInput();
+      if (this.factory.complete) {
+        this.ending = true;
+        this.hud.setFade(1);
+        this.hud.showEnding();
+        this.syncMusic();
       }
       return;
     }
@@ -717,7 +811,8 @@ export class GameScene extends Phaser.Scene {
     this.effects.update(
       ms,
       this.player.sprite,
-      this.player.controller.dash.active,
+      this.player.controller.dash.active &&
+        !this.player.controller.pizzaRush?.active,
     );
     for (const treat of this.treats) {
       treat.update(this.elapsed);
@@ -729,14 +824,29 @@ export class GameScene extends Phaser.Scene {
         this.hud.treatPop(this.player.controller.dash.charges);
       }
     }
-    this.checkpoints.update(this.player.feet, this.player.grounded);
-    if (!riding && !this.chase && !this.climb && !this.sky && !this.tunnel)
+    if (!this.factory)
+      this.checkpoints.update(this.player.feet, this.player.grounded);
+    if (
+      !riding &&
+      !this.chase &&
+      !this.climb &&
+      !this.sky &&
+      !this.tunnel &&
+      !this.factory
+    )
       this.jimmy?.afterStep(
         ms,
         this.player,
         this.checkpoints.spawn,
         this.machinery?.waitingAtGate(this.jimmy.actor),
       );
+    if (this.factory) {
+      if (this.factory.afterStep(ms)) this.beginRespawn();
+      if (this.factory.scripted) {
+        this.clearInput();
+        this.effects.clear();
+      }
+    }
     if (this.tunnel) {
       if (this.tunnel.afterStep(ms)) this.beginRespawn();
       if (this.tunnel.exit) {
@@ -768,7 +878,13 @@ export class GameScene extends Phaser.Scene {
       this.level.theme === 'warehouse'
         ? Math.min(this.level.fallY, this.checkpoints.spawn.y + 260)
         : this.level.fallY;
-    if (!this.climb && !this.sky && !this.tunnel && this.player.feet.y > fallY)
+    if (
+      !this.climb &&
+      !this.sky &&
+      !this.tunnel &&
+      !this.factory &&
+      this.player.feet.y > fallY
+    )
       this.beginRespawn();
     const finale = this.level.finale;
     if (
@@ -796,6 +912,7 @@ export class GameScene extends Phaser.Scene {
       !this.climb &&
       !this.sky &&
       !this.tunnel &&
+      !this.factory &&
       overlaps(this.player.body, this.level.exit)
     ) {
       this.clearInput();
@@ -835,12 +952,19 @@ export class GameScene extends Phaser.Scene {
       !this.chase?.finale &&
       !this.climb?.scripted &&
       !this.sky?.finale &&
-      !this.tunnel?.exit
+      !this.tunnel?.exit &&
+      !this.factory?.scripted
     ) {
       this.player.render();
       this.jimmy?.actor.render();
     }
-    if (this.tunnel)
+    if (this.factory)
+      this.factory.present(
+        this.paused || this.orientationBlocked
+          ? 0
+          : Math.min(delta, simulation.maxFrameMs),
+      );
+    else if (this.tunnel)
       this.tunnel.present(
         this.paused || this.orientationBlocked
           ? 0
@@ -868,7 +992,9 @@ export class GameScene extends Phaser.Scene {
         this.player,
       );
     const c = this.cameras.main;
-    if (this.art instanceof TunnelArt)
+    if (this.art instanceof FactoryArt)
+      this.art.update(this.factory!.view, this.elapsed);
+    else if (this.art instanceof TunnelArt)
       this.art.update(
         this.tunnel!.view,
         this.elapsed,
@@ -893,6 +1019,7 @@ export class GameScene extends Phaser.Scene {
           .find((s) => s.fromX <= this.player.feet.x) ??
         this.level.sections[0]!);
     const dash = this.player.controller.dash;
+    this.hud.updatePizzaRush(this.player.controller.pizzaRush?.fraction ?? 0);
     this.hud.update(
       this.debugSelector?.infiniteDash ? physics.maxDashCharges : dash.charges,
       dash.rechargeProgress,
@@ -946,6 +1073,7 @@ export class GameScene extends Phaser.Scene {
         climb: this.climb?.snapshot(),
         balloons: this.sky?.snapshot(),
         maintenance: this.tunnel?.snapshot(),
+        factory: this.factory?.snapshot(),
         characters: this.children.list
           .filter(
             (c) =>
@@ -993,6 +1121,7 @@ export class GameScene extends Phaser.Scene {
         );
       },
       checkpoint: (id) => {
+        this.respawnRemaining = 0;
         this.introMs = 0;
         this.hud.showDialogue();
         this.checkpoints.restore(id);

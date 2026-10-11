@@ -48,7 +48,7 @@ it('automatically delivers the ordered dialogue and ends only after both dogs le
   expect(sfx.pizzaPower).toHaveBeenCalledOnce();
 });
 
-it('reveals Shelly between the dogs and pizza, then spends an ordinary dash over her before activating pizza', () => {
+it('reveals Shelly between the dogs and pizza, then spends an ordinary dash over him before activating pizza', () => {
   const sfx = audio(),
     d = new KitchenDirector(sfx);
   expect(d.actors.shelly.visible).toBe(false);

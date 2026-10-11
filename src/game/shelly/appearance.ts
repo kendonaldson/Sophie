@@ -11,6 +11,10 @@ export const shellyAppearance = {
     crossed: { frames: [12], frameRate: 1 },
     determined: { frames: [13], frameRate: 1 },
     surprised: { frames: [14], frameRate: 1 },
+    charge: { frames: [15, 16, 15], frameRate: 8 },
+    roll: { frames: [16, 17], frameRate: 16 },
+    peel: { frames: [18], frameRate: 1 },
+    dazed: { frames: [19], frameRate: 1 },
   },
 } as const;
 export type ShellyPose = keyof typeof shellyAppearance.animations;

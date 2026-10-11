@@ -1,0 +1,21 @@
+{
+  "key": "pizza-dash",
+  "source": "super_pizza_sprite.png",
+  "asset": "assets/pizza-dash-atlas.png",
+  "sourceWidth": 1672,
+  "sourceHeight": 941,
+  "frameWidth": 96,
+  "frameHeight": 96,
+  "anchorX": 48,
+  "anchorY": 48,
+  "scale": 0.19,
+  "alphaThreshold": 145,
+  "frames": [
+    { "box": [18, 19, 368, 218], "anchor": [244, 144] },
+    { "box": [417, 19, 379, 218], "anchor": [645, 144] },
+    { "box": [34, 244, 320, 258], "anchor": [237, 371] },
+    { "box": [416, 237, 348, 265], "anchor": [634, 372] },
+    { "box": [34, 712, 351, 218], "anchor": [242, 826] },
+    { "box": [412, 712, 398, 218], "anchor": [644, 825] }
+  ]
+}

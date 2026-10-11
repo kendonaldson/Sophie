@@ -1,0 +1,23 @@
+{
+  "key": "rotating-pizza",
+  "source": "rotating_pizza_sprite.png",
+  "asset": "assets/rotating-pizza-atlas.png",
+  "sourceWidth": 2172,
+  "sourceHeight": 724,
+  "frameWidth": 40,
+  "frameHeight": 48,
+  "anchorX": 20,
+  "anchorY": 24,
+  "scale": 0.105,
+  "alphaThreshold": 145,
+  "frames": [
+    { "box": [10, 172, 295, 382], "anchor": [155, 366] },
+    { "box": [313, 172, 245, 382], "anchor": [436, 366] },
+    { "box": [596, 172, 223, 382], "anchor": [709, 366] },
+    { "box": [874, 172, 190, 382], "anchor": [969, 366] },
+    { "box": [1148, 172, 100, 382], "anchor": [1198, 366] },
+    { "box": [1351, 172, 188, 382], "anchor": [1444, 366] },
+    { "box": [1598, 172, 232, 382], "anchor": [1713, 366] },
+    { "box": [1866, 172, 295, 382], "anchor": [2013, 366] }
+  ]
+}
