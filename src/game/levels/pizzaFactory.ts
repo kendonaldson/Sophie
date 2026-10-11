@@ -155,7 +155,7 @@ export const pizzaFactory: LevelDefinition = {
     {
       fromX: 1940,
       title: 'The special ingredient',
-      hint: "Grab pizza, then press X into Shelly's roll. The boost lasts 5 seconds.",
+      hint: "Grab pizza, then press X into Shelly's roll. The boost lasts 8 seconds.",
     },
     {
       fromX: 2650,

@@ -21,26 +21,32 @@ const body = { x: 85, y: 75, width: 30, height: 25 };
 const ground = { vx: 0, vy: 0, grounded: true };
 
 describe('reusable Pizza Rush', () => {
-  it('uses configurable duration and 3x running without multiplying gravity, jump, or dash economy', () => {
+  it('runs at 2x for eight seconds, then restores ordinary movement without changing jump or dash rules', () => {
     const { player, power, sfx } = actor();
     const pickup = new PizzaPickup({ id: 'pizza', x: 100, y: 88 });
     expect(pickup.collect(body, player)).toBe(true);
     expect(power.durationMs).toBe(c.pizzaRushDurationMs);
-    expect(power.remainingMs).toBe(5000);
+    expect(power.remainingMs).toBe(8000);
     expect(power.fraction).toBe(1);
-    expect(player.movementConfig.maxRunSpeed).toBe(physics.maxRunSpeed * 3);
+    expect(player.movementConfig.maxRunSpeed).toBe(physics.maxRunSpeed * 2);
     expect(player.movementConfig.gravity).toBe(physics.gravity);
     expect(player.movementConfig.jumpVelocity).toBe(physics.jumpVelocity);
     expect(player.dash.charges).toBe(1);
     expect(sfx.pizzaPowerUp).toHaveBeenCalledOnce();
     expect(sfx.superPizzaDash).not.toHaveBeenCalled();
     let motion = ground;
-    for (let n = 0; n < 40; n++)
+    for (let n = 0; n < 799; n++)
       motion = player.step(10, { ...noInput(), moveX: 1 }, motion);
-    expect(motion.vx).toBe(540);
-    player.step(c.pizzaRushDurationMs, noInput(), motion);
+    motion = player.step(9, { ...noInput(), moveX: 1 }, motion);
+    expect(power.active).toBe(true);
+    expect(power.remainingMs).toBe(1);
+    expect(motion.vx).toBe(360);
+    motion = player.step(1, { ...noInput(), moveX: 1 }, motion);
     expect(power.active).toBe(false);
+    expect(power.remainingMs).toBe(0);
+    expect(power.fraction).toBe(0);
     expect(player.movementConfig).toBe(physics);
+    expect(motion.vx).toBe(180);
     expect(player.dash.charges).toBe(1);
   });
   it('expires deterministically and refreshes on another pickup', () => {

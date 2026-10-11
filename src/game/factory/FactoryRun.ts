@@ -364,7 +364,8 @@ export class FactoryRun {
       this.sophie.feet,
       this.sophie.grounded || this.scripted,
     );
-    if (!this.scripted) this.powerVisual.update(ms);
+    if (!this.scripted || this.sophie.controller.pizzaRush?.active)
+      this.powerVisual.update(ms);
     this.cast.update(
       ms,
       this.story,
@@ -386,6 +387,11 @@ export class FactoryRun {
         active: this.sophie.controller.pizzaRush!.active,
         remainingMs: this.sophie.controller.pizzaRush!.remainingMs,
         durationMs: this.sophie.controller.pizzaRush!.durationMs,
+        aura: {
+          visible: this.powerVisual.aura.visible,
+          x: this.powerVisual.aura.x,
+          y: this.powerVisual.aura.y,
+        },
         movement: { ...this.sophie.controller.movementConfig },
         superDash:
           this.sophie.controller.pizzaRush!.active &&

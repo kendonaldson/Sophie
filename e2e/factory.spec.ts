@@ -299,7 +299,7 @@ test('midpoint blocks normal Sophie; a paid dash through pizza changes sprite an
   const power = await pickup(page);
   expect(power.charges).toBe(0);
   expect(power.factory!.pizza.superDash).toBe(true);
-  expect(power.factory!.pizza.remainingMs).toBe(5000);
+  expect(power.factory!.pizza.remainingMs).toBe(8000);
   expect(power.vx).toBe(1080);
   expect(power.jimmy!.vx).toBeLessThanOrEqual(180);
   await expect(page.locator('#pizza-rush')).toBeVisible();
@@ -308,24 +308,38 @@ test('midpoint blocks normal Sophie; a paid dash through pizza changes sprite an
   await expect
     .poll(async () => (await state(page)).factory!.pizza.sprite)
     .toBe('pizza-dash');
-  const result = await page.evaluate(() => {
+  await expect
+    .poll(async () => (await state(page)).factory!.pizza.aura.visible)
+    .toBe(true);
+  const hit = await page.evaluate(() => {
     const a = window.__sophie!;
     let s = a.snapshot();
     for (let n = 0; n < 100 && !s.factory!.midpointResolved; n++)
       s = a.advance(1, { moveX: 1 });
-    const hit = s;
-    a.advance(130);
-    for (let n = 0; n < 300 && s.checkpoint === 'spawn'; n++)
-      s = a.advance(1, { moveX: 1 });
-    return { hit, checkpoint: s };
+    return s;
   });
-  expect(result.hit.factory).toMatchObject({
+  expect(hit.factory).toMatchObject({
     phase: 'midpoint-spin',
     midpointResolved: true,
+    pizza: { active: true },
   });
-  expect(result.hit.charges).toBe(0);
-  expect(result.checkpoint.checkpoint).toBe('factory-midpoint');
-  expect(result.checkpoint.factory!.pizza.active).toBe(false);
+  expect(hit.charges).toBe(0);
+  await expect
+    .poll(async () => (await state(page)).factory!.pizza.aura.visible)
+    .toBe(true);
+  const checkpoint = await page.evaluate(() => {
+    const a = window.__sophie!;
+    a.advance(130);
+    let s = a.snapshot();
+    for (let n = 0; n < 300 && s.checkpoint === 'spawn'; n++)
+      s = a.advance(1, { moveX: 1 });
+    return s;
+  });
+  expect(checkpoint.checkpoint).toBe('factory-midpoint');
+  expect(checkpoint.factory!.pizza.active).toBe(false);
+  await expect
+    .poll(async () => (await state(page)).factory!.pizza.aura.visible)
+    .toBe(false);
   await expect(page.locator('#pizza-rush')).toBeHidden();
 });
 
@@ -568,6 +582,9 @@ test.describe('mobile pizza factory', () => {
     await pickup(page);
     await expect(page.locator('.touch-controls')).toBeVisible();
     await expect(page.locator('#pizza-rush')).toBeVisible();
+    await expect
+      .poll(async () => (await state(page)).factory!.pizza.aura.visible)
+      .toBe(true);
     await expectSeparatePowerHud(page);
     const before = await state(page);
     await page.setViewportSize({ width: 390, height: 844 });
@@ -579,18 +596,21 @@ test.describe('mobile pizza factory', () => {
       before.factory!.pizza.remainingMs,
     );
     expect(portrait.x).toBe(before.x);
+    expect(portrait.factory!.pizza.aura.visible).toBe(true);
     await page.setViewportSize({ width: 844, height: 390 });
     await page.getByRole('button', { name: 'Pause game' }).click();
     const paused = await page.evaluate(() => window.__sophie!.advance(600));
     expect(paused.factory!.pizza.remainingMs).toBe(
       before.factory!.pizza.remainingMs,
     );
+    expect(paused.factory!.pizza.aura.visible).toBe(true);
     await page.getByRole('button', { name: 'Restart', exact: true }).click();
     expect((await state(page)).factory).toMatchObject({
       phase: 'opening',
       midpointResolved: false,
     });
     await expect(page.locator('#pizza-rush')).toBeHidden();
+    expect((await state(page)).factory!.pizza.aura.visible).toBe(false);
     await page
       .getByRole('combobox', { name: 'Debug level' })
       .selectOption('warehouse');

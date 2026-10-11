@@ -88,7 +88,7 @@ it('makes only Sophie extremely fast and starts Jimmy running immediately at her
   const beforeReturn = d.actors.sophie.x;
   d.tick(100);
   expect(beforeReturn - d.actors.sophie.x).toBeCloseTo(
-    physics.dashSpeed * 3 * 0.1,
+    physics.dashSpeed * 2 * 0.1,
   );
   reach(d, 'escape');
   expect(d.line?.text).toBe('Jimmy, run!');
@@ -100,7 +100,7 @@ it('makes only Sophie extremely fast and starts Jimmy running immediately at her
   expect(d.actors.jimmy.x - before.jimmy.x).toBeCloseTo(
     physics.maxRunSpeed * 0.1,
   );
-  d.tick(400);
+  for (let n = 0; n < 100 && d.actors.sophie.visible; n++) d.tick(10);
   expect(d.actors.sophie.visible).toBe(false);
   expect(d.actors.jimmy.visible).toBe(true);
   reach(d, 'fade');
@@ -142,7 +142,7 @@ it('keeps temporary pizza state reusable and idempotent without changing shared 
   expect(p.speedMultiplier).toBe(1);
   expect(p.activate()).toBe(true);
   expect(p.activate()).toBe(false);
-  expect(p.speedMultiplier).toBe(3);
+  expect(p.speedMultiplier).toBe(2);
   expect(physics.maxRunSpeed).toBe(180);
   p.reset();
   expect(p.speedMultiplier).toBe(1);
