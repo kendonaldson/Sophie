@@ -5,12 +5,12 @@ export const factoryDialogue = {
   opening: [
     { speaker: 'shelly', text: 'You owe me for that pizza!' },
     { speaker: 'sophie', text: "We're dogs.\nWe don't have any money." },
-    { speaker: 'jimmy', text: "I don't think that's helping." },
+    { speaker: 'jimmy', text: 'We were supposed to ask first.' },
     { speaker: 'shelly', text: 'Then stop stealing pizza!' },
   ],
   midpoint: [
     { speaker: 'shelly', text: "That's enough." },
-    { speaker: 'shelly', text: "You're not getting away with my pizza." },
+    { speaker: 'shelly', text: 'Those pizzas are for paying customers.' },
   ],
   final: [
     {
@@ -19,14 +19,17 @@ export const factoryDialogue = {
     },
     {
       speaker: 'jimmy',
-      text: "Technically, we've been running through most of the restaurant.",
+      text: "Sophie, that's somebody else's dinner.",
     },
-    { speaker: 'shelly', text: "Don't even think about it." },
+    { speaker: 'shelly', text: 'Then leave it on the counter!' },
   ],
   outro: [
     { speaker: 'shelly', text: 'Would you two PLEASE stop?!' },
-    { speaker: 'sophie', text: 'Sorry! I really like pizza.' },
-    { speaker: 'jimmy', text: "..." },
+    { speaker: 'sophie', text: 'But I wanted that pizza!' },
+    {
+      speaker: 'jimmy',
+      text: "You're not going to convince her that's stealing.",
+    },
   ],
 } as const satisfies Record<string, readonly SpeechLine[]>;
 export type FactoryPhase =

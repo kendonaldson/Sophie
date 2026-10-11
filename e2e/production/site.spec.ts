@@ -2,6 +2,7 @@ import { rooftopLines } from '../../src/game/story/interlude2';
 import { devices, expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { interludeLines } from '../../src/game/story/interlude1';
+import { factoryDialogue } from '../../src/game/factory/FactoryStory';
 
 test('production interlude hands off to the playable chase without exposing test APIs', async ({
   page,
@@ -481,8 +482,11 @@ test('production kitchen loads the supplied character atlases and hands off to L
     new URL('assets/audio/pizza-dash.mp3', baseURL!).pathname,
   );
   await expect(music).toHaveJSProperty('loop', true);
-  await expect(page.locator('.dialogue')).toContainText(
-    'You owe me for that pizza!',
+  const openingLine = factoryDialogue.opening[0];
+  await expect(page.locator('.dialogue p')).toHaveText(openingLine.text);
+  await expect(page.locator('.dialogue')).toHaveAttribute(
+    'data-speaker',
+    openingLine.speaker.toUpperCase(),
   );
   const track = await page.request.get(
     new URL('assets/audio/pizza-dash.mp3', baseURL!).href,

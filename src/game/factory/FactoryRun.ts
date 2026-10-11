@@ -313,7 +313,7 @@ export class FactoryRun {
     if (!this.sophie.grounded || this.roll.phase !== 'hidden') return;
     for (const [x, text] of [
       [3480, "You can't just steal pizza!"],
-      [9600, "I'm not letting you get away with this!"],
+      [9600, "I'm running a business here!"],
     ] as const) {
       if (
         this.sophie.feet.x >= x &&
