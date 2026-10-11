@@ -579,6 +579,56 @@ kbd {
 .dialogue p {
   margin: 8px 0 0;
   line-height: 1.5;
+  white-space: pre-line;
+}
+.pizza-rush-hud {
+  position: absolute;
+  right: 27px;
+  top: 75px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  color: #f5db9d;
+  background: #29252deb;
+  border: 1px solid #dfc08b66;
+  border-radius: 3px;
+  pointer-events: none;
+}
+.pizza-rush-hud[hidden] {
+  display: none;
+}
+.pizza-rush-hud svg {
+  width: 22px;
+  height: 26px;
+}
+.pizza-rush-hud span {
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+.pizza-rush-meter {
+  width: 82px;
+  height: 4px;
+  margin-top: 6px;
+  background: #70543b;
+}
+.pizza-rush-meter i {
+  display: block;
+  height: 100%;
+  background: #f8ca70;
+  transform-origin: left;
+}
+.mobile-landscape .pizza-rush-hud {
+  right: 15px;
+  top: 52px;
+  padding: 5px 7px;
+}
+.mobile-landscape .pizza-rush-meter {
+  width: 64px;
+}
+.factory-mode .dialogue {
+  border-color: #b5c19a70;
+  background: #30262bef;
 }
 .mobile-landscape .dialogue {
   top: 45px;

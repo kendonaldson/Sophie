@@ -336,7 +336,7 @@ export class InterludeScene extends Phaser.Scene {
       this.inputSource.clear();
       if (kitchen) {
         this.sfx.stopPizza();
-        this.hud.showEnding();
+        this.scene.start('Game', { levelId: 'pizza-factory' });
       } else if (rooftop) this.scene.start('Game', { levelId: 'balloons' });
       else this.scene.start('Game', { levelId: 'the-chase' });
     }

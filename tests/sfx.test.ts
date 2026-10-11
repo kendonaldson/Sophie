@@ -82,6 +82,53 @@ const setup = (config = structuredClone(sfxConfig)) => {
 };
 
 describe('procedural SFX lifecycle and safety', () => {
+  it('gives the factory warning, roll, pickup, super dash, and comedic spin distinct bounded voices', () => {
+    const { sfx, context, factory } = setup();
+    sfx.shellyRollCharge();
+    sfx.superPizzaDash();
+    expect(factory).not.toHaveBeenCalled();
+    sfx.unlockFromGesture();
+    for (const effect of [
+      'shellyRollCharge',
+      'shellyRoll',
+      'shellySpin',
+    ] as const) {
+      const before = context.sources.length;
+      sfx[effect]();
+      const source = context.sources[before]!;
+      expect(
+        source.frequency.setValueAtTime.mock.calls.map((c) => c[0]),
+      ).toEqual(sfxConfig[effect].pitches);
+      expect(source.stop).toHaveBeenCalledWith(
+        sfxConfig[effect].durationMs / 1000,
+      );
+      context.finish();
+    }
+    const before = context.sources.length;
+    sfx.pizzaPowerUp();
+    expect(
+      context.sources[before]!.frequency.setValueAtTime.mock.calls.map(
+        (c) => c[0],
+      ),
+    ).toEqual(sfxConfig.pizzaPower.pitches);
+    context.finish();
+    const burst = context.sources.length;
+    sfx.superPizzaDash();
+    expect(context.sources.length - burst).toBe(2);
+    expect(
+      context.sources[burst]!.frequency.setValueAtTime,
+    ).toHaveBeenCalledWith(sfxConfig.superPizzaDash.startFrequency, 0);
+    expect(sfxConfig.superPizzaDash.startFrequency).not.toBe(
+      sfxConfig.dash.startFrequency,
+    );
+    expect(context.sources[burst]!.stop).toHaveBeenCalledWith(0.18);
+    const voices = context.sources.slice(burst);
+    sfx.stopFactory();
+    expect(voices.every((v) => v.disconnect.mock.calls.length === 1)).toBe(
+      true,
+    );
+    sfx.destroy();
+  });
   it('creates no context from effects, then reuses one across all effects and gestures', () => {
     const { sfx, context, factory } = setup();
     sfx.jump();

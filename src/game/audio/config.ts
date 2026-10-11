@@ -11,6 +11,12 @@ export interface NoiseSfxConfig {
   filterEndFrequency: number;
   filterQ: number;
 }
+export interface RetroPhraseConfig {
+  volume: number;
+  durationMs: number;
+  pitches: readonly number[];
+  waveform: OscillatorType;
+}
 export interface SfxConfig {
   masterVolume: number;
   maxVoices: number;
@@ -43,6 +49,13 @@ export interface SfxConfig {
     waveform: OscillatorType;
   };
   pizzaSpeed: NoiseSfxConfig;
+  shellyRollCharge: RetroPhraseConfig;
+  shellyRoll: RetroPhraseConfig;
+  shellySpin: RetroPhraseConfig;
+  superPizzaDash: NoiseSfxConfig & {
+    startFrequency: number;
+    endFrequency: number;
+  };
   attackMs: number;
   jump: {
     volume: number;
@@ -86,6 +99,33 @@ export interface SfxConfig {
 export const sfxConfig: SfxConfig = {
   masterVolume: 0.42,
   maxVoices: 8,
+  shellyRollCharge: {
+    volume: 0.23,
+    durationMs: 240,
+    pitches: [165, 230, 165, 260, 180, 330],
+    waveform: 'square',
+  },
+  shellyRoll: {
+    volume: 0.18,
+    durationMs: 220,
+    pitches: [240, 360, 220, 330, 160],
+    waveform: 'triangle',
+  },
+  shellySpin: {
+    volume: 0.23,
+    durationMs: 260,
+    pitches: [160, 520, 360, 640, 280],
+    waveform: 'triangle',
+  },
+  superPizzaDash: {
+    volume: 0.3,
+    durationMs: 180,
+    startFrequency: 1560,
+    endFrequency: 280,
+    filterStartFrequency: 7200,
+    filterEndFrequency: 1400,
+    filterQ: 0.8,
+  },
   pizzaPower: {
     volume: 0.25,
     durationMs: 300,

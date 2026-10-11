@@ -437,7 +437,7 @@ test('production rooftop hands off to playable balloons and loads the marquee un
   expect(missing).toEqual([]);
 });
 
-test('production kitchen loads the supplied character atlases and plays to its ending without input', async ({
+test('production kitchen loads the supplied character atlases and hands off to Level 7 without input', async ({
   page,
   baseURL,
 }) => {
@@ -459,16 +459,42 @@ test('production kitchen loads the supplied character atlases and plays to its e
     expect.arrayContaining([
       new URL('assets/shelly-atlas.png', baseURL!).href,
       new URL('assets/super-pizza-atlas.png', baseURL!).href,
+      new URL('assets/pizza-dash-atlas.png', baseURL!).href,
+      new URL('assets/rotating-pizza-atlas.png', baseURL!).href,
     ]),
   );
   expect(
     await page.evaluate(() => [window.__sophie, window.__sophieStory]),
   ).toEqual([undefined, undefined]);
   await expect(page.locator('audio')).toHaveCount(0);
+  await expect(page.locator('.chapter')).toContainText('Chapter 07', {
+    timeout: 60000,
+  });
   await expect(
     page.getByRole('heading', { name: 'TO BE CONTINUED' }),
-  ).toBeVisible({ timeout: 60000 });
-  await expect(page.locator('#fade')).toHaveCSS('opacity', '1');
-  await expect(page.locator('.story-bubble')).toBeHidden();
+  ).toHaveCount(0);
+  await expect(page.locator('#fade')).toHaveCSS('opacity', '0');
+  await expect(page.locator('.story-ui')).toHaveCount(0);
+  const music = page.locator('audio');
+  await expect(music).toHaveAttribute(
+    'src',
+    new URL('assets/audio/pizza-dash.mp3', baseURL!).pathname,
+  );
+  await expect(music).toHaveJSProperty('loop', true);
+  await expect(page.locator('.dialogue')).toContainText(
+    'You owe me for that pizza!',
+  );
+  const track = await page.request.get(
+    new URL('assets/audio/pizza-dash.mp3', baseURL!).href,
+  );
+  expect(track.ok()).toBe(true);
+  expect(await track.body()).toEqual(
+    readFileSync('public/assets/audio/pizza-dash.mp3'),
+  );
+  await page.keyboard.press('ArrowRight');
+  await expect
+    .poll(() => music.evaluate((audio: HTMLAudioElement) => audio.currentTime))
+    .toBeGreaterThan(0);
+  await expect(music).toHaveJSProperty('error', null);
   expect(errors).toEqual([]);
 });

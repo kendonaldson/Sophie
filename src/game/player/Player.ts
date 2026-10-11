@@ -6,6 +6,7 @@ import type { PlayerIntent } from '../input/Input';
 import type { Point } from '../levels/types';
 import { animatePlayer } from './animations';
 import type { SfxOutput } from '../audio/Sfx';
+import type { PizzaPower } from '../pizza/PizzaPower';
 export class Player {
   readonly sprite: Phaser.Physics.Arcade.Sprite;
   readonly controller: PlayerController;
@@ -15,9 +16,11 @@ export class Player {
     private readonly solids: readonly Rect[],
     private readonly config: Readonly<PlayerPhysicsConfig> = physics,
     private readonly texture = 'sophie',
-    sfx?: Pick<SfxOutput, 'jump' | 'dash'>,
+    sfx?: Pick<SfxOutput, 'jump' | 'dash'> &
+      Partial<Pick<SfxOutput, 'pizzaPowerUp' | 'superPizzaDash'>>,
+    pizzaRush?: PizzaPower,
   ) {
-    this.controller = new PlayerController(config, sfx);
+    this.controller = new PlayerController(config, sfx, pizzaRush);
     this.sprite = scene.physics.add
       .sprite(
         spawn.x,
@@ -68,6 +71,11 @@ export class Player {
         grounded: this.grounded,
       },
       infiniteDash,
+    );
+    const movement = this.controller.movementConfig;
+    b.setMaxVelocity(
+      Math.max(movement.dashSpeed, movement.maxRunSpeed, Math.abs(result.vx)),
+      Math.max(movement.dashSpeed, movement.maxFallSpeed),
     );
     const bounds = { x: b.x, y: b.y, width: b.width, height: b.height };
     const nextY = b.y + (result.vy * ms) / 1000;

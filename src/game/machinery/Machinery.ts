@@ -209,11 +209,16 @@ export class Machinery {
   }
   transferJump(actor: Player, jumped: boolean) {
     const velocity = this.support.get(actor);
-    if (jumped && velocity)
+    if (jumped && velocity) {
       actor.body.setVelocity(
         actor.body.velocity.x + velocity.x,
         actor.body.velocity.y + velocity.y,
       );
+      actor.body.maxVelocity.x = Math.max(
+        actor.body.maxVelocity.x,
+        Math.abs(actor.body.velocity.x),
+      );
+    }
   }
   moveConstructionLift(id: string, y: number, ms: number, actors: Player[]) {
     const surface = this.surfaces.find((s) => s.id === id);

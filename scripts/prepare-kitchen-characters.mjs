@@ -5,8 +5,13 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 
-for (const name of ['shelly', 'pizza']) {
-  const meta = JSON.parse(readFileSync(`src/game/${name}/sheet.json`, 'utf8'));
+for (const name of [
+  'shelly/sheet',
+  'pizza/sheet',
+  'pizza/dash-sheet',
+  'pizza/pickup-sheet',
+]) {
+  const meta = JSON.parse(readFileSync(`src/game/${name}.json`, 'utf8'));
   const source = PNG.sync.read(readFileSync(`public/assets/${meta.source}`));
   if (source.width !== meta.sourceWidth || source.height !== meta.sourceHeight)
     throw new Error(`Remeasure ${meta.source} before preparing its atlas.`);
@@ -16,14 +21,11 @@ for (const name of ['shelly', 'pizza']) {
   });
   for (const [index, frame] of meta.frames.entries()) {
     const [left, top, width, height] = frame.box;
+    const scale = frame.scale ?? meta.scale;
     for (let y = 0; y < meta.frameHeight; y++)
       for (let x = 0; x < meta.frameWidth; x++) {
-        const sx = Math.round(
-          frame.anchor[0] + (x - meta.anchorX) / meta.scale,
-        );
-        const sy = Math.round(
-          frame.anchor[1] + (y - meta.anchorY) / meta.scale,
-        );
+        const sx = Math.round(frame.anchor[0] + (x - meta.anchorX) / scale);
+        const sy = Math.round(frame.anchor[1] + (y - meta.anchorY) / scale);
         if (sx < left || sx >= left + width || sy < top || sy >= top + height)
           continue;
         const si = (sy * source.width + sx) * 4;

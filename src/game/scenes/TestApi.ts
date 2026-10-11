@@ -1,4 +1,5 @@
 import type { TunnelRun } from '../maintenance/TunnelRun';
+import type { FactoryRun } from '../factory/FactoryRun';
 import type { KitchenDirector } from '../story/KitchenDirector';
 import type { KitchenStage } from '../story/KitchenStage';
 import type { kitchenGeometry } from '../story/KitchenArt';
@@ -87,6 +88,7 @@ export interface GameSnapshot {
   climb?: ReturnType<SkyscraperRun['snapshot']>;
   balloons?: ReturnType<BalloonRun['snapshot']>;
   maintenance?: ReturnType<TunnelRun['snapshot']>;
+  factory?: ReturnType<FactoryRun['snapshot']>;
   intro: boolean;
   finale?: string;
   finaleComplete: boolean;
@@ -104,7 +106,8 @@ export interface GameTestApi {
       | 'the-chase'
       | 'skyscraper'
       | 'balloons'
-      | 'maintenance-tunnels',
+      | 'maintenance-tunnels'
+      | 'pizza-factory',
   ): void;
   chaseSection(x: number): void;
   checkpoint(id: string): void;
