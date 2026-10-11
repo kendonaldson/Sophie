@@ -1,6 +1,8 @@
 import { test, expect, devices, type Page } from '@playwright/test';
 import { factoryTuning as tuning } from '../src/game/factory/config';
+import { factoryDialogue } from '../src/game/factory/FactoryStory';
 import { pizzaFactory } from '../src/game/levels/pizzaFactory';
+import type { SpeechLine } from '../src/ui/SpeechBubble';
 
 const state = (page: Page) => page.evaluate(() => window.__sophie!.snapshot());
 async function expectSeparatePowerHud(page: Page) {
@@ -51,24 +53,30 @@ test('opens safely with supplied art, gives the quick exchange, then releases ke
   await open(page, true);
   const lines = await page.evaluate(() => {
     const a = window.__sophie!,
-      lines: string[] = [];
+      lines: SpeechLine[] = [];
     for (let n = 0; n < 2000 && a.snapshot().factory!.scripted; n++) {
       const s = a.advance(1, {
         moveX: 1,
         dashPressed: true,
         jumpPressed: true,
       });
-      if (s.factory!.line && lines.at(-1) !== s.factory!.line.text)
-        lines.push(s.factory!.line.text);
+      const line = s.factory!.line;
+      const previous = lines.at(-1);
+      if (
+        line &&
+        (previous?.text !== line.text || previous.speaker !== line.speaker)
+      )
+        lines.push(line);
       if (s.x !== 180) throw new Error('Input escaped the opening dialogue');
     }
     return lines;
   });
-  expect(lines).toEqual([
-    'You owe me for that pizza!',
-    "We're dogs.\nWe don't have any money.",
-    "I don't think that's helping.",
-    'Then stop stealing pizza!',
+  expect(lines).toEqual(factoryDialogue.opening);
+  expect(lines.map((line) => line.speaker)).toEqual([
+    'shelly',
+    'sophie',
+    'jimmy',
+    'shelly',
   ]);
   expect((await state(page)).factory!.phase).toBe('chase');
   await page.evaluate(() => window.__sophie!.advance(40, { moveX: 1 }));
@@ -496,11 +504,20 @@ test('the final pizza and Shelly reaction lead to both dogs exiting, then the so
     a.advance(50);
     const reacting = a.snapshot();
     const phases: string[] = [];
+    const lines: SpeechLine[] = [];
     for (let n = 0; n < 2500 && !s.ending; n++) {
       s = a.advance(1);
       if (phases.at(-1) !== s.factory!.phase) phases.push(s.factory!.phase);
+      const line = s.factory!.line;
+      const previous = lines.at(-1);
+      if (
+        s.factory!.phase === 'outro' &&
+        line &&
+        (previous?.text !== line.text || previous.speaker !== line.speaker)
+      )
+        lines.push(line);
     }
-    return { converted, hit, reacting, phases, end: s };
+    return { converted, hit, reacting, phases, lines, end: s };
   });
   expect(result.converted).toBe(true);
   expect(result.hit.factory!.phase).toBe('final-spin');
@@ -512,6 +529,12 @@ test('the final pizza and Shelly reaction lead to both dogs exiting, then the so
     'empty',
     'fade',
     'complete',
+  ]);
+  expect(result.lines).toEqual(factoryDialogue.outro);
+  expect(result.lines.map((line) => line.speaker)).toEqual([
+    'shelly',
+    'sophie',
+    'jimmy',
   ]);
   expect(result.end.factory!.actors.jimmy.visible).toBe(false);
   expect(result.end.factory!.actors.sophie.visible).toBe(false);

@@ -3,30 +3,36 @@ import { factoryTuning as t } from './config';
 
 export const factoryDialogue = {
   opening: [
-    { speaker: 'shelly', text: 'You owe me for that pizza!' },
+    { speaker: 'shelly', text: "That pizza wasn't yours to take." },
     { speaker: 'sophie', text: "We're dogs.\nWe don't have any money." },
-    { speaker: 'jimmy', text: "I don't think that's helping." },
-    { speaker: 'shelly', text: 'Then stop stealing pizza!' },
+    { speaker: 'jimmy', text: 'We could have asked first, Sophie.' },
+    {
+      speaker: 'shelly',
+      text: 'Taking it without asking is still stealing.',
+    },
   ],
   midpoint: [
-    { speaker: 'shelly', text: "That's enough." },
-    { speaker: 'shelly', text: "You're not getting away with my pizza." },
+    { speaker: 'shelly', text: 'Hold on a moment.' },
+    { speaker: 'shelly', text: 'Those pizzas are for my customers.' },
   ],
   final: [
     {
       speaker: 'shelly',
-      text: 'Nobody steals a pizza and runs through my entire kitchen!',
+      text: 'I worked hard to make those pizzas.',
     },
     {
       speaker: 'jimmy',
-      text: "Technically, we've been running through most of the restaurant.",
+      text: "He's right, Sophie. We should have asked.",
     },
-    { speaker: 'shelly', text: "Don't even think about it." },
+    { speaker: 'shelly', text: 'Please leave the rest where it is.' },
   ],
   outro: [
-    { speaker: 'shelly', text: 'Would you two PLEASE stop?!' },
-    { speaker: 'sophie', text: 'Sorry! I really like pizza.' },
-    { speaker: 'jimmy', text: "..." },
+    { speaker: 'shelly', text: "Being hungry doesn't make it yours." },
+    { speaker: 'sophie', text: 'I just wanted some pizza for the road.' },
+    {
+      speaker: 'jimmy',
+      text: "I'm not sure you'll convince her it's stealing.",
+    },
   ],
 } as const satisfies Record<string, readonly SpeechLine[]>;
 export type FactoryPhase =
