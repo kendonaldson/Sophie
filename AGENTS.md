@@ -232,7 +232,13 @@ Do not change these rules unless explicitly requested.
 
 Rotating pizza activates Sophie's reusable Pizza Rush state. Initial tuning in
 `src/game/pizza/config.ts` is **8000 ms** and **2× run speed**; duration, run/air
-acceleration and dash speed/duration remain configurable. Do not blindly scale
+acceleration and dash speed/duration remain configurable. Powered dashes use
+**2× dash speed** with the ordinary **170 ms** duration; collecting pizza during
+a dash refreshes a **170 ms** burst. Keep the burst short so air control returns
+promptly. Only while Pizza Rush is active, grounded dash recovery takes **250 ms**
+instead of 500 ms. The HUD reflects this faster recovery; expiration and reset
+restore the ordinary timing. Recovery still requires continuous ground contact
+and never creates the bonus charge. Do not blindly scale
 gravity or ordinary jump strength. Pizza is separate from dog treats: it grants
 no dash charges and never powers Jimmy. Individual pickups may require an active
 dash, as in the factory confrontations.

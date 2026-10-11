@@ -209,19 +209,20 @@ An active Super Pizza Dash bats a rolling Shelly away with the existing bonk cue
 
 ### Reusable Pizza Rush
 
-`pizza/config.ts`, `PizzaPower.ts`, `PizzaPickup.ts`, and the optional player power state implement temporary movement independently of encounters. `PizzaRushVisual.ts` overlays directional art without changing Sophie’s 30×25 body; `ui/PizzaRushHud.ts` shows a native-resolution icon and duration bar separately from dash bones. A golden aura surrounds Sophie throughout the active period, including while idle, running, jumping and dashing. Ordinary powered running keeps Sophie’s run sprite, with a small trail and 1.35× animation rate. Dash-only pickups convert the **current paid dash**, retain its aim, and spend no extra charge. Pizza grants no charges, never affects Jimmy, and leaves the existing treat/500 ms ground-recovery rules intact.
+`pizza/config.ts`, `PizzaPower.ts`, `PizzaPickup.ts`, and the optional player power state implement temporary movement independently of encounters. `PizzaRushVisual.ts` overlays directional art without changing Sophie’s 30×25 body; `ui/PizzaRushHud.ts` shows a native-resolution icon and duration bar separately from dash bones. A golden aura surrounds Sophie throughout the active period, including while idle, running, jumping and dashing. Ordinary powered running keeps Sophie’s run sprite, with a small trail and 1.35× animation rate. Dash-only pickups convert the **current paid dash**, retain its aim, and spend no extra charge. Pizza grants no charges and never affects Jimmy. During its eight-second window, continuous ground contact restores the first dash in **250 ms** instead of 500 ms; the bone HUD shows this faster recovery. Leaving the ground resets the timer, airborne time never recharges, and ground recovery never creates the bonus charge.
 
 | Initial value               | Tuning                                     |
 | --------------------------- | ------------------------------------------ |
 | Pizza Rush lifetime         | 8000 ms                                    |
 | Run speed                   | 2× (180 → 360 px/s)                        |
 | Ground / air acceleration   | 1.4× / 1.15×                               |
-| Super dash speed / duration | 2.25× / 1.2× (1080 px/s / 204 ms)          |
-| Dash conversion burst       | 260 ms from pickup                         |
+| Super dash speed / duration | 2× / 1× (960 px/s / 170 ms)                |
+| Dash conversion burst       | 170 ms from pickup                         |
+| Powered ground recovery     | 250 ms (ordinary: 500 ms)                  |
 | Belt speeds                 | 35–120 px/s; reverse belts −65 / −110 px/s |
 | Moving tray speed           | 55 px/s with end pauses                    |
 
-Gravity, jump strength and dash economy stay unchanged. Expiration restores ordinary movement and graphics. Pause and mobile portrait freeze the timer. Death, checkpoint restoration, Restart and scene changes clear power and its effects. Missed pizza attempts replenish after three seconds; a completed encounter retires its slice. The only checkpoint is the stationary prep counter immediately after the first spin: retries preserve that encounter’s completion, reset machinery/roll timing, restore future treats and start Sophie in normal movement with one charge.
+Gravity, jump strength, charge capacity and treat refills stay unchanged. Powered dashes cover about twice the ordinary dash distance, with the same short control lock; collecting pizza mid-dash refreshes only a normal-length burst. Expiration restores ordinary movement, the 500 ms ground-recovery interval and graphics. Pause and mobile portrait freeze the timer. Death, checkpoint restoration, Restart and scene changes clear power and its effects. Missed pizza attempts replenish after three seconds; a completed encounter retires its slice. The only checkpoint is the stationary prep counter immediately after the first spin: retries preserve that encounter’s completion, reset machinery/roll timing, restore future treats and start Sophie in normal movement with one charge.
 
 Measured crops in `pizza/dash-sheet.json` turn the supplied `super_pizza_sprite.png` into six 96×96 frames for horizontal and diagonal pairs; mirroring and rotation cover all eight dash directions. `pizza/pickup-sheet.json` extracts all eight rotating slices from `rotating_pizza_sprite.png` into 40×48 frames. The repeatable kitchen-asset script generates `pizza-dash-atlas.png`, `rotating-pizza-atlas.png`, and the extended Shelly atlas; all three source sheets are preserved.
 

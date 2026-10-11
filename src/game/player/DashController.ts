@@ -8,18 +8,26 @@ export class DashController {
   groundedMs = 0;
   remainingMs = 0;
   direction: Direction = { x: 1, y: 0 };
-  constructor(private readonly config: Readonly<PlayerPhysicsConfig>) {}
+  private rechargeDurationMs: number;
+  constructor(private readonly config: Readonly<PlayerPhysicsConfig>) {
+    this.rechargeDurationMs = config.groundedDashRechargeMs;
+  }
   get active() {
     return this.remainingMs > 0;
   }
   get rechargeProgress() {
-    return Math.min(1, this.groundedMs / this.config.groundedDashRechargeMs);
+    return Math.min(1, this.groundedMs / this.rechargeDurationMs);
   }
-  tick(ms: number, grounded: boolean): boolean {
+  tick(
+    ms: number,
+    grounded: boolean,
+    rechargeDurationMs = this.config.groundedDashRechargeMs,
+  ): boolean {
+    this.rechargeDurationMs = rechargeDurationMs;
     const wasActive = this.active;
     this.remainingMs = Math.max(0, this.remainingMs - ms);
     this.groundedMs = grounded ? this.groundedMs + ms : 0;
-    if (this.groundedMs + 1e-6 >= this.config.groundedDashRechargeMs)
+    if (this.groundedMs + 1e-6 >= this.rechargeDurationMs)
       this.charges = Math.max(this.charges, 1);
     return wasActive && !this.active;
   }
@@ -56,6 +64,7 @@ export class DashController {
     this.charges = 1;
     this.groundedMs = 0;
     this.remainingMs = 0;
+    this.rechargeDurationMs = this.config.groundedDashRechargeMs;
     this.direction = { x: 1, y: 0 };
   }
 }
