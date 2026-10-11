@@ -15,6 +15,7 @@ import { ShellyBlocker } from './ShellyBlocker';
 import { FactoryStory } from './FactoryStory';
 import { FactoryCamera } from './FactoryCamera';
 import { FactoryCast } from './FactoryCast';
+import { ovenFireBounds } from './ovenFire';
 import { factoryTuning as t } from './config';
 
 /** Composes ordinary player/companion movement, reusable machinery and pizza,
@@ -174,7 +175,7 @@ export class FactoryRun {
     if (this.sophie.grounded) this.lastLane = this.sophie.feet.y;
     if (
       this.sophie.feet.y > this.fallBoundary ||
-      d.ovens.some((oven) => overlaps(body, oven))
+      d.ovens.some((oven) => overlaps(body, ovenFireBounds(oven)))
     )
       return true;
     if (
@@ -283,7 +284,7 @@ export class FactoryRun {
     // behind her from a bad conveyor landing, just as in the earlier chapters.
     if (
       this.sophie.grounded &&
-      d.ovens.some((o) => overlaps(this.jimmy.actor.body, o))
+      d.ovens.some((o) => overlaps(this.jimmy.actor.body, ovenFireBounds(o)))
     )
       this.jimmy.reconcile(this.sophie.feet);
     this.jimmy.afterStep(ms, this.sophie, this.checkpoints.spawn);

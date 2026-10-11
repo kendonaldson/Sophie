@@ -1,10 +1,12 @@
 import type Phaser from 'phaser';
 import type { LevelDefinition, PlatformDefinition } from '../levels/types';
 import type { Machinery } from '../machinery/Machinery';
+import type { Rect } from '../player/CollisionAssist';
 import type { FactoryCamera } from './FactoryCamera';
+import { ovenFireBounds } from './ovenFire';
 
-/** Platforms and glowing mouths match their real collision edges. Background
- * equipment stays darker so suspended, playable surfaces read at a glance. */
+/** Cool oven casings frame bright fire; the outer flame tips forgive a graze.
+ * Background equipment stays darker so playable surfaces read at a glance. */
 export class FactoryArt {
   private readonly backdrop: Phaser.GameObjects.Graphics;
   private readonly moving: Phaser.GameObjects.Graphics;
@@ -19,10 +21,10 @@ export class FactoryArt {
     for (const p of level.platforms) this.platform(g, p);
     for (const oven of level.factory!.ovens) {
       const { x, y, width: w, height: h } = oven;
-      g.fillStyle(0x1c1620).fillRect(x - 14, y - 77, w + 28, h + 93);
-      g.fillStyle(0x83503b).fillRect(x - 10, y - 73, w + 20, h + 85);
+      g.fillStyle(0x19262d).fillRect(x - 14, y - 77, w + 28, h + 93);
+      g.fillStyle(0x526569).fillRect(x - 10, y - 73, w + 20, h + 85);
       for (let row = y - 71; row < y + h + 10; row += 16) {
-        g.fillStyle(0x4b3330).fillRect(x - 10, row + 14, w + 20, 2);
+        g.fillStyle(0x34464e).fillRect(x - 10, row + 14, w + 20, 2);
         for (
           let col = x - 9 + (Math.floor(row / 16) % 2) * 16;
           col < x + w + 10;
@@ -30,20 +32,24 @@ export class FactoryArt {
         )
           g.fillRect(col, row, 2, 14);
       }
-      g.fillStyle(0x333a3c).fillRect(x + w / 2 - 17, y - 160, 34, 82);
-      g.fillStyle(0x72766b).fillRect(x + w / 2 - 22, y - 165, 44, 6);
-      g.fillStyle(0xf1b36b).fillRect(x - 4, y - 4, w + 8, h + 8);
-      g.fillStyle(0x462027).fillRect(x, y, w, h);
-      g.fillStyle(0xe4753c).fillRect(x + 3, y + h - 9, w - 6, 6);
-      for (let px = x + 6; px < x + w; px += 18)
-        g.fillStyle(0xffd786).fillRect(px, y + h - 13, 7, 8);
-      g.fillStyle(0x283b3b).fillRect(x - 8, y - 56, w + 16, 29);
+      g.fillStyle(0x34464e).fillRect(x + w / 2 - 17, y - 160, 34, 82);
+      g.fillStyle(0x829996).fillRect(x + w / 2 - 22, y - 165, 44, 6);
+      g.fillStyle(0x94aaa7).fillRect(x - 5, y - 5, w + 10, h + 10);
+      g.fillStyle(0x180f1c).fillRect(x - 2, y - 2, w + 4, h + 4);
+      g.fillStyle(0x451a26).fillRect(x, y, w, h);
+      // Warning stripes hug the opening; the cool brickwork stays visibly safe.
+      for (const edge of [x - 10, x + w + 5]) {
+        g.fillStyle(0x172329).fillRect(edge, y - 4, 5, h + 8);
+        for (let py = y - 4; py < y + h + 4; py += 10)
+          g.fillStyle(0xffc45c).fillRect(edge, py, 5, 5);
+      }
+      g.fillStyle(0x263941).fillRect(x - 8, y - 56, w + 16, 29);
       scene.add
-        .text(x + w / 2, y - 51, 'HOT', {
+        .text(x + w / 2, y - 51, 'FIRE', {
           fontFamily: 'monospace',
           fontSize: '16px',
           fontStyle: 'bold',
-          color: '#ffe0a0',
+          color: '#ffd07a',
         })
         .setOrigin(0.5, 0)
         .setDepth(1);
@@ -222,23 +228,40 @@ export class FactoryArt {
         m.fillRect(px, y, 6, 3);
     }
     for (const oven of this.level.factory!.ovens) {
-      const pulse = 0.2 + Math.sin(elapsed / 160) * 0.06;
-      m.fillStyle(0xffa33f, pulse).fillRect(
-        oven.x,
-        oven.y,
-        oven.width,
-        oven.height,
-      );
-      for (let i = 0; i < 3; i++) {
-        const x = oven.x + ((i + 0.5) * oven.width) / 3;
-        const rise = (elapsed / 28 + i * 11) % 38;
-        m.fillStyle(0xffd398, 0.25 * (1 - rise / 38)).fillRect(
-          Math.round(x + Math.sin(elapsed / 180 + i) * 3),
-          Math.round(oven.y - rise),
-          2,
-          8,
-        );
-      }
+      this.fire(m, oven, elapsed);
     }
+  }
+
+  private fire(g: Phaser.GameObjects.Graphics, oven: Rect, elapsed: number) {
+    const core = ovenFireBounds(oven),
+      bottom = oven.y + oven.height,
+      pulse = Math.sin(elapsed / 110 + oven.x) * 0.04;
+    // A steady red core makes the entire lethal area readable between flickers.
+    g.fillStyle(0xff4933, 0.88 + pulse).fillRect(
+      core.x,
+      core.y,
+      core.width,
+      core.height,
+    );
+    const count = Math.max(3, Math.ceil(oven.width / 13)),
+      step = oven.width / count;
+    for (let i = 0; i < count; i++) {
+      const x = Math.round(oven.x + (i + 0.5) * step),
+        flicker = (Math.sin(elapsed / 85 + i * 2.4 + oven.x) + 1) / 2,
+        tip = Math.round(oven.y + 1 + flicker * Math.min(9, oven.height / 4)),
+        shoulder = Math.min(bottom - 4, tip + 7),
+        width = Math.max(4, Math.floor(step * 0.7));
+      g.fillStyle(0xff652d).fillRect(
+        x - width / 2,
+        shoulder,
+        width,
+        bottom - shoulder,
+      );
+      g.fillStyle(0xff8e35).fillRect(x - 2, tip, 4, bottom - tip);
+      const inner = Math.round(tip + (bottom - tip) * 0.42);
+      g.fillStyle(0xffd25c).fillRect(x - 3, inner, 6, bottom - inner);
+      g.fillStyle(0xfff0aa).fillRect(x - 1, bottom - 5, 3, 5);
+    }
+    g.fillStyle(0xffb13e).fillRect(core.x, bottom - 3, core.width, 3);
   }
 }

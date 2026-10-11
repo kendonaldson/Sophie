@@ -1,5 +1,6 @@
 import { test, expect, devices, type Page } from '@playwright/test';
 import { factoryTuning as tuning } from '../src/game/factory/config';
+import { pizzaFactory } from '../src/game/levels/pizzaFactory';
 
 const state = (page: Page) => page.evaluate(() => window.__sophie!.snapshot());
 async function expectSeparatePowerHud(page: Page) {
@@ -144,6 +145,67 @@ test('belts carry both ways; only Sophie entering an oven resets, before or afte
   expect(result.secondReset.factory!.pizza.pickups[0]!.completed).toBe(true);
   expect(result.secondReset.factory!.roll.phase).toBe('hidden');
   expect(result.moving.x).toBeGreaterThan(4970);
+});
+
+test('oven fire forgives top and side grazes during a jump-dash but burns on core contact', async ({
+  page,
+}) => {
+  await open(page);
+  const result = await page.evaluate((oven) => {
+    const a = window.__sophie!;
+    const halfWidth = 32 - a.snapshot().physics.collisionInsetX;
+    const height =
+      64 -
+      a.snapshot().physics.collisionInsetTop -
+      a.snapshot().physics.collisionInsetBottom;
+    const center = oven.x + oven.width / 2;
+    const safePlacements = [
+      { x: center, y: oven.y + 3 },
+      { x: oven.x - halfWidth + 2, y: oven.y + 23 },
+      { x: oven.x + oven.width + halfWidth - 2, y: oven.y + 23 },
+      { x: center, y: oven.y - 12 },
+    ].map((point) => {
+      a.place(point);
+      return a.advance(1);
+    });
+
+    // Jump from the first belt, then dash across the visible flame tips.
+    a.place({ x: 1780, y: 980 });
+    a.advance(1, { moveX: 1, jumpPressed: true, jumpHeld: true });
+    const takeoff = a.advance(8, { moveX: 1, jumpHeld: true });
+    let crossed = a.advance(1, {
+      moveX: 1,
+      dashPressed: true,
+      jumpHeld: true,
+    });
+    let grazedFrames = 0;
+    for (let n = 0; n < 100 && !crossed.respawning; n++) {
+      if (
+        crossed.x + halfWidth > oven.x &&
+        crossed.x - halfWidth < oven.x + oven.width &&
+        crossed.y > oven.y &&
+        crossed.y - height < oven.y + oven.height
+      )
+        grazedFrames++;
+      if (crossed.grounded && crossed.x - halfWidth > oven.x + oven.width)
+        break;
+      crossed = a.advance(1, { moveX: 1, jumpHeld: true });
+    }
+
+    a.place({ x: center, y: oven.y + 11 });
+    const coreContact = a.advance(1);
+    return { safePlacements, takeoff, crossed, grazedFrames, coreContact };
+  }, pizzaFactory.factory!.ovens[0]!);
+
+  for (const snapshot of result.safePlacements)
+    expect(snapshot.respawning).toBe(false);
+  expect(result.takeoff.y).toBeLessThan(980);
+  expect(result.takeoff.grounded).toBe(false);
+  expect(result.grazedFrames).toBeGreaterThan(10);
+  expect(result.crossed.respawning).toBe(false);
+  expect(result.crossed.x).toBeGreaterThan(1905);
+  expect(result.crossed.grounded).toBe(true);
+  expect(result.coreContact.respawning).toBe(true);
 });
 
 test('the first shell locks its lane, a normal jump avoids it, Jimmy is harmless, and Sophie collision resets', async ({
