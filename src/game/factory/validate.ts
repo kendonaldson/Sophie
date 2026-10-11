@@ -1,5 +1,6 @@
 import type { LevelDefinition } from '../levels/types';
 import { overlaps } from '../player/CollisionAssist';
+import { pizzaRushConfig } from '../pizza/config';
 
 export function validateFactory(level: LevelDefinition) {
   const f = level.factory!;
@@ -38,6 +39,26 @@ export function validateFactory(level: LevelDefinition) {
       zone.toX <= zone.right
     ))
       fail('invalid roll zone');
+  for (const pizza of f.pizzas)
+    if (
+      ![pizza.x, pizza.y].every(Number.isFinite) ||
+      pizza.x < 0 ||
+      pizza.x > level.width ||
+      pizza.y < 0 ||
+      pizza.y > level.height ||
+      f.ovens.some((oven) =>
+        overlaps(
+          {
+            x: pizza.x - pizzaRushConfig.pickupRadius,
+            y: pizza.y - pizzaRushConfig.pickupRadius,
+            width: pizzaRushConfig.pickupRadius * 2,
+            height: pizzaRushConfig.pickupRadius * 2,
+          },
+          oven,
+        ),
+      )
+    )
+      fail('traversal pizza must be inside the level and clear of ovens');
   for (const oven of f.ovens)
     if (
       ![oven.x, oven.y, oven.width, oven.height].every(Number.isFinite) ||

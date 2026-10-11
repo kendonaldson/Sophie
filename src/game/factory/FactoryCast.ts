@@ -49,6 +49,7 @@ export class FactoryCast {
     this.elapsed += ms;
     this.warning.clear();
     this.trail.clear();
+    if (roll.phase === 'deflected') this.history = [];
     this.history = this.history
       .map((p) => ({ ...p, life: p.life - ms }))
       .filter((p) => p.life > 0);
@@ -82,7 +83,8 @@ export class FactoryCast {
       y = 0,
       pose: ShellyPose = 'idle',
       flip = false,
-      angle = 0;
+      angle = 0,
+      alpha = 1;
     if (story.phase === 'opening') {
       visible = true;
       x = 418;
@@ -95,11 +97,24 @@ export class FactoryCast {
       y = roll.feetY;
       flip = roll.direction < 0;
       pose =
-        roll.phase === 'roll'
-          ? 'roll'
-          : roll.phase === 'charge'
-            ? 'charge'
-            : 'determined';
+        roll.phase === 'deflected'
+          ? 'dazed'
+          : roll.phase === 'roll'
+            ? 'roll'
+            : roll.phase === 'charge'
+              ? 'charge'
+              : 'determined';
+      if (roll.phase === 'deflected') {
+        angle =
+          (roll.elapsed / t.rollDeflectMs) *
+          t.rollDeflectTurns *
+          360 *
+          roll.direction;
+        alpha = Math.max(
+          0,
+          Math.min(1, (t.rollDeflectMs - roll.elapsed) / t.rollDeflectFadeMs),
+        );
+      }
       if (roll.phase === 'charge') {
         const lane = roll.lockedY!;
         for (let px = x - 900; px < x + 900; px += 24)
@@ -144,12 +159,13 @@ export class FactoryCast {
       .setVisible(visible)
       .setPosition(Math.round(x), Math.round(y))
       .setFlipX(flip)
-      .setAngle(angle);
+      .setAngle(angle)
+      .setAlpha(alpha);
     if (visible) {
       this.shelly.play(`shelly-${pose}`, true);
       if (ms === 0) this.shelly.anims.pause();
       else this.shelly.anims.resume();
-      if (pose === 'roll')
+      if (pose === 'roll' || roll.phase === 'deflected')
         this.shelly
           .setOrigin(
             0.5,
@@ -160,6 +176,7 @@ export class FactoryCast {
   }
   reset() {
     this.history = [];
+    this.shelly.setAlpha(1);
     this.warning.clear();
     this.trail.clear();
   }

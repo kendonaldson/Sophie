@@ -47,7 +47,7 @@ export class FactoryRun {
     const d = level.factory!;
     this.midpoint = new ShellyBlocker(d.midpoint.shelly, t.midpointSpinMs);
     this.final = new ShellyBlocker(d.final.shelly, t.finalSpinMs);
-    this.pizzas = [d.midpoint.pizza, d.final.pizza].map(
+    this.pizzas = [d.midpoint.pizza, d.final.pizza, ...d.pizzas].map(
       (p) => new PizzaPickup(p),
     );
     this.view = new FactoryCamera(scene, level);
@@ -268,7 +268,22 @@ export class FactoryRun {
       if (sound === 'charge') this.sfx.shellyRollCharge();
       else this.sfx.shellyRoll();
     }
-    if (this.roll.hits(body)) return true;
+    const { pizzaRush, dash } = this.sophie.controller;
+    // A diagonal Super Dash can cross the shell between physics samples.
+    // Sweep both axes for the counter, preserving ordinary jump-dodge bounds.
+    const dashSweep = {
+      ...swept,
+      y: Math.min(body.y, body.prev.y),
+      height: body.height + Math.abs(body.y - body.prev.y),
+    };
+    if (
+      pizzaRush?.active &&
+      dash.active &&
+      this.roll.hits(dashSweep) &&
+      this.roll.deflect(dash.direction)
+    )
+      this.sfx.shellySpin();
+    else if (this.roll.hits(body)) return true;
     const zone = d.rollZones.find(
       (z) => this.sophie.feet.x >= z.fromX && this.sophie.feet.x <= z.toX,
     );
@@ -318,8 +333,11 @@ export class FactoryRun {
     this.story.reset(afterMidpoint);
     this.midpoint.reset(afterMidpoint);
     this.final.reset();
-    this.pizzas[0]!.reset(afterMidpoint);
-    this.pizzas[1]!.reset();
+    for (const pizza of this.pizzas)
+      pizza.reset(
+        afterMidpoint &&
+          pizza.definition.id === this.level.factory!.midpoint.pizza.id,
+      );
     this.roll.reset();
     this.cast.reset();
     this.powerVisual.clear();

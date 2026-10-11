@@ -19,6 +19,7 @@ export interface Confrontation {
 export interface FactoryDefinition {
   ovens: (Rect & { id: string })[];
   rollZones: RollZone[];
+  pizzas: PizzaDefinition[];
   midpoint: Confrontation;
   final: Confrontation;
   checkpointId: string;
@@ -42,6 +43,12 @@ export const factoryTuning = {
   rollTrailMs: 190,
   rollWidth: 36,
   rollHeight: 30,
+  rollDeflectMs: 900,
+  rollDeflectFadeMs: 250,
+  rollDeflectSpeed: 420,
+  rollDeflectLift: 430,
+  rollDeflectGravity: 780,
+  rollDeflectTurns: 3,
   blockerWidth: 44,
   blockerHeight: 76,
   recoilSpeed: 110,

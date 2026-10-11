@@ -168,7 +168,11 @@ export function validateLevel(level: LevelDefinition): void {
     ...(level.maintenance?.steam ?? []),
     ...(level.factory?.ovens ?? []),
     ...(level.factory
-      ? [level.factory.midpoint.pizza, level.factory.final.pizza]
+      ? [
+          level.factory.midpoint.pizza,
+          level.factory.final.pizza,
+          ...level.factory.pizzas,
+        ]
       : []),
   ].map((x) => x.id);
   if (new Set(ids).size !== ids.length || ids.some((id) => !id))
