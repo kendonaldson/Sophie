@@ -25,6 +25,8 @@ export interface FactoryDefinition {
   exitX: number;
 }
 export const factoryTuning = {
+  ovenFireInsetX: 6,
+  ovenFireInsetTop: 8,
   conveyorWith: 90,
   conveyorAgainst: -65,
   conveyorOven: 75,
