@@ -54,6 +54,98 @@ describe('Shelly lane rolls', () => {
     r.tick(1, 500);
     expect(r.phase).toBe('trail');
     expect(r.hits(r.body)).toBe(false);
+    expect(r.deflect({ x: 1, y: 0 })).toBe(false);
+  });
+  it('deflects a rolling shell once, immediately clearing its body and swept damage', () => {
+    const r = roll();
+    expect(r.deflect({ x: 1, y: 0 })).toBe(false);
+    r.tick(t.rollAppearMs + t.rollAlignMs + t.rollTelegraphMs + 400, 500);
+    const crossing = { x: 690, y: 475, width: 30, height: 25 };
+    expect(r.hits(crossing)).toBe(true);
+    expect(r.deflect({ x: 1, y: 0 })).toBe(true);
+    expect(r.phase).toBe('deflected');
+    expect(r.lockedY).toBeUndefined();
+    expect(r.hits(crossing)).toBe(false);
+    expect(r.hits(r.body)).toBe(false);
+    expect(r.deflect({ x: -1, y: 0 })).toBe(false);
+    expect(r.direction).toBe(1);
+    expect(r.start(100, 800, 500)).toBe(false);
+  });
+  it.each([
+    { dash: { x: 1, y: 0 }, incoming: -1 as const, away: 1 },
+    { dash: { x: -1, y: -1 }, incoming: -1 as const, away: -1 },
+    { dash: { x: 0, y: -1 }, incoming: -1 as const, away: 1 },
+    { dash: { x: 0, y: 1 }, incoming: 1 as const, away: -1 },
+  ])(
+    'launches up and away for dash $dash and incoming direction $incoming',
+    ({ dash, incoming, away }) => {
+      const r = new ShellyRoll();
+      r.count = incoming === -1 ? 0 : 1;
+      r.tick(t.rollGraceMs, 500);
+      r.start(100, 800, 500);
+      r.tick(t.rollAppearMs + t.rollAlignMs + t.rollTelegraphMs + 200, 500);
+      const before = { x: r.x, y: r.feetY };
+      expect(r.deflect(dash)).toBe(true);
+      expect(r.direction).toBe(away);
+      r.tick(100, 500);
+      expect(Math.sign(r.x - before.x)).toBe(away);
+      expect(r.feetY).toBeLessThan(before.y);
+      expect(r.hits(r.body)).toBe(false);
+    },
+  );
+  it('can deflect the damaging sweep on the frame a roll ends', () => {
+    const r = roll();
+    const rollMs = (700 * 1000) / t.rollSpeed;
+    r.tick(
+      t.rollAppearMs + t.rollAlignMs + t.rollTelegraphMs + rollMs + 1,
+      500,
+    );
+    const crossing = { x: 450, y: 475, width: 30, height: 25 };
+    expect(r.phase).toBe('trail');
+    expect(r.hits(crossing)).toBe(true);
+    expect(r.deflect({ x: 1, y: 0 })).toBe(true);
+    expect(r.phase).toBe('deflected');
+    expect(r.hits(crossing)).toBe(false);
+  });
+  it('uses a deterministic flight, freezes without elapsed time, then starts the usual cooldown', () => {
+    const a = roll(),
+      b = roll();
+    for (const r of [a, b]) {
+      r.tick(t.rollAppearMs + t.rollAlignMs + t.rollTelegraphMs + 200, 500);
+      r.deflect({ x: 1, y: 0 });
+    }
+    expect(a.tick(300, 200)).toEqual([]);
+    for (let n = 0; n < 300; n++) expect(b.tick(1, 800)).toEqual([]);
+    expect(a.x).toBeCloseTo(b.x, 7);
+    expect(a.feetY).toBeCloseTo(b.feetY, 7);
+    const frozen = { x: a.x, y: a.feetY, elapsed: a.elapsed };
+    a.tick(0, 100);
+    expect({ x: a.x, y: a.feetY, elapsed: a.elapsed }).toEqual(frozen);
+    a.tick(t.rollDeflectMs - 300, 500);
+    expect(a.phase).toBe('hidden');
+    expect(a.cooldown).toBe(t.rollCooldownMs);
+    expect(a.hits(a.body)).toBe(false);
+    expect(a.deflect({ x: 1, y: 0 })).toBe(false);
+    expect(a.start(100, 800, 500)).toBe(false);
+    a.tick(t.rollCooldownMs, 500);
+    expect(a.start(100, 800, 500)).toBe(true);
+    expect(a.direction).toBe(1);
+  });
+  it('cancels a deflection on reset without carrying flight or damage into a retry', () => {
+    const r = roll();
+    r.tick(t.rollAppearMs + t.rollAlignMs + t.rollTelegraphMs + 200, 500);
+    r.deflect({ x: 1, y: 0 });
+    r.tick(200, 500);
+    r.reset();
+    expect(r.phase).toBe('hidden');
+    expect(r.elapsed).toBe(0);
+    expect(r.cooldown).toBe(t.rollGraceMs);
+    expect(r.hits(r.body)).toBe(false);
+    r.tick(t.rollGraceMs, 500);
+    expect(r.start(100, 800, 500)).toBe(true);
+    expect(r.direction).toBe(-1);
+    expect(r.x).toBe(800);
+    expect(r.feetY).toBe(410);
   });
   it('gives a meaningful cooldown and a safe deterministic reset', () => {
     const r = roll();

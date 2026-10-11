@@ -3,7 +3,7 @@ import { approach } from '../player/PlayerController';
 import { factoryTuning as t } from './config';
 
 export type RollPhase =
-  'hidden' | 'appear' | 'align' | 'charge' | 'roll' | 'trail';
+  'hidden' | 'appear' | 'align' | 'charge' | 'roll' | 'trail' | 'deflected';
 type RollSound = 'charge' | 'roll';
 /** Fixed-time lane selection. Only align can read a new target height. */
 export class ShellyRoll {
@@ -18,6 +18,8 @@ export class ShellyRoll {
   private left = 0;
   private right = 0;
   private sweeps: Rect[] = [];
+  private deflectX = 0;
+  private deflectY = 0;
   start(left: number, right: number, targetY: number) {
     if (this.phase !== 'hidden' || this.cooldown > 0) return false;
     this.left = left;
@@ -28,6 +30,30 @@ export class ShellyRoll {
     this.lockedY = undefined;
     this.phase = 'appear';
     this.elapsed = 0;
+    return true;
+  }
+  /** The caller has already confirmed a powered dash intersects this roll. */
+  deflect(direction: { x: number; y: number }): boolean {
+    // A step may have just ended the roll while retaining its damaging sweep.
+    if (
+      this.phase === 'deflected' ||
+      (this.phase !== 'roll' && this.sweeps.length === 0)
+    )
+      return false;
+    this.direction =
+      direction.x > 0
+        ? 1
+        : direction.x < 0
+          ? -1
+          : this.direction === 1
+            ? -1
+            : 1;
+    this.deflectX = this.x;
+    this.deflectY = this.feetY;
+    this.phase = 'deflected';
+    this.elapsed = 0;
+    this.lockedY = undefined;
+    this.sweeps = [];
     return true;
   }
   tick(ms: number, targetY: number): RollSound[] {
@@ -48,7 +74,9 @@ export class ShellyRoll {
               ? t.rollTelegraphMs
               : this.phase === 'roll'
                 ? ((this.right - this.left) * 1000) / t.rollSpeed
-                : t.rollTrailMs;
+                : this.phase === 'deflected'
+                  ? t.rollDeflectMs
+                  : t.rollTrailMs;
       const step = Math.min(remaining, duration - this.elapsed);
       if (this.phase === 'align')
         this.feetY = approach(this.feetY, targetY, step * 0.9);
@@ -61,6 +89,14 @@ export class ShellyRoll {
           width: Math.abs(this.x - from) + t.rollWidth,
           height: t.rollHeight,
         });
+      }
+      if (this.phase === 'deflected') {
+        const seconds = (this.elapsed + step) / 1000;
+        this.x = this.deflectX + this.direction * t.rollDeflectSpeed * seconds;
+        this.feetY =
+          this.deflectY -
+          t.rollDeflectLift * seconds +
+          (t.rollDeflectGravity * seconds ** 2) / 2;
       }
       this.elapsed += step;
       remaining -= step;
@@ -103,5 +139,6 @@ export class ShellyRoll {
     this.lockedY = undefined;
     this.count = 0;
     this.sweeps = [];
+    this.deflectX = this.deflectY = 0;
   }
 }

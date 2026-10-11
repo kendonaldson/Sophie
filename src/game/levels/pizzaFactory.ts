@@ -40,7 +40,7 @@ export const pizzaFactory: LevelDefinition = {
     platform('with-the-belt', 620, 980, 340),
     platform('against-the-belt', 1040, 940, 350),
     platform('first-oven-belt', 1480, 980, 355),
-    platform('first-roll-runway', 1920, 980, 710),
+    platform('first-roll-runway', 1920, 980, 790),
     platform('upper-sandwich', 2710, 860, 310),
     platform('lower-sandwich', 3080, 980, 280),
     platform('tray-prep', 3440, 930, 360, 'prep'),
@@ -154,13 +154,13 @@ export const pizzaFactory: LevelDefinition = {
     },
     {
       fromX: 1940,
-      title: 'A turtle in a hurry',
-      hint: 'He picks a lane, then holds it. Jump when he rolls.',
+      title: 'The special ingredient',
+      hint: "Grab pizza, then press X into Shelly's roll. The boost lasts 5 seconds.",
     },
     {
       fromX: 2650,
       title: 'Change lanes',
-      hint: 'Z / Space, then ↑ + X to reach the upper belt.',
+      hint: 'No pizza? Jump over his roll. Z / Space, then ↑ + X reaches the upper belt.',
     },
     {
       fromX: 3420,
@@ -200,7 +200,7 @@ export const pizzaFactory: LevelDefinition = {
     {
       fromX: 9530,
       title: 'Full service',
-      hint: 'Read the lane. Upward dash, long jump, treat, then escape the oven belt.',
+      hint: 'Jump for the optional pizza. X bats Shelly away while powered; ovens still burn.',
     },
     {
       fromX: 11120,
@@ -210,6 +210,10 @@ export const pizzaFactory: LevelDefinition = {
   ],
   exit: { x: 12300, y: 606, width: 148, height: 144 },
   factory: {
+    pizzas: [
+      { id: 'conveyor-intro-pizza', x: 2020, y: 961 },
+      { id: 'gauntlet-counter-pizza', x: 9650, y: 720 },
+    ],
     ovens: [
       { id: 'oven-introduction', x: 1810, y: 955, width: 66, height: 30 },
       { id: 'oven-sandwich', x: 3310, y: 947, width: 66, height: 38 },

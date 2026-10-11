@@ -245,6 +245,11 @@ Expiration restores ordinary movement and visuals without changing dash charges.
 Death/checkpoint restoration clears Pizza Rush unless a later level explicitly
 designs otherwise. Keep power state, presentation and encounter rules separate.
 
+An active Super Pizza Dash bats rolling Shelly away into a harmless tumble.
+Powered running and ordinary dashes do not protect Sophie from a roll, and pizza
+never grants immunity to ovens or falls. Traversal slices are deliberately sparse;
+most roll encounters remain dodge challenges.
+
 ---
 
 ## Gameplay Configuration
