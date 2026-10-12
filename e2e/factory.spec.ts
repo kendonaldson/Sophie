@@ -300,7 +300,7 @@ test('midpoint blocks normal Sophie; a paid dash through pizza changes sprite an
   expect(power.charges).toBe(0);
   expect(power.factory!.pizza.superDash).toBe(true);
   expect(power.factory!.pizza.remainingMs).toBe(8000);
-  expect(power.vx).toBe(1080);
+  expect(power.vx).toBe(960);
   expect(power.jimmy!.vx).toBeLessThanOrEqual(180);
   await expect(page.locator('#pizza-rush')).toBeVisible();
   await expect(page.locator('#dash-hud')).toBeVisible();

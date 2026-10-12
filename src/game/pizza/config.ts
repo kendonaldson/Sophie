@@ -6,9 +6,10 @@ export const pizzaRushConfig = {
   pizzaRunSpeedMultiplier: 2,
   pizzaGroundAccelerationMultiplier: 1.4,
   pizzaAirAccelerationMultiplier: 1.15,
-  pizzaDashSpeedMultiplier: 2.25,
-  pizzaDashDurationMultiplier: 1.2,
-  pickupDashBurstMs: 260,
+  pizzaGroundedRechargeMultiplier: 0.5,
+  pizzaDashSpeedMultiplier: 2,
+  pizzaDashDurationMultiplier: 1,
+  pickupDashBurstMs: 170,
   runningAnimationRate: 1.35,
   pickupRespawnMs: 3000,
   pickupRadius: 18,
@@ -37,5 +38,7 @@ export function pizzaMovementConfig(base: Readonly<PlayerPhysicsConfig>) {
     airAcceleration: base.airAcceleration * c.pizzaAirAccelerationMultiplier,
     dashSpeed: base.dashSpeed * c.pizzaDashSpeedMultiplier,
     dashDurationMs: base.dashDurationMs * c.pizzaDashDurationMultiplier,
+    groundedDashRechargeMs:
+      base.groundedDashRechargeMs * c.pizzaGroundedRechargeMultiplier,
   } satisfies PlayerPhysicsConfig;
 }

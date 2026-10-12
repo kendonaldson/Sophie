@@ -95,7 +95,7 @@ export class PlayerController {
             }
           : undefined;
     }
-    const dashEnded = this.dash.tick(ms, grounded);
+    const dashEnded = this.dash.tick(ms, grounded, c.groundedDashRechargeMs);
     if (dashEnded) {
       vx *= c.dashExitMomentumRetention;
       vy *= c.dashExitMomentumRetention;

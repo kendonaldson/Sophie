@@ -93,6 +93,7 @@ test('Pizza Rush stays visible at rest, follows movement, and expires after eigh
   const expired = await page.evaluate(() => window.__sophie!.advance(2));
   expect(expired.factory!.pizza.active).toBe(false);
   expect(expired.factory!.pizza.movement.maxRunSpeed).toBe(180);
+  expect(expired.factory!.pizza.movement.groundedDashRechargeMs).toBe(500);
   expect(expired.charges).toBe(1);
   await expect
     .poll(() =>

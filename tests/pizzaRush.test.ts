@@ -100,6 +100,65 @@ describe('reusable Pizza Rush', () => {
     player.dash.tick(1, true);
     expect(player.dash.charges).toBe(1);
   });
+  it.each([false, true])(
+    'recharges only the baseline charge after grounded recovery, with powered=%s',
+    (powered) => {
+      const { player } = actor();
+      if (powered) player.collectPizza();
+      player.step(8, { ...noInput(), dashPressed: true, moveX: 1 }, ground);
+      expect(player.dash.charges).toBe(0);
+      const recoveryMs = powered ? 250 : 500;
+      player.step(recoveryMs / 2, noInput(), ground);
+      expect(player.dash.charges).toBe(0);
+      expect(player.dash.rechargeProgress).toBe(0.5);
+      player.step(recoveryMs / 2 - 1, noInput(), ground);
+      expect(player.dash.charges).toBe(0);
+      expect(player.dash.rechargeProgress).toBeCloseTo(
+        (recoveryMs - 1) / recoveryMs,
+      );
+      player.step(1, noInput(), ground);
+      expect(player.dash.charges).toBe(1);
+      expect(player.dash.rechargeProgress).toBe(1);
+      player.step(1000, noInput(), ground);
+      expect(player.dash.charges).toBe(1);
+      player.dash.collectTreat();
+      player.step(1000, noInput(), ground);
+      expect(player.dash.charges).toBe(2);
+    },
+  );
+  it('requires continuous ground contact for the faster powered recharge', () => {
+    const { player, power } = actor();
+    player.collectPizza();
+    player.step(8, { ...noInput(), dashPressed: true, moveX: 1 }, ground);
+    player.step(249, noInput(), ground);
+    expect(player.dash.charges).toBe(0);
+    player.step(1000, noInput(), { ...ground, grounded: false });
+    expect(power.active).toBe(true);
+    expect(player.dash.charges).toBe(0);
+    expect(player.dash.rechargeProgress).toBe(0);
+    player.step(249, noInput(), ground);
+    expect(player.dash.charges).toBe(0);
+    player.step(1, noInput(), ground);
+    expect(player.dash.charges).toBe(1);
+  });
+  it('restores the ordinary recovery threshold when power expires before a refill', () => {
+    const { player, power } = actor();
+    player.collectPizza();
+    player.step(8, { ...noInput(), dashPressed: true, moveX: 1 }, ground);
+    power.tick(power.remainingMs - 250);
+    player.step(249, noInput(), ground);
+    expect(power.active).toBe(true);
+    expect(player.dash.charges).toBe(0);
+    expect(player.dash.rechargeProgress).toBeCloseTo(249 / 250);
+    player.step(1, noInput(), ground);
+    expect(power.active).toBe(false);
+    expect(player.dash.charges).toBe(0);
+    expect(player.dash.rechargeProgress).toBe(0.5);
+    player.step(249, noInput(), ground);
+    expect(player.dash.charges).toBe(0);
+    player.step(1, noInput(), ground);
+    expect(player.dash.charges).toBe(1);
+  });
   it('requires an active dash for confrontation slices, and allows a missed attempt to recover', () => {
     const { player } = actor();
     const pickup = new PizzaPickup({
@@ -125,6 +184,37 @@ describe('reusable Pizza Rush', () => {
 });
 
 describe('Super Pizza Dash', () => {
+  it.each([false, true])(
+    'restores air control after the ordinary dash duration, with powered=%s',
+    (powered) => {
+      const { player, power } = actor();
+      if (powered) player.collectPizza();
+      const speed = physics.dashSpeed * (powered ? 2 : 1);
+      let motion = player.step(
+        8,
+        { ...noInput(), dashPressed: true, moveX: 1 },
+        { ...ground, grounded: false },
+      );
+      expect(motion.vx).toBe(speed);
+      expect(player.dash.remainingMs).toBe(physics.dashDurationMs);
+      expect(player.dash.charges).toBe(0);
+      const reverse = { ...noInput(), moveX: -1 as const };
+      motion = player.step(physics.dashDurationMs - 1, reverse, motion);
+      expect(player.dash.active).toBe(true);
+      expect(motion.vx).toBe(speed);
+      expect(motion.vy).toBe(0);
+      motion = player.step(1, reverse, motion);
+      expect(player.dash.active).toBe(false);
+      expect(player.state).toBe('Airborne');
+      expect(motion.vx).toBeLessThan(speed * physics.dashExitMomentumRetention);
+      expect(motion.vy).toBeGreaterThan(0);
+      const exitSpeed = motion.vx;
+      motion = player.step(40, reverse, motion);
+      expect(motion.vx).toBeLessThan(exitSpeed);
+      expect(player.dash.charges).toBe(0);
+      expect(power.active).toBe(powered);
+    },
+  );
   it('transforms the paid-for current dash immediately, preserves aim, and spends no extra charge', () => {
     const { player, sfx } = actor();
     player.step(
@@ -138,14 +228,21 @@ describe('Super Pizza Dash', () => {
     player.collectPizza();
     expect(player.dash.charges).toBe(0);
     expect(player.dash.direction).toEqual(direction);
-    expect(player.dash.remainingMs).toBe(c.pickupDashBurstMs);
-    const motion = player.step(8, noInput(), { vx: 0, vy: 0, grounded: false });
+    expect(player.dash.remainingMs).toBe(physics.dashDurationMs);
+    let motion = player.step(8, noInput(), { vx: 0, vy: 0, grounded: false });
     expect(motion.vx).toBeCloseTo(
       (physics.dashSpeed * c.pizzaDashSpeedMultiplier) / Math.SQRT2,
     );
     expect(motion.vy).toBeCloseTo(-motion.vx);
     expect(sfx.dash).toHaveBeenCalledOnce();
     expect(sfx.superPizzaDash).toHaveBeenCalledOnce();
+    motion = player.step(physics.dashDurationMs - 9, noInput(), motion);
+    expect(player.dash.active).toBe(true);
+    expect(player.dash.direction).toEqual(direction);
+    player.step(1, noInput(), motion);
+    expect(player.dash.active).toBe(false);
+    expect(player.state).toBe('Airborne');
+    expect(player.dash.charges).toBe(0);
   });
   it('uses the special sound for each powered dash, then restores the ordinary sound', () => {
     const { player, sfx, power } = actor();

@@ -152,6 +152,36 @@ for (const mobile of [false, true])
           await page.setViewportSize({ width: 844, height: 390 });
           await expect(page.locator('.touch-controls')).toBeVisible();
         }
+        const nearlyReady = await page.evaluate(() => {
+          const a = window.__sophie!;
+          let s = a.snapshot();
+          for (
+            let n = 0;
+            n < 30 && s.rechargeMs < 250 - 1000 / 120 - 0.001;
+            n++
+          )
+            s = a.advance(1);
+          return s;
+        });
+        expect(nearlyReady.grounded).toBe(true);
+        expect(nearlyReady.factory!.pizza.active).toBe(true);
+        expect(nearlyReady.charges).toBe(0);
+        expect(nearlyReady.rechargeMs).toBeCloseTo(250 - 1000 / 120);
+        await expect
+          .poll(() =>
+            page
+              .locator('[data-bone="0"]')
+              .evaluate((bone) =>
+                parseFloat(
+                  (bone as HTMLElement).style.getPropertyValue('--fill'),
+                ),
+              ),
+          )
+          .toBeGreaterThan(95);
+        const refilled = await page.evaluate(() => window.__sophie!.advance(1));
+        expect(refilled.rechargeMs).toBeCloseTo(250);
+        expect(refilled.charges).toBe(1);
+        await expect(page.locator('[data-bone="0"]')).toHaveClass(/available/);
         const flying = await page.evaluate(() => window.__sophie!.advance(15));
         expect(flying.factory!.roll.x).toBeGreaterThan(hit.factory!.roll.x);
         expect(flying.factory!.roll.y).toBeLessThan(hit.factory!.roll.y);
