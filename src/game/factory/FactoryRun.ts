@@ -189,6 +189,18 @@ export class FactoryRun {
       this.jimmy.enabled = !this.scripted;
       return false;
     }
+    // Save the safe runway before the final dialogue takes over simulation.
+    if (
+      this.midpoint.resolved &&
+      this.checkpoints.update(this.sophie.feet, this.sophie.grounded)
+    ) {
+      this.sophie.controller.pizzaRush?.reset();
+      body.setVelocityX(
+        Math.min(body.velocity.x, this.sophie.controller.config.maxRunSpeed),
+      );
+      this.roll.reset();
+      this.cast.reset();
+    }
     if (
       this.midpoint.resolved &&
       !this.final.resolved &&
@@ -251,17 +263,6 @@ export class FactoryRun {
         if (index === 1) this.sophie.controller.pizzaRush?.reset();
         return false;
       }
-    }
-    if (
-      this.midpoint.resolved &&
-      this.checkpoints.update(this.sophie.feet, this.sophie.grounded)
-    ) {
-      this.sophie.controller.pizzaRush?.reset();
-      body.setVelocityX(
-        Math.min(body.velocity.x, this.sophie.controller.config.maxRunSpeed),
-      );
-      this.roll.reset();
-      this.cast.reset();
     }
     const sounds = this.roll.tick(ms, this.lastLane);
     for (const sound of sounds) {
@@ -328,9 +329,11 @@ export class FactoryRun {
     }
   }
   reset() {
+    const atFinal =
+      this.checkpoints.id === this.level.factory!.finalCheckpointId;
     const afterMidpoint =
-      this.checkpoints.id === this.level.factory!.checkpointId;
-    this.story.reset(afterMidpoint);
+      atFinal || this.checkpoints.id === this.level.factory!.checkpointId;
+    this.story.reset(afterMidpoint, atFinal);
     this.midpoint.reset(afterMidpoint);
     this.final.reset();
     for (const pizza of this.pizzas)

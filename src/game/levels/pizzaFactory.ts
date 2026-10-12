@@ -144,6 +144,11 @@ export const pizzaFactory: LevelDefinition = {
       spawn: { x: 4950, y: 960 },
       area: { x: 4830, y: 952, width: 400, height: 16 },
     },
+    {
+      id: 'factory-final',
+      spawn: { x: 11300, y: 790 },
+      area: { x: 11220, y: 782, width: 360, height: 16 },
+    },
   ],
   sections: [
     { fromX: 0, title: "Shelly's Pizza Factory", hint: 'Keep moving, Jimmy.' },
@@ -252,6 +257,7 @@ export const pizzaFactory: LevelDefinition = {
       pizza: { id: 'final-pizza', x: 11913, y: 722, requiresDash: true },
     },
     checkpointId: 'factory-midpoint',
+    finalCheckpointId: 'factory-final',
     exitX: 12380,
   },
 };

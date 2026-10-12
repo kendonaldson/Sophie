@@ -91,8 +91,9 @@ export class FactoryStory {
     this.enter(this.finalSeen ? 'final' : 'final-dialogue');
     this.finalSeen = true;
   }
-  reset(afterMidpoint: boolean) {
-    this.enter(afterMidpoint ? 'second-half' : 'chase');
+  reset(afterMidpoint: boolean, atFinal = false) {
+    if (atFinal) this.finalSeen = true;
+    this.enter(atFinal ? 'final' : afterMidpoint ? 'second-half' : 'chase');
   }
   tick(ms: number) {
     let remaining = Math.max(0, ms);

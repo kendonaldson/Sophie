@@ -7,7 +7,7 @@ import {
 } from '../src/game/factory/FactoryStory';
 import { factoryTuning as t } from '../src/game/factory/config';
 import { pizzaFactory } from '../src/game/levels/pizzaFactory';
-import { validateLevel } from '../src/game/levels/types';
+import { validateLevel, type LevelDefinition } from '../src/game/levels/types';
 import { Checkpoints } from '../src/game/levels/Checkpoints';
 
 const roll = () => {
@@ -201,6 +201,19 @@ describe('confrontations and story', () => {
     story.tick(15000);
     expect(story.phase).toBe('final');
   });
+  it('retries the final checkpoint immediately, including if its dialogue was interrupted', () => {
+    const story = new FactoryStory();
+    story.final();
+    expect(story.phase).toBe('final-dialogue');
+    story.tick(100);
+    story.reset(true, true);
+    expect(story.phase).toBe('final');
+    expect(story.scripted).toBe(false);
+    expect(story.line).toBeUndefined();
+    expect(story.elapsed).toBe(0);
+    story.final();
+    expect(story.phase).toBe('final');
+  });
   it('holds the final reaction, lets both dogs escape, then fades before the sole ending', () => {
     const story = new FactoryStory();
     story.enter('final-spin');
@@ -222,7 +235,7 @@ describe('confrontations and story', () => {
     expect(story.fade).toBe(1);
   });
 });
-describe('factory route and its only checkpoint', () => {
+describe('factory route and checkpoints', () => {
   it('validates the suspended route, mixed belts, moving trays, and two dash-only pizzas', () => {
     expect(() => validateLevel(pizzaFactory)).not.toThrow();
     expect(pizzaFactory.conveyors!.some((c) => c.speed > 0)).toBe(true);
@@ -233,7 +246,7 @@ describe('factory route and its only checkpoint', () => {
   });
   it('returns first-half failures to the start and second-half failures to a stationary, protected midpoint', () => {
     const checkpoints = new Checkpoints(pizzaFactory);
-    expect(pizzaFactory.checkpoints).toHaveLength(1);
+    expect(pizzaFactory.checkpoints).toHaveLength(2);
     expect(checkpoints.spawn).toEqual(pizzaFactory.playerSpawn);
     checkpoints.update({ x: 4000, y: 930 }, true);
     expect(checkpoints.id).toBe('spawn');
@@ -253,4 +266,105 @@ describe('factory route and its only checkpoint', () => {
       cp.spawn.x - pizzaFactory.factory!.midpoint.shelly.x,
     ).toBeGreaterThan(100);
   });
+  it('earns the final runway checkpoint only on landing and never loses it by backtracking', () => {
+    const checkpoints = new Checkpoints(pizzaFactory);
+    const [midpoint, final] = pizzaFactory.checkpoints;
+    checkpoints.update(midpoint!.spawn, true);
+    const arrival = {
+      x: pizzaFactory.factory!.final.triggerX,
+      y: final!.spawn.y,
+    };
+    expect(checkpoints.update(arrival, false)).toBe(false);
+    expect(checkpoints.id).toBe(midpoint!.id);
+    expect(checkpoints.update(arrival, true)).toBe(true);
+    expect(checkpoints.id).toBe(pizzaFactory.factory!.finalCheckpointId);
+    expect(checkpoints.spawn).toEqual(pizzaFactory.factory!.final.staging);
+    expect(checkpoints.update(midpoint!.spawn, true)).toBe(false);
+    expect(checkpoints.spawn).toEqual(final!.spawn);
+    checkpoints.reset();
+    expect(checkpoints.id).toBe('spawn');
+    expect(checkpoints.spawn).toEqual(pizzaFactory.playerSpawn);
+  });
+  it.each([
+    [
+      'missing final checkpoint',
+      (level: LevelDefinition) => level.checkpoints.pop(),
+    ],
+    [
+      'reversed checkpoint order',
+      (level: LevelDefinition) => level.checkpoints.reverse(),
+    ],
+    [
+      'unknown final checkpoint',
+      (level: LevelDefinition) => {
+        level.factory!.finalCheckpointId = 'missing-final';
+      },
+    ],
+    [
+      'trigger outside final checkpoint',
+      (level: LevelDefinition) => {
+        level.checkpoints[1]!.area.x = level.factory!.final.triggerX + 1;
+      },
+    ],
+    [
+      'staging outside final checkpoint',
+      (level: LevelDefinition) => {
+        level.checkpoints[1]!.area.width = 40;
+      },
+    ],
+  ])('rejects %s', (_description, invalidate) => {
+    const level = structuredClone(pizzaFactory);
+    invalidate(level);
+    expect(() => validateLevel(level)).toThrow(/checkpoint/);
+  });
+  it.each([
+    [
+      'airborne anchor',
+      (level: LevelDefinition) => {
+        const cp = level.checkpoints[1]!;
+        cp.spawn.y -= 4;
+      },
+    ],
+    [
+      'edge anchor',
+      (level: LevelDefinition) => {
+        const cp = level.checkpoints[1]!;
+        cp.spawn.x = 11570;
+      },
+    ],
+    [
+      'moving belt',
+      (level: LevelDefinition) => {
+        level.conveyors!.push({ platformId: 'final-runway', speed: 90 });
+      },
+    ],
+    [
+      'oven',
+      (level: LevelDefinition) => {
+        level.factory!.ovens.push({
+          id: 'checkpoint-oven',
+          ...level.checkpoints[1]!.area,
+        });
+      },
+    ],
+    [
+      'roll lane',
+      (level: LevelDefinition) => {
+        level.factory!.rollZones.push({
+          id: 'checkpoint-roll',
+          fromX: 11220,
+          toX: 11400,
+          left: 11120,
+          right: 11580,
+        });
+      },
+    ],
+  ])(
+    'rejects an unsafe final checkpoint with %s',
+    (_description, invalidate) => {
+      const level = structuredClone(pizzaFactory);
+      invalidate(level);
+      expect(() => validateLevel(level)).toThrow(/checkpoint/);
+    },
+  );
 });
