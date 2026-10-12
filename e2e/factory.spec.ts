@@ -96,7 +96,7 @@ test('opens safely with supplied art, gives the quick exchange, then releases ke
   expect(errors).toEqual([]);
 });
 
-test('belts carry both ways; only Sophie entering an oven resets, before or after the one safe checkpoint', async ({
+test('belts carry both ways; only Sophie entering an oven resets, before or after the midpoint checkpoint', async ({
   page,
 }) => {
   await open(page);
@@ -488,6 +488,155 @@ test('long jumps, tray and vertical refills, and the earned finale tolerate vari
   expect(results.filter((r) => r.route !== 'long' && !r.collected)).toEqual([]);
   expect(results.filter((r) => r.route === 'long' && r.collected)).toEqual([]);
 });
+
+for (const source of ['keyboard', 'touch'] as const)
+  test(`the final runway checkpoint gives a ready retry of the earned finale with ${source} timing`, async ({
+    page,
+  }) => {
+    await open(page);
+    const arrival = await page.evaluate(() => {
+      const a = window.__sophie!;
+      a.checkpoint('factory-midpoint');
+      a.place({ x: 11170, y: 790 });
+      const before = a.advance(1);
+      let arrived = before;
+      for (let n = 0; n < 120 && !arrived.factory!.scripted; n++)
+        arrived = a.advance(1, { moveX: 1 });
+      return { before, arrived };
+    });
+    expect(arrival.before.checkpoint).toBe('factory-midpoint');
+    expect(arrival.arrived.checkpoint).toBe('factory-final');
+    expect(arrival.arrived.factory).toMatchObject({
+      phase: 'final-dialogue',
+      scripted: true,
+      midpointResolved: true,
+      finalResolved: false,
+    });
+
+    const failed = await page.evaluate(() => {
+      const a = window.__sophie!;
+      a.advance(1600);
+      // Isolate a failed attempt after taking both final pickups. A leftward
+      // paid dash crosses the pizza and bone, then drops into the final gap.
+      a.place({ x: 11945, y: 743 });
+      let s = a.advance(1, { moveX: -1, dashPressed: true });
+      for (let n = 0; n < 40 && !s.treats.includes('factory-final-bone'); n++)
+        s = a.advance(1);
+      const collected = s;
+      for (let n = 0; n < 180 && !s.respawning; n++) s = a.advance(1);
+      return { collected, falling: s, retry: a.advance(30) };
+    });
+    expect(failed.collected.treats).toContain('factory-final-bone');
+    expect(failed.collected.factory!.pizza.active).toBe(true);
+    expect(
+      failed.collected.factory!.pizza.pickups.find(
+        (pizza) => pizza.id === 'final-pizza',
+      )!.available,
+    ).toBe(false);
+    expect(failed.falling.respawning).toBe(true);
+    expect(failed.falling.factory!.pizza.active).toBe(true);
+    expect(failed.retry).toMatchObject({
+      checkpoint: 'factory-final',
+      x: 11300,
+      y: 790,
+      vx: 0,
+      vy: 0,
+      charges: 1,
+      respawning: false,
+      jimmy: { y: 790, enabled: true },
+      factory: {
+        phase: 'final',
+        scripted: false,
+        midpointResolved: true,
+        finalResolved: false,
+        pizza: { active: false, remainingMs: 0 },
+      },
+    });
+    expect(failed.retry.treats).not.toContain('factory-final-bone');
+    expect(
+      failed.retry.factory!.pizza.pickups.find(
+        (pizza) => pizza.id === 'final-pizza',
+      ),
+    ).toMatchObject({ available: true, completed: false });
+    expect(failed.retry.factory!.pizza.pickups[0]!.completed).toBe(true);
+    expect(Math.abs(failed.retry.jimmy!.x - failed.retry.x)).toBeLessThan(100);
+    await expect(page.locator('#pizza-rush')).toBeHidden();
+    await expect
+      .poll(async () => (await state(page)).factory!.pizza.aura.visible)
+      .toBe(false);
+
+    await page.evaluate(() => window.__sophie!.advance(30, { moveX: 1 }));
+    await page.keyboard.press('KeyR');
+    const keyboardRetry = await page.evaluate(() =>
+      window.__sophie!.advance(30),
+    );
+    expect(keyboardRetry).toMatchObject({
+      checkpoint: 'factory-final',
+      x: 11300,
+      y: 790,
+      charges: 1,
+      factory: { phase: 'final', scripted: false },
+    });
+
+    const completed = await page.evaluate((source) => {
+      const a = window.__sophie!;
+      const input = {
+        jumpSource: source === 'touch' ? 'touch' : undefined,
+        dashSource: source === 'touch' ? 'touch' : undefined,
+      } as const;
+      let s = a.snapshot();
+      for (let n = 0; n < 220 && s.x < 11534; n++)
+        s = a.advance(1, { moveX: 1 });
+      a.advance(source === 'touch' ? 12 : 8, {
+        ...input,
+        moveX: 1,
+        dashPressed: true,
+      });
+      s = a.advance(1, {
+        ...input,
+        moveX: 1,
+        jumpPressed: true,
+        jumpHeld: true,
+      });
+      let spentRefill = false;
+      for (
+        let n = 0;
+        n < 300 && !s.respawning && !s.factory!.finalResolved;
+        n++
+      ) {
+        const dash: boolean =
+          !spentRefill &&
+          s.treats.includes('factory-final-bone') &&
+          s.state !== 'Dashing' &&
+          s.x >= 11805;
+        spentRefill ||= dash;
+        s = a.advance(1, {
+          ...input,
+          moveX: 1,
+          jumpHeld: true,
+          dashPressed: dash,
+        });
+      }
+      return { spentRefill, state: s };
+    }, source);
+    expect(completed.spentRefill).toBe(true);
+    expect(completed.state.respawning).toBe(false);
+    expect(completed.state.factory!.finalResolved).toBe(true);
+
+    await page.getByRole('button', { name: 'Pause game' }).click();
+    await page.getByRole('button', { name: 'Restart', exact: true }).click();
+    const restarted = await page.evaluate(() => window.__sophie!.advance(1));
+    expect(restarted).toMatchObject({
+      checkpoint: 'spawn',
+      x: 180,
+      y: 980,
+      factory: {
+        phase: 'opening',
+        midpointResolved: false,
+        finalResolved: false,
+      },
+    });
+  });
 
 test('the final pizza and Shelly reaction lead to both dogs exiting, then the sole TO BE CONTINUED', async ({
   page,

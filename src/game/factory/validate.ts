@@ -8,23 +8,40 @@ export function validateFactory(level: LevelDefinition) {
     throw new Error(`Invalid factory: ${reason}`);
   };
   if (
-    level.checkpoints.length !== 1 ||
-    level.checkpoints[0]?.id !== f.checkpointId
+    level.checkpoints.length !== 2 ||
+    level.checkpoints[0]?.id !== f.checkpointId ||
+    level.checkpoints[1]?.id !== f.finalCheckpointId
   )
-    fail('exactly one midpoint checkpoint is required');
+    fail('ordered midpoint and final-runway checkpoints are required');
   const cp = level.checkpoints[0]!;
   if (cp.spawn.x <= f.midpoint.shelly.x || cp.spawn.x >= f.final.triggerX)
     fail('checkpoint must follow the first confrontation');
+  const final = level.checkpoints[1]!;
   if (
-    level.conveyors?.some((b) =>
-      level.platforms.some(
-        (p) => p.id === b.platformId && overlaps(p, cp.area),
-      ),
-    ) ||
-    f.ovens.some((o) => overlaps(o, cp.area)) ||
-    f.rollZones.some((z) => cp.spawn.x >= z.fromX && cp.spawn.x <= z.toX)
+    final.spawn.x < f.final.triggerX ||
+    final.spawn.x >= f.final.pizza.x ||
+    final.spawn.y !== f.final.staging.y ||
+    final.area.x > f.final.triggerX ||
+    final.area.x + final.area.width < f.final.staging.x ||
+    final.area.y > f.final.staging.y ||
+    final.area.y + final.area.height < f.final.staging.y
   )
-    fail('checkpoint must be free of machinery and rolls');
+    fail(
+      'final checkpoint must cover the dialogue runway before the last jump',
+    );
+  for (const checkpoint of level.checkpoints)
+    if (
+      level.conveyors?.some((b) =>
+        level.platforms.some(
+          (p) => p.id === b.platformId && overlaps(p, checkpoint.area),
+        ),
+      ) ||
+      f.ovens.some((o) => overlaps(o, checkpoint.area)) ||
+      f.rollZones.some(
+        (z) => checkpoint.spawn.x >= z.fromX && checkpoint.spawn.x <= z.toX,
+      )
+    )
+      fail('checkpoint must be free of machinery and rolls');
   for (const c of [f.midpoint, f.final])
     if (
       !c.pizza.requiresDash ||

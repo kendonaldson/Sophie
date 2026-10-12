@@ -23,6 +23,7 @@ export interface FactoryDefinition {
   midpoint: Confrontation;
   final: Confrontation;
   checkpointId: string;
+  finalCheckpointId: string;
   exitX: number;
 }
 export const factoryTuning = {
