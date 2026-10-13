@@ -636,11 +636,12 @@ kbd {
   font-size: 12px;
 }
 .touch-pad {
+  --pad-size: clamp(120px, 36dvh, 144px);
   position: absolute;
   left: 18px;
   bottom: 16px;
-  width: 108px;
-  height: 108px;
+  width: var(--pad-size);
+  height: var(--pad-size);
   border: 1px solid #e9d8b56b;
   background: #1c303ba6;
   border-radius: 50%;
@@ -656,8 +657,8 @@ kbd {
   font-size: 22px;
 }
 .pad-direction {
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
   padding: 4px;
   border-radius: 50%;
   pointer-events: none;
@@ -678,8 +679,8 @@ kbd {
 }
 .pad-dot {
   grid-area: 2/2;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   background: #e9d8b550;
   border: 1px solid #e9d8b573;
   border-radius: 50%;
