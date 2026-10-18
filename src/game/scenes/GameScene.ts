@@ -66,6 +66,7 @@ import type { Hud } from '../../ui/Hud';
 import type { LevelDefinition } from '../levels/types';
 import type { GameTestApi } from './TestApi';
 import { sceneDestinations } from './destinations';
+import type { ProgressStore, SavedProgress } from '../progress/ProgressStore';
 const playableLevel = (id: string) =>
   id === pizzaFactory.id
     ? pizzaFactory
@@ -122,17 +123,32 @@ export class GameScene extends Phaser.Scene {
   private followCamera!: FollowCamera;
   private debugFinaleEnabled = true;
   private leavingScene = false;
-  private testEntryApplied = false;
+  private startupApplied = false;
+  private savedEntry?: SavedProgress;
+  private savedCheckpoint = '';
+  private level: LevelDefinition = atticEscape;
   constructor(
     private readonly hud: Hud,
     private readonly sfx: SfxOutput,
     private readonly debugSettings: DebugSettings,
-    private level: LevelDefinition = atticEscape,
+    private readonly progress: ProgressStore,
   ) {
     super('Game');
   }
   init(data: { levelId?: string } = {}) {
     if (data.levelId) this.level = playableLevel(data.levelId);
+    if (!this.startupApplied) {
+      this.startupApplied = true;
+      const params = new URLSearchParams(location.search);
+      const testLevel =
+        import.meta.env.DEV && params.has('test') ? params.get('level') : null;
+      if (testLevel) this.level = playableLevel(testLevel);
+      else if (!data.levelId) {
+        this.savedEntry = this.progress.read();
+        if (this.savedEntry?.checkpointId)
+          this.level = playableLevel(this.savedEntry.destinationId);
+      }
+    }
     this.manual = false;
     this.leavingScene = false;
     this.debugFinaleEnabled = true;
@@ -213,6 +229,14 @@ export class GameScene extends Phaser.Scene {
     }
     createTreatTexture(this);
     this.textures.get('treat').setFilter(Phaser.Textures.FilterMode.NEAREST);
+    const savedStory = this.savedEntry
+      ? storySceneKey(this.savedEntry.destinationId)
+      : undefined;
+    if (savedStory) {
+      this.savedEntry = undefined;
+      this.startInterlude(savedStory);
+      return;
+    }
     this.physics.disableUpdate();
     this.physics.world.fixedStep = false;
     const shell = document.querySelector<HTMLElement>('.game-shell')!;
@@ -235,7 +259,9 @@ export class GameScene extends Phaser.Scene {
       Boolean(
         this.level.balloons || this.level.maintenance || this.level.factory,
       ),
+      this.savedEntry?.checkpointId,
     );
+    this.savedEntry = undefined;
     this.debugSelector = new DebugLevelSelector(
       document.querySelector<HTMLElement>('#app')!,
       sceneDestinations,
@@ -251,6 +277,7 @@ export class GameScene extends Phaser.Scene {
       () => this.togglePause(),
       () => this.restart(),
       () => (this.ending ? this.buildLevel(atticEscape) : this.togglePause()),
+      () => this.buildLevel(atticEscape),
     );
     window.addEventListener('keydown', this.onCommand);
     window.addEventListener('blur', this.onBlur);
@@ -287,22 +314,14 @@ export class GameScene extends Phaser.Scene {
     };
     this.events.once('shutdown', cleanup);
     this.events.once('destroy', cleanup);
-    if (
-      import.meta.env.DEV &&
-      new URLSearchParams(location.search).has('test')
-    ) {
+    if (import.meta.env.DEV && new URLSearchParams(location.search).has('test'))
       this.installTestApi();
-      if (
-        !this.testEntryApplied &&
-        new URLSearchParams(location.search).has('level')
-      )
-        this.buildLevel(
-          playableLevel(new URLSearchParams(location.search).get('level')!),
-        );
-      this.testEntryApplied = true;
-    }
   }
-  private buildLevel(level: LevelDefinition, fade = false) {
+  private buildLevel(
+    level: LevelDefinition,
+    fade = false,
+    checkpointId?: string,
+  ) {
     this.sfx.stopJimmySuperJump();
     this.factory?.destroy();
     this.factory = undefined;
@@ -469,6 +488,21 @@ export class GameScene extends Phaser.Scene {
     this.music?.setVolume(0.5);
     this.music?.setTrack(level.music);
     this.syncMusic();
+    if (checkpointId && checkpointId !== 'spawn') {
+      this.introMs = 0;
+      this.fadeInMs = 0;
+      this.checkpoints.restore(checkpointId);
+      this.resetPlayer();
+      if (this.jimmy) this.jimmy.enabled = true;
+      this.hud.setFade(0);
+    }
+    this.saveProgress();
+  }
+  private saveProgress() {
+    const checkpoint = `${this.level.id}:${this.checkpoints.id}`;
+    if (checkpoint === this.savedCheckpoint) return;
+    if (this.progress.saveLevel(this.level.id, this.checkpoints.id))
+      this.savedCheckpoint = checkpoint;
   }
   private get actors() {
     return this.jimmy ? [this.player, this.jimmy.actor] : [this.player];
@@ -597,6 +631,10 @@ export class GameScene extends Phaser.Scene {
     this.music?.setVolume(0.5);
   }
   private step(ms: number, intent: PlayerIntent) {
+    this.stepSimulation(ms, intent);
+    if (!this.leavingScene) this.saveProgress();
+  }
+  private stepSimulation(ms: number, intent: PlayerIntent) {
     if (this.paused || this.orientationBlocked || this.leavingScene) return;
     this.music?.step(ms);
     this.elapsed += ms;

@@ -363,6 +363,68 @@ canvas {
 .overlay.ending .pause-only {
   display: none;
 }
+.offline-panel {
+  width: min(360px, 100%);
+  flex-shrink: 0;
+  margin-top: 12px;
+  border-top: 1px solid #a9956866;
+  color: #d0d2c0;
+  font-size: 12px;
+}
+.offline-panel summary {
+  cursor: pointer;
+  padding: 12px 4px;
+  min-height: 44px;
+  color: #f1eadc;
+}
+#offline-summary {
+  float: right;
+  color: #c9b98f;
+  font-size: 11px;
+}
+.offline-panel[data-ready='true'] #offline-summary {
+  color: #bed7b5;
+}
+.offline-content p {
+  margin: 0 0 10px;
+  line-height: 1.5;
+}
+.offline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.offline-actions button {
+  min-height: 44px;
+  flex: 1;
+}
+.offline-actions [hidden],
+#offline-progress[hidden] {
+  display: none;
+}
+#offline-progress {
+  display: block;
+  width: 100%;
+  height: 10px;
+  margin-bottom: 12px;
+  accent-color: #e5bd7f;
+}
+.offline-content .offline-help {
+  font-size: 11px;
+  color: #a6b5ac;
+}
+.mobile-landscape .overlay h1 {
+  margin: 4px 10px 10px;
+  font-size: 28px;
+}
+.mobile-landscape .overlay:not(.ending) .pause-menu {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(360px, 100%);
+}
+.mobile-landscape .offline-panel {
+  margin-top: 6px;
+}
 .overlay.ending {
   background: #000;
 }

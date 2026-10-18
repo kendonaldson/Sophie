@@ -11,7 +11,7 @@ const pause = (page: Page) =>
   page.getByRole('button', { name: 'Pause game', exact: true }).click();
 const resume = (page: Page) =>
   page.getByRole('button', { name: 'Continue', exact: true }).click();
-test('pause offers the three actions, Continue preserves play, and R still retries a checkpoint', async ({
+test('pause offers chapter restart and Start over, Continue preserves play, and R still retries a checkpoint', async ({
   page,
 }) => {
   await open(page);
@@ -27,6 +27,7 @@ test('pause offers the three actions, Continue preserves play, and R still retri
   await expect(page.locator('#overlay button')).toHaveText([
     'Restart',
     'Full Screen',
+    'Start over',
     'Continue',
   ]);
   await expect(
@@ -260,7 +261,7 @@ test.describe('mobile pause and fullscreen', () => {
     await open(page);
     await pause(page);
     const shell = (await page.locator('.game-shell').boundingBox())!;
-    for (const name of ['Restart', 'Full Screen', 'Continue']) {
+    for (const name of ['Restart', 'Full Screen', 'Start over', 'Continue']) {
       const b = (await page
         .getByRole('button', { name, exact: true })
         .boundingBox())!;
