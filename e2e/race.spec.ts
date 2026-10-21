@@ -427,9 +427,16 @@ test('the visible attic stays playable until both dogs enter, then hands off to 
     const entered = s;
     const phases: string[] = [];
     let bothInsideBeforeFade = false;
+    const lastVisibleX = { sophie: -Infinity, jimmy: -Infinity };
+    const firstHiddenX: Partial<Record<'sophie' | 'jimmy', number>> = {};
     const dialogue: string[] = [];
     for (let n = 0; n < 600 && s.race!.phase !== 'attic-complete'; n++) {
       const r = s.race!;
+      for (const name of ['sophie', 'jimmy'] as const) {
+        const actor = r.actors[name];
+        if (actor.visible) lastVisibleX[name] = actor.x;
+        else firstHiddenX[name] ??= actor.x;
+      }
       if (phases.at(-1) !== r.phase) phases.push(r.phase);
       if (r.phase === 'attic-empty')
         bothInsideBeforeFade ||=
@@ -437,11 +444,27 @@ test('the visible attic stays playable until both dogs enter, then hands off to 
       if (r.line) dialogue.push(r.line.text);
       s = a.advance(1, { moveX: -1, jumpPressed: true, dashPressed: true });
     }
-    return { entered, phases, bothInsideBeforeFade, dialogue, end: s };
+    return {
+      entered,
+      phases,
+      bothInsideBeforeFade,
+      lastVisibleX,
+      firstHiddenX,
+      dialogue,
+      end: s,
+    };
   }, destination);
   expect(ending.entered.race!.scripted).toBe(true);
   expect(ending.phases).toEqual(['attic-enter', 'attic-empty', 'attic-fade']);
   expect(ending.bothInsideBeforeFade).toBe(true);
+  // WorldArt draws the opening from 12 px left to 13 px right of this marker.
+  // Neither dog should walk out past the door before disappearing.
+  for (const name of ['sophie', 'jimmy'] as const) {
+    expect(ending.lastVisibleX[name]).toBeGreaterThan(destination.attic.x - 12);
+    expect(ending.lastVisibleX[name]).toBeLessThan(destination.attic.x + 13);
+    expect(ending.firstHiddenX[name]).toBeGreaterThan(destination.attic.x - 12);
+    expect(ending.firstHiddenX[name]).toBeLessThan(destination.attic.x + 13);
+  }
   expect(ending.dialogue).toEqual([]);
   expect(ending.end.race!.actors.sophie.visible).toBe(false);
   expect(ending.end.race!.actors.jimmy.visible).toBe(false);
