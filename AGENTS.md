@@ -258,6 +258,15 @@ Powered running and ordinary dashes do not protect Sophie from a roll, and pizza
 never grants immunity to ovens or falls. Traversal slices are deliberately sparse;
 most roll encounters remain dodge challenges.
 
+Levels with Pizza Rush and small creatures use the shared
+`creatures/SmallCreatureContact.ts` policy. Active Pizza Rush scatters sparrows
+and rats on contact; a dash is not required. Scattering is harmless flight or
+scurrying, with existing sounds and bounded overlap, never a defeat animation.
+Keep motion and sound cadence deterministic, clear scattering on checkpoint
+reset, and leave ordinary contact behavior intact when power is absent. This
+policy must never grant protection from steam, ovens, falls, or other
+environmental hazards. Jimmy never enters creature or pickup collision queries.
+
 ---
 
 ## Gameplay Configuration
@@ -605,6 +614,12 @@ Adding a conventional level should generally mean defining:
 
 rather than writing another giant custom Scene.
 
+Race Home is the playable return chapter after Shelly's factory. Its school bus
+is background storytelling, never a deadline or failure condition. Preserve its
+section-based camera and four sparse Pizza Rush opportunities. The attic-entry
+completion is an isolated handoff for a future reunion; do not add that reunion
+or final story resolution without a separate request.
+
 Keep PlayerController independent of specific level geometry.
 
 Architecture should remain compatible with moving to Tiled or another map editor later without requiring player-movement rewrites.
@@ -656,6 +671,12 @@ Respawn should:
 - reconcile companions appropriately
 
 Avoid long death animations and loading interruptions.
+
+Major checkpoints in mixed-environment levels must be immediately playable:
+restore consumed challenge resources and reset hazard and moving-platform cycles
+to deterministic safe starts. Do not require waiting at the respawn position for
+a cycle to clear. A scripted pause before a demanding challenge should earn the
+safe checkpoint before taking control; retries should skip repeated dialogue.
 
 ---
 

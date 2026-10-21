@@ -24,9 +24,9 @@ export class WorldArt {
     this.far = scene.add.graphics().setScrollFactor(0).setDepth(-20);
     this.near = scene.add.graphics().setScrollFactor(0).setDepth(-10);
     const g = scene.add.graphics().setDepth(0);
-    level.platforms.forEach((p, i) => this.building(g, p, i));
+    level.platforms.forEach((p, i) => WorldArt.drawRoof(g, p, i));
     if (level.atticOpening)
-      this.attic(g, level.atticOpening.x, level.atticOpening.y);
+      WorldArt.drawAttic(g, level.atticOpening.x, level.atticOpening.y);
     this.door(g, level.exit.x, level.exit.y);
     // Decorative chimneys and vents sit behind the walkable roof silhouette.
   }
@@ -136,7 +136,7 @@ export class WorldArt {
           g.fillRect(wx, wy, 5, 8);
     }
   }
-  private building(
+  static drawRoof(
     g: Phaser.GameObjects.Graphics,
     p: PlatformDefinition,
     index: number,
@@ -201,7 +201,7 @@ export class WorldArt {
       rect(g, 0x56635a, sx + 6, y - 23, 2, 2);
     }
   }
-  private window(
+  private static window(
     g: Phaser.GameObjects.Graphics,
     x: number,
     y: number,
@@ -216,7 +216,7 @@ export class WorldArt {
     rect(g, 0x4e605e, x + 2, y + h * 0.5, w - 4, 2);
     rect(g, 0xd0c3a4, x - 4, y + h + 2, w + 8, 3);
   }
-  private chimney(g: Phaser.GameObjects.Graphics, x: number, y: number) {
+  private static chimney(g: Phaser.GameObjects.Graphics, x: number, y: number) {
     rect(g, 0x8d7467, x, y - 37, 25, 37);
     rect(g, 0x655e56, x - 3, y - 41, 31, 6);
     for (let row = 0; row < 4; row++) {
@@ -224,7 +224,7 @@ export class WorldArt {
       rect(g, 0xb29b80, x + 4 + (row % 2) * 10, y - 29 + row * 8, 1, 6);
     }
   }
-  private vent(
+  private static vent(
     g: Phaser.GameObjects.Graphics,
     x: number,
     y: number,
@@ -234,7 +234,7 @@ export class WorldArt {
     rect(g, 0xb9bea4, x - 3, y - 21, w + 6, 4);
     for (let i = 4; i < w - 3; i += 5) rect(g, 0x4b696b, x + i, y - 13, 2, 9);
   }
-  private attic(g: Phaser.GameObjects.Graphics, x: number, y: number) {
+  static drawAttic(g: Phaser.GameObjects.Graphics, x: number, y: number) {
     rect(g, 0x9c917b, x, y - 66, 72, 66);
     g.fillStyle(0x455557).fillPoints(
       [

@@ -638,7 +638,7 @@ for (const source of ['keyboard', 'touch'] as const)
     });
   });
 
-test('the final pizza and Shelly reaction lead to both dogs exiting, then the sole TO BE CONTINUED', async ({
+test('the final pizza and Shelly reaction lead to both dogs exiting, then Race Home', async ({
   page,
 }) => {
   await open(page);
@@ -669,8 +669,11 @@ test('the final pizza and Shelly reaction lead to both dogs exiting, then the so
     const reacting = a.snapshot();
     const phases: string[] = [];
     const lines: SpeechLine[] = [];
-    for (let n = 0; n < 2500 && !s.ending; n++) {
+    let lastFactory = s;
+    for (let n = 0; n < 2500 && s.levelId === 'pizza-factory'; n++) {
       s = a.advance(1);
+      if (s.levelId !== 'pizza-factory') break;
+      lastFactory = s;
       if (phases.at(-1) !== s.factory!.phase) phases.push(s.factory!.phase);
       const line = s.factory!.line;
       const previous = lines.at(-1);
@@ -681,7 +684,7 @@ test('the final pizza and Shelly reaction lead to both dogs exiting, then the so
       )
         lines.push(line);
     }
-    return { converted, hit, reacting, phases, lines, end: s };
+    return { converted, hit, reacting, phases, lines, lastFactory, end: s };
   });
   expect(result.converted).toBe(true);
   expect(result.hit.factory!.phase).toBe('final-spin');
@@ -692,7 +695,6 @@ test('the final pizza and Shelly reaction lead to both dogs exiting, then the so
     'escape',
     'empty',
     'fade',
-    'complete',
   ]);
   expect(result.lines).toEqual(factoryDialogue.outro);
   expect(result.lines.map((line) => line.speaker)).toEqual([
@@ -700,17 +702,14 @@ test('the final pizza and Shelly reaction lead to both dogs exiting, then the so
     'sophie',
     'jimmy',
   ]);
-  expect(result.end.factory!.actors.jimmy.visible).toBe(false);
-  expect(result.end.factory!.actors.sophie.visible).toBe(false);
-  expect(result.end.factory!.pizza.active).toBe(false);
+  expect(result.lastFactory.factory!.actors.jimmy.visible).toBe(false);
+  expect(result.lastFactory.factory!.actors.sophie.visible).toBe(false);
+  expect(result.lastFactory.factory!.pizza.active).toBe(false);
+  expect(result.end.levelId).toBe('race-home');
+  expect(result.end.ending).toBe(false);
   await expect(
     page.getByRole('heading', { name: 'TO BE CONTINUED' }),
-  ).toBeVisible();
-  await expect(page.locator('#fade')).toHaveCSS('opacity', '1');
-  await page.getByRole('button', { name: 'Play again' }).click();
-  await page.waitForFunction(
-    () => window.__sophie?.snapshot().levelId === 'attic-escape',
-  );
+  ).toHaveCount(0);
   await expect(page.locator('#app')).not.toHaveClass(/factory-mode/);
   await expect(page.locator('#pizza-rush')).toBeHidden();
 });

@@ -27,6 +27,7 @@ const hood = (id: string, x: number, bottom: number): PlatformDefinition => ({
 
 export const pizzaFactory: LevelDefinition = {
   id: 'pizza-factory',
+  nextLevel: 'race-home',
   name: "Shelly's Pizza Factory",
   theme: 'factory',
   music: 'assets/audio/pizza-dash.mp3',

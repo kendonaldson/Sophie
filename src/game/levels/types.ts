@@ -8,6 +8,8 @@ import type { BalloonDefinition } from '../balloons/config';
 import { validateBalloons } from '../balloons/validate';
 import type { FactoryDefinition } from '../factory/config';
 import { validateFactory } from '../factory/validate';
+import type { RaceDefinition } from '../race/config';
+import { validateRace } from '../race/validate';
 export interface Point {
   x: number;
   y: number;
@@ -33,7 +35,8 @@ export interface PlatformDefinition extends Rect {
     | 'pipe'
     | 'prep'
     | 'conveyor'
-    | 'factory-hood';
+    | 'factory-hood'
+    | 'car';
 }
 export interface MovingPlatformDefinition {
   id: string;
@@ -102,7 +105,9 @@ export interface LevelDefinition {
     | 'skyscraper'
     | 'balloons'
     | 'maintenance'
-    | 'factory';
+    | 'factory'
+    | 'race';
+  race?: RaceDefinition;
   factory?: FactoryDefinition;
   maintenance?: MaintenanceDefinition;
   chase?: ChaseDefinition;
@@ -167,6 +172,10 @@ export function validateLevel(level: LevelDefinition): void {
     ...(level.maintenance?.rats ?? []),
     ...(level.maintenance?.steam ?? []),
     ...(level.factory?.ovens ?? []),
+    ...(level.race?.birds ?? []),
+    ...(level.race?.rats ?? []),
+    ...(level.race?.steam ?? []),
+    ...(level.race?.pizzas ?? []),
     ...(level.factory
       ? [
           level.factory.midpoint.pizza,
@@ -230,6 +239,7 @@ export function validateLevel(level: LevelDefinition): void {
   if (level.balloons) validateBalloons(level, safe, fail);
   if (level.maintenance) validateMaintenance(level);
   if (level.factory) validateFactory(level);
+  if (level.race) validateRace(level, safe, fail);
   for (const cp of level.checkpoints)
     if (
       !rectValid(cp.area) ||
