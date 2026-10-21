@@ -17,11 +17,10 @@ export const epilogue = {
   busExitX: 820,
   fadeInMs: 700,
   fadeOutMs: 3000,
-  // Attach only the supplied ending soundtrack here. Silence until it arrives.
-  music: undefined as string | undefined,
+  music: 'assets/audio/returning-home.mp3',
   musicLoop: false,
-  musicVolume: 0.3,
-  punchlineVolume: 0.16,
+  musicVolume: 0.25,
+  punchlineVolume: 0.13,
 } as const;
 
 export const epilogueLines = [
