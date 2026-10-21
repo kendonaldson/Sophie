@@ -32,6 +32,7 @@ import {
 } from './destinations';
 import type { StoryTestApi } from './TestApi';
 import type { SfxOutput } from '../audio/Sfx';
+import type { ProgressStore } from '../progress/ProgressStore';
 
 export class InterludeScene extends Phaser.Scene {
   private director: InterludeDirector | RooftopDirector | KitchenDirector =
@@ -49,15 +50,21 @@ export class InterludeScene extends Phaser.Scene {
   private orientationBlocked = false;
   private manual = false;
   private ended = false;
+  private progressSaved = false;
+  private readonly storyId: StoryId;
   constructor(
     private readonly hud: Hud,
     private readonly sfx: SfxOutput,
     private readonly debugSettings: DebugSettings,
-    private readonly storyId: StoryId = 'interlude-1',
+    storyId: StoryId | undefined,
+    private readonly progress: ProgressStore,
   ) {
+    storyId ??= 'interlude-1';
     super(storyScenes[storyId]);
+    this.storyId = storyId;
   }
   create() {
+    this.progressSaved = this.progress.saveStory(this.storyId);
     // The fixed shot leaves side margins on wide phones; clear them to night too.
     const previousBackground = this.game.config.backgroundColor.clone();
     this.game.config.backgroundColor.setTo(24, 46, 56);
@@ -160,6 +167,7 @@ export class InterludeScene extends Phaser.Scene {
         if (this.ended) this.scene.start('Game', { levelId: 'attic-escape' });
         else this.togglePause();
       },
+      () => this.scene.start('Game', { levelId: 'attic-escape' }),
     );
     window.addEventListener('keydown', this.command);
     window.addEventListener('blur', this.blur);
@@ -237,6 +245,8 @@ export class InterludeScene extends Phaser.Scene {
     if (document.hidden) this.blur();
   };
   update(_time: number, delta: number) {
+    if (!this.progressSaved)
+      this.progressSaved = this.progress.saveStory(this.storyId);
     const ms =
       !this.manual && !this.paused && !this.orientationBlocked
         ? Math.min(delta, 100)

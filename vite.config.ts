@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import { offlineBuild } from './scripts/offline-build';
 const basePath = process.env.SITE_BASE_PATH || '/';
 if (
   !basePath.startsWith('/') ||
@@ -9,6 +10,7 @@ if (
 }
 export default defineConfig({
   base: basePath.endsWith('/') ? basePath : `${basePath}/`,
+  plugins: [offlineBuild()],
   test: { include: ['tests/**/*.test.ts'] },
   build: {
     rollupOptions: { output: { manualChunks: { phaser: ['phaser'] } } },

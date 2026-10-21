@@ -13,6 +13,7 @@ export class Hud {
   private readonly overlayNote: HTMLElement;
   private readonly continueButton: HTMLButtonElement;
   private readonly restartButton: HTMLButtonElement;
+  private readonly startOverButton: HTMLButtonElement;
   private readonly fullscreen: FullscreenControl;
   private readonly pizzaRush: PizzaRushHud;
   private readonly fade: HTMLElement;
@@ -29,7 +30,7 @@ export class Hud {
       <main><div class="game-shell"><div id="world" role="img" aria-label="Sophie, a dachshund, exploring neighborhood rooftops"></div>
       <div class="world-ui"><div class="location"><span class="location-dot"></span><span id="section">A little way out</span></div><div id="dash-hud" class="dash-hud" role="img" aria-label="1 of 2 dash charges available"><span class="eyebrow">DASH</span><div class="bones">${[0, 1].map((i) => `<span class="bone" data-bone="${i}"><span class="bone-empty">${boneSvg}</span><span class="bone-fill">${boneSvg}</span></span>`).join('')}</div></div></div>
       <section class="tutorial-card" aria-label="Traversal tutorial" aria-live="polite" hidden><h2></h2><ol></ol></section>
-      <div class="vignette"></div><div id="fade"></div><div id="overlay" class="overlay" role="dialog" aria-labelledby="overlay-title" hidden><span class="eyebrow" id="overlay-note">TAKE YOUR TIME</span><h1 id="overlay-title">A little breather.</h1><div class="pause-menu"><button id="restart" class="menu-button pause-only" title="Restart the current chapter">Restart</button><button id="fullscreen" class="menu-button pause-only" aria-describedby="fullscreen-status">Full Screen</button><button id="continue" class="primary-button">Continue</button></div><p id="fullscreen-status" class="pause-only" role="status" aria-live="polite"></p></div></div>
+      <div class="vignette"></div><div id="fade"></div><div id="overlay" class="overlay" role="dialog" aria-labelledby="overlay-title" hidden><span class="eyebrow" id="overlay-note">TAKE YOUR TIME</span><h1 id="overlay-title">A little breather.</h1><div class="pause-menu"><button id="restart" class="menu-button pause-only" title="Restart the current chapter">Restart</button><button id="fullscreen" class="menu-button pause-only" aria-describedby="fullscreen-status">Full Screen</button><button id="start-over" class="menu-button pause-only" title="Begin again from Chapter 1">Start over</button><button id="continue" class="primary-button">Continue</button></div><p id="fullscreen-status" class="pause-only" role="status" aria-live="polite"></p></div></div>
       <div class="below-world"><div class="hint-mark">✦</div><p id="hint">← → Move · Z / Space Jump</p></div></main>
       <footer><span>A little dog. A big way home.</span><div class="key-guide"><span><kbd>←</kbd><kbd>→</kbd> Move</span><span><kbd>Z</kbd> / <kbd>Space</kbd> Jump</span><span><kbd>X</kbd> Dash</span><span><kbd>Esc</kbd> Pause</span></div><span class="chapter-number">01 — 01</span></footer>
       <p class="keyboard-notice">Best played with a keyboard. Arrow keys · Z · X</p>`;
@@ -42,6 +43,7 @@ export class Hud {
     this.overlayNote = root.querySelector('#overlay-note')!;
     this.continueButton = root.querySelector('#continue')!;
     this.restartButton = root.querySelector('#restart')!;
+    this.startOverButton = root.querySelector('#start-over')!;
     this.fullscreen = new FullscreenControl(
       root,
       root.querySelector('#fullscreen')!,
@@ -153,7 +155,12 @@ export class Hud {
     )
       this.dialogueText.textContent = this.reveal.tick(ms);
   }
-  bind(onPause: () => void, onRestart: () => void, onContinue: () => void) {
+  bind(
+    onPause: () => void,
+    onRestart: () => void,
+    onContinue: () => void,
+    onStartOver: () => void,
+  ) {
     const controller = new AbortController();
     const options = { signal: controller.signal };
     document.querySelector('#pause')!.addEventListener(
@@ -177,6 +184,19 @@ export class Hud {
       () => {
         onContinue();
         this.continueButton.blur();
+      },
+      options,
+    );
+    this.startOverButton.addEventListener(
+      'click',
+      () => {
+        if (
+          window.confirm(
+            'Start again from Chapter 1? Your checkpoint progress will be reset. Offline downloads stay on this device.',
+          )
+        )
+          onStartOver();
+        this.startOverButton.blur();
       },
       options,
     );

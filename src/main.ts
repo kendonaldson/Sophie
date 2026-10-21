@@ -5,10 +5,16 @@ import { GameScene } from './game/scenes/GameScene';
 import { InterludeScene } from './game/scenes/InterludeScene';
 import { viewportSize, watchViewport } from './game/rendering/Viewport';
 import { Sfx } from './game/audio/Sfx';
+import { ProgressStore } from './game/progress/ProgressStore';
+import { installOfflinePlay } from './ui/OfflinePlay';
 const sfx = new Sfx();
+const progress = new ProgressStore(import.meta.env.BASE_URL);
 const debugSettings = { infiniteDash: false };
 sfx.bindGestures();
 const hud = new Hud(document.querySelector<HTMLElement>('#app')!, sfx);
+const removeOfflinePlay = installOfflinePlay(
+  document.querySelector<HTMLElement>('#app')!,
+);
 const container = document.querySelector<HTMLElement>('#world')!;
 const size = viewportSize(container.clientWidth, container.clientHeight);
 const game = new Phaser.Game({
@@ -31,10 +37,10 @@ const game = new Phaser.Game({
     },
   },
   scene: [
-    new GameScene(hud, sfx, debugSettings),
-    new InterludeScene(hud, sfx, debugSettings),
-    new InterludeScene(hud, sfx, debugSettings, 'interlude-2'),
-    new InterludeScene(hud, sfx, debugSettings, 'interlude-3'),
+    new GameScene(hud, sfx, debugSettings, progress),
+    new InterludeScene(hud, sfx, debugSettings, undefined, progress),
+    new InterludeScene(hud, sfx, debugSettings, 'interlude-2', progress),
+    new InterludeScene(hud, sfx, debugSettings, 'interlude-3', progress),
   ],
   // Music streams through LevelMusic; SFX own the only Web Audio context.
   audio: { noAudio: true },
@@ -44,6 +50,8 @@ const unwatch = watchViewport(game, container);
 game.events.once('destroy', () => {
   sfx.destroy();
   hud.destroy();
+  removeOfflinePlay();
+  progress.destroy();
 });
 if (import.meta.hot)
   import.meta.hot.dispose(() => {
