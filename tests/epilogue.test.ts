@@ -143,7 +143,6 @@ it('holds the empty bedroom for the off-screen reunion and leaves only silence a
 });
 
 it('reserves the supplied non-looping soundtrack and shares its final fade envelope with the picture', () => {
-  expect(epilogue.music).toBeUndefined();
   expect(epilogue.musicLoop).toBe(false);
   const scene = sceneAt('inside-transition');
   scene.tick(duration('inside-transition') / 2);

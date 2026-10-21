@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { epilogueLines } from '../../src/game/story/epilogue';
+import { epilogue as c, epilogueLines } from '../../src/game/story/epilogue';
 
 test('production epilogue plays automatically through the last line and THE END under the Pages path', async ({
   page,
@@ -23,7 +23,12 @@ test('production epilogue plays automatically through the last line and THE END 
   const music = page.locator('audio');
   await expect(music).toHaveCount(1);
   await expect(music).toHaveJSProperty('loop', false);
-  await expect(music).not.toHaveAttribute('src');
+  if (c.music)
+    await expect(music).toHaveAttribute(
+      'src',
+      new URL(c.music, page.url()).pathname,
+    );
+  else await expect(music).not.toHaveAttribute('src');
   expect(
     await page.evaluate(() => [window.__sophie, window.__sophieStory]),
   ).toEqual([undefined, undefined]);

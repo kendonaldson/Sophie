@@ -106,7 +106,12 @@ test('the automatic ending stages the bus, unseen family, dog exit, last joke, s
   await expect(page.locator('#dash-hud')).toBeHidden();
   await expect(page.locator('audio')).toHaveCount(1);
   await expect(page.locator('audio')).toHaveJSProperty('loop', false);
-  await expect(page.locator('audio')).not.toHaveAttribute('src');
+  if (c.music)
+    await expect(page.locator('audio')).toHaveAttribute(
+      'src',
+      new URL(c.music, page.url()).pathname,
+    );
+  else await expect(page.locator('audio')).not.toHaveAttribute('src');
   for (const key of ['ArrowRight', 'KeyZ', 'Space', 'KeyX', 'KeyR'])
     await page.keyboard.press(key);
   expect((await snapshot(page)).actors).toEqual(initial.actors);
