@@ -31,7 +31,7 @@ test('production Race Home loads its reused assets, opening, and controls under 
   const music = page.locator('audio');
   await expect(music).toHaveAttribute(
     'src',
-    new URL('assets/audio/pixel-dash.mp3', baseURL!).pathname,
+    new URL('assets/audio/race-home.mp3', baseURL!).pathname,
   );
   await expect(music).toHaveJSProperty('loop', true);
   await expect(music).toHaveJSProperty('error', null);

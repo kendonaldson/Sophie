@@ -120,7 +120,7 @@ export const raceHome: LevelDefinition = {
   id: 'race-home',
   name: 'Race Home',
   theme: 'race',
-  music: 'assets/audio/pixel-dash.mp3',
+  music: 'assets/audio/race-home.mp3',
   width: 21600,
   height: 2500,
   fallY: 2420,
