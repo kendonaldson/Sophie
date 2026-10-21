@@ -1,3 +1,4 @@
+import { raceHome } from '../levels/raceHome';
 import { maintenance } from '../levels/maintenance';
 import { pizzaFactory } from '../levels/pizzaFactory';
 import { balloons } from '../levels/balloons';
@@ -30,4 +31,5 @@ export const sceneDestinations = [
   maintenance,
   interlude3,
   pizzaFactory,
+  raceHome,
 ] as const;

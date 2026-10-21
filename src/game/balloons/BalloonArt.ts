@@ -13,7 +13,7 @@ const palettes = [
 ] as const;
 type Variant = NonNullable<LevelDefinition['balloons']>['variants'][number];
 /** Flat fabric crowns above tapered, non-solid envelopes. Everything below y=0 is decorative. */
-function envelope(
+export function drawBalloonEnvelope(
   g: Phaser.GameObjects.Graphics,
   width: number,
   variant: Variant,
@@ -87,7 +87,7 @@ export class BalloonArt {
         level.platforms.find((p) => p.id === variant.platformId) ??
         machinery.surfaces.find((p) => p.id === variant.platformId)!;
       const g = scene.add.graphics().setDepth(-1);
-      const height = envelope(g, surface.width, variant);
+      const height = drawBalloonEnvelope(g, surface.width, variant);
       this.balloons.push({ variant, surface, envelope: g, height });
     }
     this.rooftop();

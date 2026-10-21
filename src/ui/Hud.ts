@@ -57,55 +57,62 @@ export class Hud {
     root.querySelector('.game-shell')!.append(this.dialogue);
   }
   setLevel(level: LevelDefinition) {
+    const race = level.theme === 'race';
     const factory = level.theme === 'factory';
     const maintenance = level.theme === 'maintenance';
     const balloons = level.theme === 'balloons';
     const warehouse = level.theme === 'warehouse';
     const chase = level.theme === 'chase';
     const skyscraper = level.theme === 'skyscraper';
-    document.querySelector('.chapter > span:last-child')!.innerHTML = factory
-      ? "Chapter 07 <i></i> Shelly's Pizza Factory"
-      : maintenance
-        ? 'Chapter 06 <i></i> Maintenance Tunnels'
-        : balloons
-          ? 'Chapter 05 <i></i> The Balloons'
-          : skyscraper
-            ? 'Chapter 04 <i></i> The Skyscraper'
-            : chase
-              ? 'Chapter 03 <i></i> The Chase'
-              : warehouse
-                ? 'Chapter 02 <i></i> The Warehouse'
-                : 'Chapter 01 <i></i> Attic Escape';
-    document.querySelector('.chapter-number')!.textContent = factory
-      ? '07 — 07'
-      : maintenance
-        ? '06 — 07'
-        : balloons
-          ? '05 — 07'
-          : skyscraper
-            ? '04 — 07'
-            : chase
-              ? '03 — 07'
-              : warehouse
-                ? '02 — 07'
-                : '01 — 07';
+    document.querySelector('.chapter > span:last-child')!.innerHTML = race
+      ? 'Chapter 08 <i></i> Race Home'
+      : factory
+        ? "Chapter 07 <i></i> Shelly's Pizza Factory"
+        : maintenance
+          ? 'Chapter 06 <i></i> Maintenance Tunnels'
+          : balloons
+            ? 'Chapter 05 <i></i> The Balloons'
+            : skyscraper
+              ? 'Chapter 04 <i></i> The Skyscraper'
+              : chase
+                ? 'Chapter 03 <i></i> The Chase'
+                : warehouse
+                  ? 'Chapter 02 <i></i> The Warehouse'
+                  : 'Chapter 01 <i></i> Attic Escape';
+    document.querySelector('.chapter-number')!.textContent = race
+      ? '08 — 08'
+      : factory
+        ? '07 — 08'
+        : maintenance
+          ? '06 — 08'
+          : balloons
+            ? '05 — 08'
+            : skyscraper
+              ? '04 — 08'
+              : chase
+                ? '03 — 08'
+                : warehouse
+                  ? '02 — 08'
+                  : '01 — 08';
     document
       .querySelector('#world')!
       .setAttribute(
         'aria-label',
-        factory
-          ? "Sophie and Jimmy escaping Shelly's suspended pizza factory"
-          : maintenance
-            ? 'Sophie and Jimmy exploring warm industrial maintenance tunnels'
-            : balloons
-              ? 'Sophie and Jimmy crossing colorful balloon crowns toward Shelly’s Pizza'
-              : skyscraper
-                ? 'Sophie and Jimmy climbing the skyscraper above the nighttime city'
-                : chase
-                  ? 'Sophie and Jimmy escaping through a neighborhood and construction yard'
-                  : warehouse
-                    ? 'Sophie and Jimmy exploring a warehouse'
-                    : 'Sophie, a dachshund, exploring neighborhood rooftops',
+        race
+          ? 'Sophie and Jimmy racing home through the city to their open attic'
+          : factory
+            ? "Sophie and Jimmy escaping Shelly's suspended pizza factory"
+            : maintenance
+              ? 'Sophie and Jimmy exploring warm industrial maintenance tunnels'
+              : balloons
+                ? 'Sophie and Jimmy crossing colorful balloon crowns toward Shelly’s Pizza'
+                : skyscraper
+                  ? 'Sophie and Jimmy climbing the skyscraper above the nighttime city'
+                  : chase
+                    ? 'Sophie and Jimmy escaping through a neighborhood and construction yard'
+                    : warehouse
+                      ? 'Sophie and Jimmy exploring a warehouse'
+                      : 'Sophie, a dachshund, exploring neighborhood rooftops',
       );
     this.lastSection = '';
     this.pizzaRush.update();
