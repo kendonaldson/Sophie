@@ -1,4 +1,5 @@
 import type { RaceHomeRun } from '../race/RaceHomeRun';
+import type { EpilogueDirector } from '../story/EpilogueDirector';
 import type { TunnelRun } from '../maintenance/TunnelRun';
 import type { FactoryRun } from '../factory/FactoryRun';
 import type { KitchenDirector } from '../story/KitchenDirector';
@@ -15,6 +16,14 @@ import type { SkyscraperRun } from '../skyscraper/SkyscraperRun';
 export interface StoryTestApi {
   snapshot(): {
     storyId: string;
+    epilogue?: {
+      environment: EpilogueDirector['environment'];
+      beat: string;
+      bus: EpilogueDirector['bus'];
+      camera: { scrollX: number; scrollY: number; zoom: number };
+      music: { asset?: string; loop: false; volume: number };
+      theEnd: boolean;
+    };
     environment?: 'night' | 'day';
     geometry?: typeof rooftopGeometry;
     balloons: ReturnType<typeof balloonPositions>;
@@ -25,19 +34,22 @@ export interface StoryTestApi {
     phase:
       | InterludeDirector['phase']
       | RooftopDirector['phase']
-      | KitchenDirector['phase'];
+      | KitchenDirector['phase']
+      | EpilogueDirector['phase'];
     index: number;
     line:
       | InterludeDirector['line']
       | RooftopDirector['line']
-      | KitchenDirector['line'];
+      | KitchenDirector['line']
+      | EpilogueDirector['line'];
     canAdvance: boolean;
     fade: number;
     paused: boolean;
     actors:
       | InterludeDirector['actors']
       | RooftopDirector['actors']
-      | KitchenDirector['actors'];
+      | KitchenDirector['actors']
+      | EpilogueDirector['actors'];
     animations: { sophie?: string; jimmy?: string };
     characters: string[];
   };

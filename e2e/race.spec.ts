@@ -396,7 +396,7 @@ test('the moving balloon carries Sophie on its crown without requiring repeated 
   expect(result.ridden.x).toBeCloseTo(result.moved.x + 100);
 });
 
-test('the visible attic stays a playable approach, then both dogs enter before the isolated ending', async ({
+test('the visible attic stays playable until both dogs enter, then hands off to the epilogue', async ({
   page,
 }) => {
   await open(page);
@@ -428,7 +428,7 @@ test('the visible attic stays a playable approach, then both dogs enter before t
     const phases: string[] = [];
     let bothInsideBeforeFade = false;
     const dialogue: string[] = [];
-    for (let n = 0; n < 600 && !s.ending; n++) {
+    for (let n = 0; n < 600 && s.race!.phase !== 'attic-complete'; n++) {
       const r = s.race!;
       if (phases.at(-1) !== r.phase) phases.push(r.phase);
       if (r.phase === 'attic-empty')
@@ -443,18 +443,19 @@ test('the visible attic stays a playable approach, then both dogs enter before t
   expect(ending.phases).toEqual(['attic-enter', 'attic-empty', 'attic-fade']);
   expect(ending.bothInsideBeforeFade).toBe(true);
   expect(ending.dialogue).toEqual([]);
-  expect(ending.end.ending).toBe(true);
   expect(ending.end.race!.actors.sophie.visible).toBe(false);
   expect(ending.end.race!.actors.jimmy.visible).toBe(false);
   expect(ending.end.race!.phase).toBe('attic-complete');
+  await page.waitForFunction(
+    () => window.__sophieStory?.snapshot().storyId === 'epilogue',
+  );
   await expect(
     page.getByRole('heading', { name: 'TO BE CONTINUED' }),
-  ).toBeVisible();
-  await expect(page.locator('#fade')).toHaveCSS('opacity', '1');
-  await page.getByRole('button', { name: 'Play again' }).click();
-  await page.waitForFunction(
-    () => window.__sophie?.snapshot().levelId === 'attic-escape',
-  );
+  ).toHaveCount(0);
+  expect(await page.evaluate(() => window.__sophie)).toBeUndefined();
+  await expect(page.locator('.touch-controls')).toHaveCount(0);
+  await expect(page.locator('audio')).toHaveCount(1);
+  await expect(page.locator('audio')).toHaveJSProperty('loop', false);
 });
 
 test.describe('Race Home on mobile', () => {

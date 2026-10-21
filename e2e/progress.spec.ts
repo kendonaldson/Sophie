@@ -3,6 +3,7 @@ import { atticEscape } from '../src/game/levels/atticEscape';
 import { pizzaFactory } from '../src/game/levels/pizzaFactory';
 import { skyscraper } from '../src/game/levels/skyscraper';
 import { warehouse } from '../src/game/levels/warehouse';
+import { raceHome } from '../src/game/levels/raceHome';
 import { progressStorageKey } from '../src/game/progress/ProgressStore';
 
 const key = progressStorageKey('/');
@@ -13,6 +14,51 @@ type StorageHarness = Window & {
 const state = (page: Page) => page.evaluate(() => window.__sophie!.snapshot());
 const saved = (page: Page) =>
   page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), key);
+
+test('entering the final epilogue saves the handoff and reload starts its exterior with both dog assets ready', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto('/?test');
+  await ready(page);
+  await page.evaluate((destination) => {
+    const game = window.__sophie!;
+    game.loadLevel('race-home');
+    game.advance(1000);
+    game.place(destination.sophie);
+    game.advance(1);
+    game.place({ x: destination.attic.x - 24, y: destination.attic.y });
+    game.advance(600, { moveX: 1 });
+  }, raceHome.race!.destination);
+  await page.waitForFunction(
+    () => window.__sophieStory?.snapshot().storyId === 'epilogue',
+  );
+  expect(await saved(page)).toEqual({
+    version: 1,
+    destinationId: 'epilogue',
+  });
+  await page.reload();
+  await page.waitForFunction(
+    () => window.__sophieStory?.snapshot().storyId === 'epilogue',
+  );
+  const restored = await page.evaluate(() => {
+    window.__sophieStory!.manual(true);
+    return window.__sophieStory!.snapshot();
+  });
+  expect(restored).toMatchObject({
+    storyId: 'epilogue',
+    characters: ['Sophie', 'Jimmy'],
+    epilogue: { environment: 'exterior', theEnd: false },
+  });
+  expect(await page.evaluate(() => window.__sophie)).toBeUndefined();
+  expect(await saved(page)).toEqual({
+    version: 1,
+    destinationId: 'epilogue',
+  });
+  await expect(page.locator('audio')).toHaveJSProperty('loop', false);
+  expect(errors).toEqual([]);
+});
 
 async function ready(page: Page) {
   await page.waitForFunction(() => Boolean(window.__sophie));

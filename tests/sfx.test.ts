@@ -437,6 +437,40 @@ it('plays a short high rat chirp and soft filtered steam using the shared audio 
   expect(factory).toHaveBeenCalledOnce();
 });
 
+describe('quiet epilogue home sounds', () => {
+  it('uses the existing context, stays bounded, and can stop household sounds without stopping dialogue', () => {
+    const { sfx, context, factory } = setup();
+    sfx.homeSound('bus-brake');
+    expect(factory).not.toHaveBeenCalled();
+    sfx.unlockFromGesture();
+    sfx.dialogueBoop('iris', 'W');
+    for (const cue of [
+      'bus-brake',
+      'bus-door',
+      'front-door',
+      'reunion',
+    ] as const) {
+      sfx.homeSound(cue);
+      expect(context.sources.at(-1)!.stop).toHaveBeenCalledWith(
+        sfxConfig.home[cue].durationMs / 1000,
+      );
+    }
+    expect(context.sources).toHaveLength(5);
+    expect(context.filters).toHaveLength(2);
+    const greeting = context.sources.at(-1)!;
+    expect(greeting.frequency.setValueAtTime.mock.calls).toHaveLength(4);
+    sfx.stopHome();
+    expect(context.sources[0]!.disconnect).not.toHaveBeenCalled();
+    expect(
+      context.sources
+        .slice(1)
+        .every((source) => source.disconnect.mock.calls.length === 1),
+    ).toBe(true);
+    expect(factory).toHaveBeenCalledOnce();
+    sfx.destroy();
+  });
+});
+
 describe('dialogue reveal and character cadence', () => {
   it('skips spaces/punctuation, rate-limits across characters and speakers, and cancels only dialogue', () => {
     const { sfx, context } = setup();
@@ -482,6 +516,32 @@ describe('dialogue reveal and character cadence', () => {
     expect(dialoguePitch(jimmy, 0)).toBeGreaterThan(
       dialoguePitch(offscreen, 1),
     );
+  });
+  it('keeps the three human voices ordered in pitch, distinct in cadence, and data-driven in timbre', () => {
+    const { lizzy, iris, paul } = sfxConfig.dialogue.profiles;
+    expect(dialoguePitch(lizzy, 0)).toBeGreaterThan(dialoguePitch(iris, 1));
+    expect(dialoguePitch(iris, 0)).toBeGreaterThan(dialoguePitch(paul, 1));
+    expect(lizzy.cadenceMs).toBeLessThan(iris.cadenceMs);
+    expect(iris.cadenceMs).toBeLessThan(paul.cadenceMs);
+    expect(lizzy.variation).toBeGreaterThan(iris.variation);
+    expect(iris.variation).toBeGreaterThan(paul.variation);
+    const { sfx, context } = setup();
+    sfx.unlockFromGesture();
+    for (const [i, speaker] of (['lizzy', 'iris', 'paul'] as const).entries()) {
+      context.currentTime = i;
+      sfx.dialogueBoop(speaker, 'a');
+      const source = context.sources[i]!;
+      const profile = sfxConfig.dialogue.profiles[speaker];
+      expect(source.frequency.setValueAtTime).toHaveBeenCalledWith(
+        profile.basePitch,
+        i,
+      );
+      expect(source.type).toBe(profile.waveform);
+      context.currentTime += (profile.cadenceMs - 1) / 1000;
+      sfx.dialogueBoop(speaker, 'b');
+      expect(context.sources).toHaveLength(i + 1);
+      context.finish();
+    }
   });
   it('reveals at the configured pace, skips silent characters, never catches up with a sound backlog', () => {
     const output = { dialogueBoop: vi.fn(), stopDialogue: vi.fn() };

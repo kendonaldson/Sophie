@@ -728,10 +728,7 @@ export class GameScene extends Phaser.Scene {
     if (this.race?.stepScript(ms)) {
       this.clearInput();
       if (this.race.complete) {
-        this.ending = true;
-        this.hud.setFade(1);
-        this.hud.showEnding();
-        this.syncMusic();
+        this.startInterlude('Epilogue');
       }
       return;
     }
@@ -1025,7 +1022,11 @@ export class GameScene extends Phaser.Scene {
     if (this.leavingScene) return;
     this.leavingScene = true;
     this.clearInput();
-    this.scene.start(scene);
+    if (scene === 'Epilogue') {
+      const music = this.music;
+      this.music = undefined;
+      this.scene.start(scene, { music });
+    } else this.scene.start(scene);
   }
   update(_time: number, delta: number) {
     if (this.leavingScene) return;
