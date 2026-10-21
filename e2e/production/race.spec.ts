@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { raceStoryTuning } from '../../src/game/race/storyConfig';
 
 test('production Race Home loads its reused assets, opening, and controls under the Pages path', async ({
   page,
@@ -11,6 +12,7 @@ test('production Race Home loads its reused assets, opening, and controls under 
     if (response.status() >= 400) errors.push(response.url());
     if (response.url().includes('/assets/')) assets.push(response.url());
   });
+  await page.clock.install();
   await page.goto('./#debug');
   const selector = page.getByRole('combobox', { name: 'Debug level' });
   await selector.selectOption('race-home');
@@ -28,6 +30,9 @@ test('production Race Home loads its reused assets, opening, and controls under 
     { timeout: 5000 },
   );
   await expect(page.locator('.dialogue')).toBeHidden({ timeout: 6000 });
+  // Dialogue hides before the final reaction beat releases gameplay input.
+  // Deliver animation frames through that beat instead of relying on CI speed.
+  await page.clock.runFor(raceStoryTuning.opening.reactionMs + 100);
   const music = page.locator('audio');
   await expect(music).toHaveAttribute(
     'src',
