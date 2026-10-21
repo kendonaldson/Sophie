@@ -179,7 +179,7 @@ describe('race-home attic entry', () => {
     expect(entry.actors.jimmy.x).toBeGreaterThan(entryFrom.jimmy.x);
     const sophieInsideMs =
       ((entry.insideX - entryFrom.sophie.x) / t.attic.walkSpeed) * 1000;
-    entry.tick(sophieInsideMs - entry.elapsed);
+    entry.tick(Math.max(0, sophieInsideMs - entry.elapsed));
     expect(entry.actors.sophie.visible).toBe(false);
     expect(entry.actors.jimmy.visible).toBe(true);
     expect(entry.fade).toBe(0);
@@ -197,7 +197,7 @@ describe('race-home attic entry', () => {
     expect(entry.fade).toBe(1);
   });
 
-  it('only fades a dog after crossing the attic opening, and safely reconciles a distant Jimmy', () => {
+  it('fades both dogs within the visible doorway and safely reconciles a distant Jimmy', () => {
     const entry = new RaceAtticEntry(destination, {
       sophie: entryFrom.sophie,
       jimmy: { x: 500, y: 4000 },
@@ -206,17 +206,26 @@ describe('race-home attic entry', () => {
       entryFrom.sophie.x - t.attic.companionReach,
     );
     expect(entry.actors.jimmy.y).toBe(destination.attic.y);
+    // RaceHomeArt centers WorldArt's 25-pixel opening on this destination.
+    const leftJamb = destination.attic.x - 12;
+    const rightJamb = destination.attic.x + 13;
+    const fadingDogs = new Set<string>();
     for (let ms = 0; ms < entry.walkMs; ms += 10) {
-      for (const actor of Object.values(entry.actors)) {
-        if (actor.x <= destination.attic.x) expect(actor.alpha).toBe(1);
-        if (actor.alpha < 1)
-          expect(actor.x).toBeGreaterThan(destination.attic.x);
+      for (const [name, actor] of Object.entries(entry.actors)) {
+        expect(actor.x).toBeLessThan(rightJamb);
+        if (actor.x <= leftJamb) expect(actor.alpha).toBe(1);
+        if (actor.alpha < 1) expect(actor.x).toBeGreaterThan(leftJamb);
+        if (actor.alpha > 0 && actor.alpha < 1) fadingDogs.add(name);
       }
       entry.tick(10);
     }
-    expect(Object.values(entry.actors).every((actor) => !actor.visible)).toBe(
-      true,
-    );
+    expect([...fadingDogs].sort()).toEqual(['jimmy', 'sophie']);
+    for (const actor of Object.values(entry.actors)) {
+      expect(actor.visible).toBe(false);
+      expect(actor.alpha).toBe(0);
+      expect(actor.x).toBeGreaterThan(leftJamb);
+      expect(actor.x).toBeLessThan(rightJamb);
+    }
   });
 
   it('has deterministic pause/resume and completion regardless of tick partition', () => {

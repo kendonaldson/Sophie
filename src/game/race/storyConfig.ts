@@ -21,7 +21,9 @@ export const raceStoryTuning = {
     walkSpeed: 160,
     followDelayMs: 220,
     settleMs: 200,
-    insideOffset: 72,
+    // The visible attic opening spans -12 to +13 from its center marker.
+    // Finish each dog's fade inside the doorway, before the right jamb.
+    insideOffset: 12,
     fadeInsidePixels: 24,
     companionReach: 96,
     emptyMs: 300,
