@@ -97,11 +97,17 @@ export class RaceHomeArt {
 
   private platform(p: PlatformDefinition, index: number) {
     const g = this.terrain;
+    // The camera can follow a missed jump down the facade. Draw foundations
+    // to the world bottom without changing the platform's collision bounds.
+    const facade = {
+      ...p,
+      height: Math.max(p.height, this.level.height - p.y),
+    };
     if (p.style === 'balloon') return;
     if (p.style === 'car') {
       this.car(p);
     } else if (p.style === 'street') {
-      rect(g, 0x66716d, p.x, p.y, p.width, p.height);
+      rect(g, 0x66716d, p.x, p.y, p.width, facade.height);
       rect(g, 0xe3d5b5, p.x, p.y, p.width, 5);
       rect(g, 0xadb2a0, p.x, p.y + 5, p.width, 13);
       for (let x = p.x + 25; x < p.x + p.width; x += 78)
@@ -109,7 +115,7 @@ export class RaceHomeArt {
       for (let x = p.x + 45; x < p.x + p.width; x += 110)
         rect(g, 0xc5c2a1, x, p.y + 72, 42, 4);
     } else if (p.style === 'maintenance') {
-      floor(g, p);
+      floor(g, facade);
     } else if (p.style === 'barrier') {
       rect(g, 0x665448, p.x, p.y, p.width, p.height);
       for (let x = p.x; x < p.x + p.width; x += 12)
@@ -154,7 +160,7 @@ export class RaceHomeArt {
     } else if (p.style === 'crate' || p.style === 'steel') {
       this.cargo(g, p);
     } else {
-      WorldArt.drawRoof(g, p, index);
+      WorldArt.drawRoof(g, facade, index);
     }
   }
 
@@ -275,7 +281,14 @@ export class RaceHomeArt {
       rect(g, 0x82988b, x - 17, band.floorY - 192, 5, 192);
     }
     for (const s of this.level.race!.steam) {
-      rect(g, 0x322f2e, s.x, s.floorY + 24, s.width, 400);
+      rect(
+        g,
+        0x322f2e,
+        s.x,
+        s.floorY + 24,
+        s.width,
+        this.level.height - s.floorY - 24,
+      );
       for (let i = 0; i < 4; i++)
         rect(
           g,
