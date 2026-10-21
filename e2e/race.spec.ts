@@ -138,7 +138,9 @@ test('ordinary Sophie resets on bird and rat contact while Jimmy cannot trigger 
     const a = window.__sophie!;
     return (['birds', 'rats'] as const).map((kind) => {
       a.loadLevel('race-home');
-      a.advance(1000);
+      // Establish the section before sampling its patrol: entering a new
+      // checkpoint intentionally resets creature positions for a fair retry.
+      a.checkpoint(kind === 'birds' ? 'race-scaffold' : 'race-tunnel-entry');
       const creature = a.snapshot().race![kind][0]!;
       const feet = {
         x: creature.x,
