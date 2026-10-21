@@ -9,10 +9,12 @@ import { skyscraper } from '../levels/skyscraper';
 import { warehouse } from '../levels/warehouse';
 import { interlude1 } from '../story/interlude1';
 import { interlude3 } from '../story/interlude3';
+import { epilogue } from '../story/epilogue';
 export const storyScenes = {
   'interlude-1': 'Interlude1',
   'interlude-2': 'Interlude2',
   'interlude-3': 'Interlude3',
+  epilogue: 'Epilogue',
 } as const;
 export type StoryId = keyof typeof storyScenes;
 export function storySceneKey(id: string) {
@@ -32,4 +34,5 @@ export const sceneDestinations = [
   interlude3,
   pizzaFactory,
   raceHome,
+  epilogue,
 ] as const;

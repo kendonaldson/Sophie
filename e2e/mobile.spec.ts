@@ -48,13 +48,13 @@ test.describe('phone controls', () => {
       [1, 1],
     ]) {
       // Start near the apex of a normal jump so downward dashes are measurable
-      // before the roof collision. Direction and dash come from real touch events.
+      // before the roof collision. Keep simulation time fixed while asynchronous
+      // touch/highlight checks run; direction and dash still use real touch events.
       await page.evaluate(() => {
         const a = window.__sophie!;
         a.manual(true);
         a.restart();
         a.advance(35, { jumpPressed: true, jumpHeld: true });
-        a.manual(false);
       });
       await session.send('Input.dispatchTouchEvent', {
         type: 'touchStart',
@@ -71,14 +71,6 @@ test.describe('phone controls', () => {
         touchPoints: [direction],
       });
       await expectAim(x!, y!);
-      const dashed = page.waitForFunction(
-        () => {
-          const s = window.__sophie!.snapshot();
-          return s.state === 'Dashing' ? s : false;
-        },
-        undefined,
-        { polling: 'raf' },
-      );
       await session.send('Input.dispatchTouchEvent', {
         type: 'touchStart',
         touchPoints: [
@@ -86,8 +78,10 @@ test.describe('phone controls', () => {
           { id: 2, x: dash.x + dash.width / 2, y: dash.y + dash.height / 2 },
         ],
       });
-      const snapshot = await (await dashed).jsonValue();
-      if (!snapshot) throw new Error('Touch dash did not start');
+      const snapshot = await page.evaluate(() =>
+        window.__sophie!.advanceInput(1),
+      );
+      expect(snapshot.state).toBe('Dashing');
       const length = Math.hypot(x!, y!);
       expect(snapshot.vx).toBeCloseTo(
         (snapshot.physics.dashSpeed * x!) / length,

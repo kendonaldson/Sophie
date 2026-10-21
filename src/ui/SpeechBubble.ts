@@ -36,10 +36,13 @@ export class SpeechBubble {
     if (!line) return;
     this.element.setAttribute('aria-label', `${line.speaker}: ${line.text}`);
     this.element.dataset.speaker = line.speaker;
+    this.element.dataset.offscreen = String(isHumanSpeaker(line.speaker));
     this.label.textContent =
       line.speaker === 'offscreen'
         ? 'A VOICE FROM OFF-SCREEN'
-        : line.speaker.toUpperCase();
+        : isHumanSpeaker(line.speaker)
+          ? `${line.speaker.toUpperCase()} · OFF SCREEN`
+          : line.speaker.toUpperCase();
   }
   revealText(ms: number) {
     if (this.line) this.text.textContent = this.reveal.tick(ms);
@@ -50,6 +53,14 @@ export class SpeechBubble {
   }
   anchor(x: number, headY: number) {
     const bubble = this.element;
+    if (this.line && isHumanSpeaker(this.line.speaker)) {
+      bubble.style.left = 'auto';
+      bubble.style.right = '18px';
+      bubble.style.bottom = 'auto';
+      bubble.style.top = '18%';
+      return;
+    }
+    bubble.style.right = 'auto';
     if (this.line?.speaker === 'offscreen') {
       bubble.style.left = '18px';
       bubble.style.bottom = 'auto';
@@ -72,3 +83,6 @@ export class SpeechBubble {
     );
   }
 }
+
+const isHumanSpeaker = (speaker: DialogueSpeaker) =>
+  speaker === 'lizzy' || speaker === 'iris' || speaker === 'paul';

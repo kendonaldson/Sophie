@@ -3,6 +3,7 @@ import './style.css';
 import { Hud } from './ui/Hud';
 import { GameScene } from './game/scenes/GameScene';
 import { InterludeScene } from './game/scenes/InterludeScene';
+import { EpilogueScene } from './game/scenes/EpilogueScene';
 import { viewportSize, watchViewport } from './game/rendering/Viewport';
 import { Sfx } from './game/audio/Sfx';
 import { ProgressStore } from './game/progress/ProgressStore';
@@ -41,6 +42,7 @@ const game = new Phaser.Game({
     new InterludeScene(hud, sfx, debugSettings, undefined, progress),
     new InterludeScene(hud, sfx, debugSettings, 'interlude-2', progress),
     new InterludeScene(hud, sfx, debugSettings, 'interlude-3', progress),
+    new EpilogueScene(hud, sfx, debugSettings, progress),
   ],
   // Music streams through LevelMusic; SFX own the only Web Audio context.
   audio: { noAudio: true },

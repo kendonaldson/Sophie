@@ -952,6 +952,38 @@ kbd {
   transform: rotate(135deg);
   border-color: #d8bf91;
 }
+.story-bubble[data-offscreen='true'] {
+  --human-accent: #b6a28a;
+  background: #f5eee2;
+  border-color: var(--human-accent);
+  border-radius: 14px 3px 3px 14px;
+}
+.story-bubble[data-offscreen='true']::after {
+  left: auto;
+  right: -9px;
+  top: 45%;
+  bottom: auto;
+  transform: rotate(-45deg);
+  border-color: var(--human-accent);
+}
+.story-bubble[data-speaker='lizzy'] {
+  --human-accent: #bb9b85;
+}
+.story-bubble[data-speaker='lizzy'] strong {
+  color: #87634c;
+}
+.story-bubble[data-speaker='iris'] {
+  --human-accent: #a6aa8d;
+}
+.story-bubble[data-speaker='iris'] strong {
+  color: #686e50;
+}
+.story-bubble[data-speaker='paul'] {
+  --human-accent: #8b9ca4;
+}
+.story-bubble[data-speaker='paul'] strong {
+  color: #536b78;
+}
 .story-next {
   position: absolute;
   right: 18px;

@@ -110,7 +110,9 @@ export class PizzaRushVisual {
     this.player.sprite.anims.timeScale = 1;
   }
   destroy() {
-    this.clear();
+    // Phaser may destroy scene sprites before our shutdown listener runs.
+    // A live player still needs its ordinary appearance restored on level swaps.
+    if (this.player.sprite.scene) this.clear();
     this.sprite.destroy();
     this.trail.destroy();
     this.aura.destroy();

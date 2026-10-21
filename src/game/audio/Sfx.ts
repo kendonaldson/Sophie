@@ -4,11 +4,14 @@ import {
   isBoopCharacter,
   sfxConfig,
   type DialogueSpeaker,
+  type HomeSoundCue,
   type NoiseSfxConfig,
   type SfxConfig,
 } from './config';
 
 export interface SfxOutput {
+  homeSound(cue: HomeSoundCue): void;
+  stopHome(): void;
   jump(): void;
   dash(): void;
   birdSquawk(): void;
@@ -31,6 +34,7 @@ export interface SfxOutput {
   stopDialogue(): void;
 }
 type Effect =
+  | 'home'
   | 'jump'
   | 'dash'
   | 'dialogue'
@@ -89,6 +93,7 @@ export class Sfx implements SfxOutput {
   ) {
     this.masterVolume = clampVolume(config.masterVolume);
     this.volumes = {
+      home: 1,
       jump: clampVolume(config.jump.volume),
       dash: clampVolume(config.dash.volume),
       dialogue: clampVolume(config.dialogue.volume),
@@ -332,6 +337,50 @@ export class Sfx implements SfxOutput {
       oscillator.connect(gain);
     });
   }
+  /** Short off-screen household cues; no audio loop or separate context. */
+  homeSound(cue: HomeSoundCue) {
+    const c = this.config.home[cue];
+    this.play('home', c.durationMs, (context, voice, gain, at, end) => {
+      const cueGain = context.createGain();
+      voice.nodes.push(cueGain);
+      cueGain.gain.value = clampVolume(c.volume);
+      cueGain.connect(gain);
+      if ('pitches' in c) {
+        const oscillator = context.createOscillator();
+        voice.sources.push(oscillator);
+        oscillator.type = c.waveform;
+        const max = Math.min(12000, context.sampleRate / 2 - 1);
+        c.pitches.forEach((pitch, i) =>
+          oscillator.frequency.setValueAtTime(
+            bounded(pitch, 20, max),
+            at + ((end - at) * i) / c.pitches.length,
+          ),
+        );
+        // Two little greeting sounds, separated by silence rather than a drone.
+        if (c.pulses > 1) {
+          const pulse = (end - at) / c.pulses;
+          for (let i = 0; i < c.pulses; i++) {
+            const start = at + pulse * i;
+            cueGain.gain.setValueAtTime(0, start);
+            cueGain.gain.linearRampToValueAtTime(
+              clampVolume(c.volume),
+              start + 0.008,
+            );
+            cueGain.gain.exponentialRampToValueAtTime(
+              0.0001,
+              start + pulse * 0.7,
+            );
+            cueGain.gain.setValueAtTime(0, start + pulse * 0.75);
+          }
+        }
+        oscillator.connect(cueGain);
+      } else this.filteredNoise(context, voice, cueGain, at, end, c);
+    });
+  }
+  stopHome() {
+    for (const voice of this.voices)
+      if (voice.effect === 'home') this.release(voice);
+  }
   stopFactory() {
     this.stopPizza();
     for (const voice of this.voices)
@@ -448,11 +497,15 @@ export class Sfx implements SfxOutput {
     const pitch = dialoguePitch(profile, this.random());
     if (
       this.play('dialogue', c.durationMs, (context, voice, gain, at, end) => {
+        const voiceGain = context.createGain();
+        voice.nodes.push(voiceGain);
+        voiceGain.gain.value = clampVolume(profile.volume ?? 1);
+        voiceGain.connect(gain);
         this.tone(
           context,
           voice,
-          gain,
-          c.waveform,
+          voiceGain,
+          profile.waveform ?? c.waveform,
           pitch,
           pitch * 0.94,
           at,

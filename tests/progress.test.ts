@@ -80,6 +80,26 @@ describe('saved progress', () => {
     expect(first.read()).toEqual({ version: 1, destinationId: 'interlude-1' });
   });
 
+  it('saves the final epilogue as a story destination without gameplay coordinates or checkpoints', () => {
+    const backing = storage();
+    const store = new ProgressStore(
+      '/',
+      () => backing,
+      () => '',
+    );
+    expect(store.saveStory('epilogue')).toBe(true);
+    expect(store.read()).toEqual({ version: 1, destinationId: 'epilogue' });
+    expect(
+      parseProgress(
+        JSON.stringify({
+          version: 1,
+          destinationId: 'epilogue',
+          checkpointId: 'spawn',
+        }),
+      ),
+    ).toBeUndefined();
+  });
+
   it('leaves normal progress intact throughout a debug session, including after the fragment is removed', () => {
     const backing = storage();
     let hash = '';

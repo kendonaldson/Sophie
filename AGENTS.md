@@ -616,9 +616,12 @@ rather than writing another giant custom Scene.
 
 Race Home is the playable return chapter after Shelly's factory. Its school bus
 is background storytelling, never a deadline or failure condition. Preserve its
-section-based camera and four sparse Pizza Rush opportunities. The attic-entry
-completion is an isolated handoff for a future reunion; do not add that reunion
-or final story resolution without a separate request.
+section-based camera and four sparse Pizza Rush opportunities. Attic entry hands
+off to the final Epilogue story scene. Keep its bus exterior and fixed bedroom
+shots separate from gameplay. Humans remain entirely off screen; only Sophie
+and Jimmy appear, then walk out of view. Iris's pizza question is the last spoken
+line, followed only by silence, a synchronized picture/music fade, and THE END.
+The epilogue's supplied soundtrack plays once across both shots and never loops.
 
 Keep PlayerController independent of specific level geometry.
 

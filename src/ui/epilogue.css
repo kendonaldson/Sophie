@@ -1,0 +1,26 @@
+.epilogue-mode .below-world,
+.epilogue-mode footer,
+.epilogue-mode .keyboard-notice {
+  visibility: hidden;
+}
+.epilogue-mode .masthead > :not(.debug-level-selector) {
+  opacity: calc(1 - var(--ending-fade, 0));
+}
+.epilogue-complete .masthead > :not(.debug-level-selector) {
+  visibility: hidden;
+}
+.epilogue-end {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  color: #f5efdf;
+  font-size: clamp(24px, 4vw, 40px);
+  letter-spacing: 0.2em;
+  font-weight: 500;
+}
+.epilogue-end[hidden] {
+  display: none;
+}

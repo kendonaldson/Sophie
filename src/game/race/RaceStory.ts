@@ -205,7 +205,7 @@ export class RaceSuperJump {
 
 export type RaceAtticPhase = 'enter' | 'empty' | 'fade' | 'complete';
 
-/** Stops at the attic threshold. The future reunion scene owns everything inside. */
+/** Stops at the attic threshold. The epilogue owns everything inside. */
 export class RaceAtticEntry {
   elapsed = 0;
   private readonly from: ActorPositions;

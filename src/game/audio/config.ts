@@ -1,8 +1,12 @@
-export type DialogueSpeaker = 'sophie' | 'jimmy' | 'shelly' | 'offscreen';
+export type DialogueSpeaker =
+  'sophie' | 'jimmy' | 'shelly' | 'offscreen' | 'lizzy' | 'iris' | 'paul';
+export type HomeSoundCue = 'bus-brake' | 'bus-door' | 'front-door' | 'reunion';
 export interface DialogueProfile {
   basePitch: number;
   variation: number;
   cadenceMs: number;
+  waveform?: OscillatorType;
+  volume?: number;
 }
 export interface NoiseSfxConfig {
   volume: number;
@@ -18,6 +22,10 @@ export interface RetroPhraseConfig {
   waveform: OscillatorType;
 }
 export interface SfxConfig {
+  home: Record<
+    HomeSoundCue,
+    NoiseSfxConfig | (RetroPhraseConfig & { pulses: number })
+  >;
   masterVolume: number;
   maxVoices: number;
   birdSquawk: {
@@ -97,6 +105,36 @@ export interface SfxConfig {
   };
 }
 export const sfxConfig: SfxConfig = {
+  home: {
+    'bus-brake': {
+      volume: 0.12,
+      durationMs: 240,
+      filterStartFrequency: 1600,
+      filterEndFrequency: 500,
+      filterQ: 0.5,
+    },
+    'bus-door': {
+      volume: 0.09,
+      durationMs: 200,
+      filterStartFrequency: 700,
+      filterEndFrequency: 1100,
+      filterQ: 0.5,
+    },
+    'front-door': {
+      volume: 0.12,
+      durationMs: 140,
+      pitches: [160, 85],
+      waveform: 'triangle',
+      pulses: 1,
+    },
+    reunion: {
+      volume: 0.14,
+      durationMs: 280,
+      pitches: [430, 250, 460, 270],
+      waveform: 'triangle',
+      pulses: 2,
+    },
+  },
   masterVolume: 0.42,
   maxVoices: 8,
   shellyRollCharge: {
@@ -202,6 +240,26 @@ export const sfxConfig: SfxConfig = {
       jimmy: { basePitch: 440, variation: 35, cadenceMs: 75 },
       shelly: { basePitch: 540, variation: 30, cadenceMs: 72 },
       offscreen: { basePitch: 330, variation: 25, cadenceMs: 85 },
+      lizzy: {
+        basePitch: 750,
+        variation: 90,
+        cadenceMs: 65,
+        waveform: 'square',
+        volume: 0.72,
+      },
+      iris: {
+        basePitch: 590,
+        variation: 60,
+        cadenceMs: 85,
+        waveform: 'triangle',
+        volume: 0.88,
+      },
+      paul: {
+        basePitch: 285,
+        variation: 30,
+        cadenceMs: 105,
+        waveform: 'triangle',
+      },
     },
   },
   jimmySuperJump: {

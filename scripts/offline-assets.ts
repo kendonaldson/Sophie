@@ -5,6 +5,8 @@ import { skyscraper } from '../src/game/levels/skyscraper';
 import { balloons } from '../src/game/levels/balloons';
 import { maintenance } from '../src/game/levels/maintenance';
 import { pizzaFactory } from '../src/game/levels/pizzaFactory';
+import { raceHome } from '../src/game/levels/raceHome';
+import { epilogue } from '../src/game/story/epilogue';
 import { birdAppearance } from '../src/game/birds/appearance';
 import { ratAppearance } from '../src/game/rats/appearance';
 import { jimmyAppearance } from '../src/game/companion/config';
@@ -42,5 +44,7 @@ export const offlinePublicAssets = [
     balloons,
     maintenance,
     pizzaFactory,
+    raceHome,
+    epilogue,
   ].flatMap(({ music }) => (music ? [music] : [])),
 ];
