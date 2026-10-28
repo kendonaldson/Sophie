@@ -30,6 +30,7 @@ export class EpilogueScene extends Phaser.Scene {
   private orientationBlocked = false;
   private manual = false;
   private progressSaved = false;
+  private progressCleared = false;
 
   constructor(
     private readonly hud: Hud,
@@ -47,7 +48,7 @@ export class EpilogueScene extends Phaser.Scene {
 
   create() {
     this.director = new EpilogueDirector(this.sfx);
-    this.progressSaved = this.progress.saveStory(c.id);
+    this.progressSaved = this.progressCleared = false;
     const app = document.querySelector<HTMLElement>('#app')!;
     const shell = document.querySelector<HTMLElement>('.game-shell')!;
     const previousBackground = this.game.config.backgroundColor.clone();
@@ -201,7 +202,6 @@ export class EpilogueScene extends Phaser.Scene {
   };
 
   update(_time: number, delta: number) {
-    if (!this.progressSaved) this.progressSaved = this.progress.saveStory(c.id);
     const blocked = this.paused || this.orientationBlocked;
     const ms = !this.manual && !blocked ? Math.min(delta, 100) : 0;
     this.director.tick(ms);
@@ -240,6 +240,11 @@ export class EpilogueScene extends Phaser.Scene {
     this.music?.setVolume(d.musicVolume);
     this.syncAudio();
     const complete = d.phase === 'complete';
+    if (complete) {
+      if (!this.progressCleared) this.progressCleared = this.progress.clear();
+    } else if (!this.progressSaved) {
+      this.progressSaved = this.progress.saveStory(c.id);
+    }
     this.endTitle.hidden = !complete;
     const app = document.querySelector<HTMLElement>('#app')!;
     app.classList.toggle('epilogue-complete', complete);

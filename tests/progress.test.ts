@@ -19,6 +19,9 @@ function storage() {
     setItem: vi.fn((key: string, value: string) => {
       data.set(key, value);
     }),
+    removeItem: vi.fn((key: string) => {
+      data.delete(key);
+    }),
   };
 }
 
@@ -100,6 +103,36 @@ describe('saved progress', () => {
     ).toBeUndefined();
   });
 
+  it('clears only the current deployment save and can save the same checkpoint again', () => {
+    const backing = storage();
+    const store = new ProgressStore(
+      '/Sophie/',
+      () => backing,
+      () => '',
+    );
+    backing.setItem(progressStorageKey('/preview/'), serialized);
+    backing.setItem('unrelated-setting', 'keep');
+    store.saveLevel('attic-escape', 'dash');
+    backing.setItem.mockClear();
+
+    expect(store.clear()).toBe(true);
+    expect(store.available).toBe(true);
+    expect(store.read()).toBeUndefined();
+    expect(backing.removeItem).toHaveBeenCalledWith(
+      progressStorageKey('/Sophie/'),
+    );
+    expect(backing.getItem(progressStorageKey('/preview/'))).toBe(serialized);
+    expect(backing.getItem('unrelated-setting')).toBe('keep');
+    expect(store.clear()).toBe(true);
+    expect(backing.removeItem).toHaveBeenCalledTimes(1);
+
+    expect(store.saveLevel('attic-escape', 'dash')).toBe(true);
+    expect(store.read()).toEqual(checkpoint);
+    expect(backing.setItem).toHaveBeenCalledTimes(1);
+    expect(store.saveLevel('attic-escape', 'dash')).toBe(true);
+    expect(backing.setItem).toHaveBeenCalledTimes(1);
+  });
+
   it('leaves normal progress intact throughout a debug session, including after the fragment is removed', () => {
     const backing = storage();
     let hash = '';
@@ -115,9 +148,12 @@ describe('saved progress', () => {
     events.dispatchEvent(new Event('hashchange'));
     expect(store.read()).toBeUndefined();
     expect(store.saveLevel('pizza-factory', 'factory-final')).toBe(false);
+    expect(store.clear()).toBe(false);
     hash = '';
     events.dispatchEvent(new Event('hashchange'));
     expect(store.saveStory('interlude-3')).toBe(false);
+    expect(store.clear()).toBe(false);
+    expect(backing.removeItem).not.toHaveBeenCalled();
     expect(backing.getItem(progressStorageKey('/'))).toBe(serialized);
     store.destroy();
     expect(
@@ -139,6 +175,8 @@ describe('saved progress', () => {
     );
     expect(store.read()).toBeUndefined();
     expect(store.saveLevel('warehouse', 'spawn')).toBe(false);
+    expect(store.clear()).toBe(false);
+    expect(backing.removeItem).not.toHaveBeenCalled();
     expect(backing.getItem(progressStorageKey('/'))).toBe(serialized);
   });
 
@@ -152,6 +190,7 @@ describe('saved progress', () => {
     );
     expect(denied.read()).toBeUndefined();
     expect(denied.saveLevel('attic-escape', 'dash')).toBe(false);
+    expect(denied.clear()).toBe(false);
     expect(denied.available).toBe(false);
     const backing = storage();
     const store = new ProgressStore(
@@ -193,5 +232,35 @@ describe('saved progress', () => {
     expect(backing.setItem).toHaveBeenCalledTimes(2);
     store.saveLevel('attic-escape', 'dash');
     expect(backing.setItem).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries failed progress removal without writing every frame or blocking the next save', () => {
+    const backing = storage();
+    let now = 0;
+    const store = new ProgressStore(
+      '/',
+      () => backing,
+      () => '',
+      undefined,
+      () => now,
+    );
+    store.saveStory('epilogue');
+    backing.removeItem.mockImplementationOnce(() => {
+      throw new Error('Storage temporarily unavailable');
+    });
+    expect(store.clear()).toBe(false);
+    expect(store.available).toBe(false);
+    expect(store.read()).toEqual({ version: 1, destinationId: 'epilogue' });
+    for (now = 0; now < 1000; now += 10) expect(store.clear()).toBe(false);
+    expect(backing.removeItem).toHaveBeenCalledTimes(1);
+
+    expect(store.clear()).toBe(true);
+    expect(backing.removeItem).toHaveBeenCalledTimes(2);
+    expect(store.available).toBe(true);
+    expect(store.read()).toBeUndefined();
+    expect(store.clear()).toBe(true);
+    expect(backing.removeItem).toHaveBeenCalledTimes(2);
+    expect(store.saveStory('epilogue')).toBe(true);
+    expect(store.read()).toEqual({ version: 1, destinationId: 'epilogue' });
   });
 });
