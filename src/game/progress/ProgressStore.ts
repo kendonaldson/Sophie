@@ -6,7 +6,7 @@ export interface SavedProgress {
   checkpointId?: string;
 }
 
-type ProgressStorage = Pick<Storage, 'getItem' | 'setItem'>;
+type ProgressStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 type HashEvents = Pick<Window, 'addEventListener' | 'removeEventListener'>;
 
 export const progressStorageKey = (basePath: string) =>
@@ -47,8 +47,8 @@ export function parseProgress(raw: string | null): SavedProgress | undefined {
 
 export class ProgressStore {
   private debugSession = false;
-  private lastWrite?: string;
-  private failedWrite?: string;
+  private lastWrite?: string | null;
+  private failedWrite?: string | null;
   private retryAt = 0;
   private writable = false;
   private readonly key: string;
@@ -66,7 +66,7 @@ export class ProgressStore {
     this.events?.addEventListener('hashchange', this.checkDebug);
   }
 
-  /** False until a save succeeds, and whenever browser storage rejects it. */
+  /** False until a storage change succeeds, and whenever the browser rejects it. */
   get available() {
     return this.writable;
   }
@@ -94,18 +94,27 @@ export class ProgressStore {
     return this.write({ version: 1, destinationId });
   }
 
+  /** Completing a normal playthrough only removes this deployment's progress. */
+  clear() {
+    return this.persist(null);
+  }
+
   private write(progress: SavedProgress) {
+    return this.persist(JSON.stringify(progress));
+  }
+
+  private persist(raw: string | null) {
     this.checkDebug();
     if (this.debugSession) return false;
-    const raw = JSON.stringify(progress);
     if (raw === this.lastWrite) {
       this.writable = true;
       return true;
     }
     if (raw === this.failedWrite && this.now() < this.retryAt) return false;
-    if (!parseProgress(raw)) return false;
+    if (raw !== null && !parseProgress(raw)) return false;
     try {
-      this.storage().setItem(this.key, raw);
+      if (raw === null) this.storage().removeItem(this.key);
+      else this.storage().setItem(this.key, raw);
       this.lastWrite = raw;
       this.failedWrite = undefined;
       this.writable = true;

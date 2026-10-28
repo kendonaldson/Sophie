@@ -5,17 +5,19 @@ import { skyscraper } from '../src/game/levels/skyscraper';
 import { warehouse } from '../src/game/levels/warehouse';
 import { raceHome } from '../src/game/levels/raceHome';
 import { progressStorageKey } from '../src/game/progress/ProgressStore';
+import { epilogue } from '../src/game/story/epilogue';
 
 const key = progressStorageKey('/');
 type StorageHarness = Window & {
   progressWritesBlocked?: boolean;
   progressWriteAttempts?: number;
+  progressDeletesBlocked?: boolean;
 };
 const state = (page: Page) => page.evaluate(() => window.__sophie!.snapshot());
 const saved = (page: Page) =>
   page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), key);
 
-test('entering the final epilogue saves the handoff and reload starts its exterior with both dog assets ready', async ({
+test('an unfinished ending resumes, but THE END clears progress and reload starts a new game', async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -57,6 +59,131 @@ test('entering the final epilogue saves the handoff and reload starts its exteri
     destinationId: 'epilogue',
   });
   await expect(page.locator('audio')).toHaveJSProperty('loop', false);
+  await page.evaluate(async () => {
+    localStorage.setItem('unrelated-setting', 'keep');
+    const cache = await caches.open('ending-download-check');
+    await cache.put('/download-marker', new Response('keep this download'));
+    const story = window.__sophieStory!;
+    for (let i = 0; i < 1000 && story.snapshot().phase !== 'fade'; i++)
+      story.tick(100);
+  });
+  expect(
+    await page.evaluate(() => window.__sophieStory!.snapshot().phase),
+  ).toBe('fade');
+  await expect(page.locator('.epilogue-end')).toBeHidden();
+  expect(await saved(page)).toEqual({ version: 1, destinationId: 'epilogue' });
+  await page.evaluate(
+    (ms) => window.__sophieStory!.tick(ms),
+    epilogue.fadeOutMs,
+  );
+  await expect(page.locator('.epilogue-end')).toBeVisible();
+  expect(await saved(page)).toBeNull();
+  await page.evaluate(() => window.__sophieStory!.tick(10000));
+  expect(await saved(page)).toBeNull();
+  expect(
+    await page.evaluate(() => localStorage.getItem('unrelated-setting')),
+  ).toBe('keep');
+  expect(
+    await page.evaluate(async () => {
+      const cache = await caches.open('ending-download-check');
+      return (await cache.match('/download-marker'))?.text();
+    }),
+  ).toBe('keep this download');
+  await page.reload();
+  await ready(page);
+  await page.evaluate(() => window.__sophie!.advance(2));
+  expect(await state(page)).toMatchObject({
+    levelId: 'attic-escape',
+    checkpoint: 'start',
+    charges: 1,
+    x: atticEscape.playerSpawn.x,
+  });
+  expect(await saved(page)).toEqual({
+    version: 1,
+    destinationId: 'attic-escape',
+    checkpointId: 'start',
+  });
+  expect(errors).toEqual([]);
+});
+
+test('finishing in debug mode preserves the ordinary checkpoint', async ({
+  page,
+}) => {
+  await earnAtticCheckpoint(page);
+  const original = await saved(page);
+  await page.goto('/?test#debug');
+  await page
+    .getByRole('combobox', { name: 'Debug level' })
+    .selectOption('epilogue');
+  await page.getByRole('button', { name: 'Load', exact: true }).click();
+  await page.waitForFunction(
+    () => window.__sophieStory?.snapshot().storyId === 'epilogue',
+  );
+  await page.evaluate(() => {
+    location.hash = '';
+    window.__sophieStory!.manual(true);
+    window.__sophieStory!.tick(100000);
+  });
+  await expect(page.locator('.epilogue-end')).toBeVisible();
+  expect(await saved(page)).toEqual(original);
+  await page.reload();
+  await ready(page);
+  expect(await state(page)).toMatchObject({
+    levelId: 'attic-escape',
+    checkpoint: 'dash',
+  });
+});
+
+test('a completed ending retries failed save removal without saving the epilogue again', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.addInitScript((key) => {
+    localStorage.setItem(
+      key,
+      JSON.stringify({ version: 1, destinationId: 'epilogue' }),
+    );
+    const set = Storage.prototype.setItem;
+    const remove = Storage.prototype.removeItem;
+    const harness = window as StorageHarness;
+    harness.progressWritesBlocked = harness.progressDeletesBlocked = true;
+    harness.progressWriteAttempts = 0;
+    Storage.prototype.setItem = function (name, value) {
+      if (name === key) {
+        harness.progressWriteAttempts!++;
+        if (harness.progressWritesBlocked)
+          throw new Error('Storage unavailable');
+      }
+      set.call(this, name, value);
+    };
+    Storage.prototype.removeItem = function (name) {
+      if (name === key && harness.progressDeletesBlocked)
+        throw new Error('Storage unavailable');
+      remove.call(this, name);
+    };
+  }, key);
+  await page.goto('/?test');
+  await page.waitForFunction(
+    () => window.__sophieStory?.snapshot().storyId === 'epilogue',
+  );
+  const writes = await page.evaluate(() => {
+    window.__sophieStory!.manual(true);
+    window.__sophieStory!.tick(100000);
+    return (window as StorageHarness).progressWriteAttempts;
+  });
+  await expect(page.locator('.epilogue-end')).toBeVisible();
+  expect(await saved(page)).toEqual({ version: 1, destinationId: 'epilogue' });
+  await page.evaluate(() => {
+    const harness = window as StorageHarness;
+    harness.progressWritesBlocked = harness.progressDeletesBlocked = false;
+  });
+  await expect.poll(() => saved(page)).toBeNull();
+  await page.evaluate(() => window.__sophieStory!.tick(10000));
+  expect(await saved(page)).toBeNull();
+  expect(
+    await page.evaluate(() => (window as StorageHarness).progressWriteAttempts),
+  ).toBe(writes);
   expect(errors).toEqual([]);
 });
 
